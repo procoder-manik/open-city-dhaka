@@ -8,6 +8,8 @@ const Url = z
   .nullable();
 
 const SiteSchema = z.object({
+  /** Public site address, e.g. https://gtm.example.com (null → derived from env / localhost). */
+  siteUrl: Url.optional().default(null),
   donateUrl: Url,
   donateNote: z.string(),
   feedbackFormUrl: Url,

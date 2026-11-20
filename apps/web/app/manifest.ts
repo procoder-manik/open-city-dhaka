@@ -19,7 +19,24 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'bn',
     icons: [
       { src: icon, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: icon, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      {
+        src: `/${brand.logoDir}/icon-192.png`,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: `/${brand.logoDir}/icon-512.png`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: `/${brand.logoDir}/icon-maskable-512.png`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
   };
 }

@@ -78,10 +78,18 @@ async function create(): Promise<Db> {
   return drizzle(client, { schema }) as unknown as Db;
 }
 
+/**
+ * One database per process. Cached on globalThis because each Next route bundle gets its
+ * own module instance — two PGlite instances on the same data dir would corrupt it.
+ */
 export function getDb(): Promise<Db> {
+  const g = globalThis as unknown as { __gameDb?: Promise<Db> | null };
+  dbPromise ??= g.__gameDb ?? null;
   dbPromise ??= create().catch((err) => {
     dbPromise = null;
+    g.__gameDb = null;
     throw err;
   });
+  g.__gameDb = dbPromise;
   return dbPromise;
 }

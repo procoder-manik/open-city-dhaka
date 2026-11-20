@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { brand } from '@game/shared';
-import { signIn, signOut, signUp, useSession } from '@/lib/auth-client';
+import { signIn, signUp, useSession } from '@/lib/auth-client';
+import { AccountPanel } from './AccountPanel';
 import styles from './login.module.css';
 
 type Mode = 'signin' | 'signup';
@@ -37,27 +38,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
 
   if (isPending) return <main className={styles.main} />;
 
-  if (session?.user) {
-    return (
-      <main className={styles.main}>
-        <div className={`panel ${styles.card}`}>
-          <h1>স্বাগতম, {session.user.name}!</h1>
-          <p className={styles.muted}>{session.user.email}</p>
-          <Link href="/play" className="btn">
-            খেলা শুরু করো ▶
-          </Link>
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={() => signOut().then(() => window.location.assign('/'))}
-            data-testid="logout"
-          >
-            লগআউট
-          </button>
-        </div>
-      </main>
-    );
-  }
+  if (session?.user) return <AccountPanel name={session.user.name} email={session.user.email} />;
 
   return (
     <main className={styles.main}>

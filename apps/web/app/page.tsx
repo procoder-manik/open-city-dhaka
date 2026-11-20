@@ -3,7 +3,16 @@ import { brand, site } from '@game/shared';
 import styles from './landing.module.css';
 
 const FEATURES = [
-  { title: 'যেকোনো গাড়ি চুরি', text: 'রিকশা, CNG, বাইক, বাস — সব তোমার।' },
+  {
+    title: 'যেকোনো গাড়ি চুরি',
+    text: 'রাস্তার সিএনজি, প্রাইভেট কার, বাইক — ড্রাইভার নামাও, গাড়ি তোমার।',
+  },
+  { title: 'জ্যান্ত শহর', text: 'বাস, রিকশা, সিএনজির জ্যাম, হর্ন, ফুটপাতে মানুষ — সবাই রিঅ্যাক্ট করে।' },
+  {
+    title: 'পুলিশ চেজ',
+    text: 'ঘুষি, পিস্তল, গ্রেনেড — ওয়ান্টেড বাড়লে পুলিশের পিকআপ আসবে, ধরা খাইলে থানায়!',
+  },
+  { title: 'মিশন: অ্যাক্ট ১', text: 'চায়ের বাকি, সিএনজি পার্সেল, বাইক রেস, থানার সামনে সেলফি…' },
   { title: 'তোমার নামেই ওয়ান্টেড', text: 'লগইন করে নিজের টাইটেল দাও — রংবাজ, গ্যাংস্টার, ডন…' },
   { title: 'পুলিশ? ঘুষ আছে!', text: 'ওসি কামাল পাশাকে ফোন দাও, ফাইল গায়েব।' },
   { title: 'আসল মোহাম্মদপুর', text: 'আসাদ গেট, টাউন হল, বেড়িবাঁধ।' },
@@ -28,6 +37,12 @@ export default function LandingPage() {
         <div className={styles.ctaRow}>
           <Link href="/play" className="btn">
             খেলা শুরু করো ▶
+          </Link>
+          <Link href="/leaderboard" className="btn secondary">
+            🏆 লিডারবোর্ড
+          </Link>
+          <Link href="/login" className="btn secondary" data-testid="login-link">
+            লগইন / অ্যাকাউন্ট
           </Link>
           {site.donateUrl && (
             <a
@@ -93,9 +108,12 @@ export default function LandingPage() {
       )}
 
       <footer className={styles.footer}>
-        <span>Early development build · Phase 1.5</span>
-        <span>Map data © OpenStreetMap contributors</span>
-        <span>Textures: Poly Haven (CC0)</span>
+        <span>v1.0 · Act 1 — মোহাম্মদপুর</span>
+        <span>
+          <Link href="/credits">ক্রেডিট</Link> · <Link href="/privacy">প্রাইভেসি</Link> ·{' '}
+          <Link href="/terms">শর্তাবলি</Link>
+        </span>
+        <span>Map data © OpenStreetMap contributors · Textures: Poly Haven (CC0)</span>
       </footer>
     </main>
   );

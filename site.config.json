@@ -1,5 +1,6 @@
 {
-  "_comment": "Website links. Leave null to hide a button. Owner fills these in (see docs/09-BRANDING.md).",
+  "_comment": "Website links. Leave null to hide a button. Owner fills these in; siteUrl = your public https address (SEO, share cards, sitemap) (see docs/09-BRANDING.md).",
+  "siteUrl": null,
   "donateUrl": null,
   "donateNote": "bKash / Nagad / কার্ড — গেম ফ্রি রাখতে সাহায্য করুন",
   "feedbackFormUrl": null,

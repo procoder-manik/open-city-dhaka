@@ -136,3 +136,7 @@
 .community :global(.btn) {
   text-decoration: none;
 }
+
+.footer a {
+  color: inherit;
+}

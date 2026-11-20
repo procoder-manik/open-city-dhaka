@@ -115,3 +115,43 @@ test('player can create an account and is signed in on the game page', async ({ 
   await page.waitForURL('**/play', { timeout: 30_000 });
   await expect(page.getByTestId('signed-in')).toBeVisible({ timeout: 20_000 });
 });
+
+test('leaderboard, legal pages, robots and sitemap load', async ({ page, request }) => {
+  for (const [path, text] of [
+    ['/leaderboard', 'লিডারবোর্ড'],
+    ['/privacy', 'প্রাইভেসি'],
+    ['/terms', 'শর্তাবলি'],
+    ['/credits', 'OpenStreetMap'],
+  ] as const) {
+    await page.goto(path);
+    await expect(page.locator('main')).toContainText(text);
+  }
+  expect((await request.get('/robots.txt')).ok()).toBe(true);
+  expect(await (await request.get('/sitemap.xml')).text()).toContain('/leaderboard');
+  expect((await request.get('/api/leaderboard?by=taka')).ok()).toBe(true);
+  expect((await request.get('/api/leaderboard?by=nope')).status()).toBe(400);
+});
+
+test('combat + mission HUD: health, weapon, shot uses ammo, mission progress', async ({ page }) => {
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  await expect(page.getByTestId('health')).toBeVisible();
+  await expect(page.getByTestId('mission-progress')).toBeVisible();
+  const ammo = await page.evaluate(() => {
+    const g = (
+      window as unknown as {
+        __game: { debugAttack(w: string): boolean; debugInfo(): { ammo: number } };
+      }
+    ).__game;
+    const before = g.debugInfo().ammo;
+    g.debugAttack('pistol');
+    return [before, g.debugInfo().ammo];
+  });
+  expect(ammo[1]).toBe(ammo[0]! - 1);
+  await expect(page.getByTestId('wanted')).toBeVisible();
+});
