@@ -47,7 +47,8 @@ export function HeroPanel({
 }: {
   signedIn: boolean;
   current: string;
-  onSave: (id: HeroIdentity) => void;
+  /** Returns an error message, or null on success. */
+  onSave: (id: HeroIdentity) => Promise<string | null>;
 }) {
   const saved = loadIdentity() ?? DEFAULT_IDENTITY;
   const [title, setTitle] = useState(saved.title);
@@ -60,20 +61,21 @@ export function HeroPanel({
       <div className={styles.heroPanel}>
         <p className={styles.heroCurrent}>🦹 {current}</p>
         <p className={styles.tip}>
-          নিজের টাইটেল আর নাম দিতে (যেমন &quot;রংবাজ মোস্তফা&quot;) লগইন করতে হবে — লগইন শীঘ্রই আসছে।
+          নিজের টাইটেল আর নাম দিতে (যেমন &quot;রংবাজ মোস্তফা&quot;) <a href="/login">লগইন করো</a>।
         </p>
       </div>
     );
   }
 
-  const save = () => {
+  const save = async () => {
     const t = checkHeroText(title, 'title');
     const n = checkHeroText(name, 'name');
     if (!t.ok) return setError(`টাইটেল: ${t.reason}`);
     if (!n.ok) return setError(`নাম: ${n.reason}`);
     const id = { title: t.value, name: n.value };
+    const err = await onSave(id);
+    if (err) return setError(err);
     saveIdentity(id);
-    onSave(id);
     setError(null);
     setDone(true);
   };

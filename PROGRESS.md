@@ -45,7 +45,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | P3 | Vehicles & city life (traffic, peds, carjacking) | ⬜ | |
 | P4 | Combat, weapons & police (Thana Alert) | ⬜ | |
 | P5 | Missions & story Act 1 | ⬜ | |
-| P6 | Backend, accounts, cloud saves, leaderboards | ⬜ | |
+| P6 | Backend, accounts, cloud saves, leaderboards | 🟨 | Login (email + optional Google), profile hero name, cloud save done; leaderboards later |
 | P7 | Polish (audio, weather, phone, HUD editor, perf) | ⬜ | |
 | P8 | Launch | ⬜ | |
 | P9+ | Expansion (Dhaka areas, Cox's Bazar, multiplayer) | ⬜ | |
@@ -183,6 +183,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Phase 6 login: Better Auth (email/password, Google when keys set), Drizzle + Postgres (Neon via DATABASE_URL, embedded PGlite locally), /login page, /api/profile (server-validated hero title/name), /api/save (cloud save, size/zod/rate limited), autosave, signed-in hero editor | Continuing autonomously: Phase 2 map next (OSM data downloaded) |
 | 2026-11-21 | Claude (Opus 5.5) | Hero identity (login-gated editor), crime record + Wanted 0–5, bribe OC, good-deed redemption, wanted posters + news billboards with player's name, headline toasts, NPC recognition, donate/feedback links via site.config.json, Dhaka palette + colour grade | Next: login (Phase 6 auth) or Phase 2 map |
 | 2026-11-21 | Claude (Opus 5.5) | Free route: downloaded & verified 6 CC0 Poly Haven texture sets, applied to road/footpath/walls/awnings/poles; device Bangla AI voice per character + voice selector; Azure `voice:gen` tool | Waiting on owner: Azure key, model downloads; Phase 2 can start |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 1.5 Part A: mastan hero with expressive face, skinned characters, 4 talking NPCs, 60 funny Bangla lines + subtitles, talk/order/snatch menu, money & reputation, synthesized engine/horn/crash/footstep/city sounds, funny posters & banner, fuel + zone damage dashboard, dust/smoke particles; docs 10 & 11 | Waiting on owner: asset route + voices (Part B), real-phone test |

@@ -5,7 +5,9 @@ import { useStore } from 'zustand';
 import { QUALITY_TIERS, brand, site, type QualityTier } from '@game/shared';
 import type * as Engine from '@game/engine';
 import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
+import { useSession } from '@/lib/auth-client';
 import { HeroPanel, loadIdentity } from './HeroPanel';
+import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
 import { TouchControls } from './TouchControls';
 import styles from './play.module.css';
 
@@ -46,6 +48,12 @@ export function PlayClient() {
   const [isTouch, setIsTouch] = useState(false);
   const [iosBrowser, setIosBrowser] = useState(false);
   const [allowPortrait, setAllowPortrait] = useState(false);
+  const { data: session } = useSession();
+  const signedIn = !!session?.user || isDebug();
+  const signedInRef = useRef(signedIn);
+  signedInRef.current = signedIn;
+  const realSessionRef = useRef(false);
+  realSessionRef.current = !!session?.user;
 
   // Preload the engine while the player looks at the start screen, so the Play tap
   // can go fullscreen immediately (browsers require it inside the user gesture).
@@ -100,6 +108,12 @@ export function PlayClient() {
   }, [tier, togglePause]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function boot(mod: EngineModule, container: HTMLElement, t: TierChoice) {
+    // Signed-in players get their saved hero name from the server; guests the default.
+    const hero = realSessionRef.current
+      ? await fetchProfile()
+      : signedInRef.current
+        ? loadIdentity()
+        : null;
     const banglaFont = getComputedStyle(document.documentElement)
       .getPropertyValue('--font-bangla')
       .trim();
@@ -107,13 +121,15 @@ export function PlayClient() {
       container,
       ...(t === 'auto' ? {} : { tier: t }),
       ...(banglaFont ? { banglaFont } : {}),
-      ...(isSignedIn() ? { hero: loadIdentity() ?? undefined } : {}),
+      ...(hero ? { hero } : {}),
       onPauseRequest: togglePause,
       createPhysicsWorker: () =>
         new Worker(new URL('../../workers/physics.worker.ts', import.meta.url), {
           type: 'module',
         }),
     });
+    const progress = await loadProgress(realSessionRef.current);
+    if (progress) g.importSave(progress);
     gameRef.current = g;
     if (new URLSearchParams(window.location.search).has('debug')) {
       (window as unknown as { __game?: Game }).__game = g;
@@ -159,6 +175,23 @@ export function PlayClient() {
 
   useEffect(() => () => game?.dispose(), [game]);
 
+  // Autosave every 60 s, when pausing, and when leaving the page.
+  useEffect(() => {
+    if (!game) return;
+    const save = () => void saveProgress(realSessionRef.current, game.exportSave());
+    const timer = setInterval(save, 60000);
+    const unsub = game.store.subscribe((s, prev) => {
+      if (s.status === 'paused' && prev.status !== 'paused') save();
+    });
+    window.addEventListener('pagehide', save);
+    return () => {
+      clearInterval(timer);
+      unsub();
+      window.removeEventListener('pagehide', save);
+      save();
+    };
+  }, [game]);
+
   return (
     <div ref={rootRef} className={`play-root ${allowPortrait ? styles.allowPortrait : ''}`}>
       <div
@@ -200,6 +233,15 @@ export function PlayClient() {
                 ))}
               </select>
             </label>
+            {session?.user ? (
+              <p className={styles.tip} data-testid="signed-in">
+                ✅ লগইন: {session.user.name} — খেলা ক্লাউডে সেভ হবে
+              </p>
+            ) : (
+              <a className={styles.tip} href="/login" data-testid="login-link">
+                🔑 লগইন করো — নিজের নামে হিরো, ক্লাউড সেভ
+              </a>
+            )}
             {iosBrowser && (
               <p className={styles.tip}>
                 iPhone-এ ফুল স্ক্রিনের জন্য: Share → <b>Add to Home Screen</b>, তারপর আইকন থেকে খোলো।
@@ -245,6 +287,8 @@ export function PlayClient() {
           onResume={resume}
           onExit={exitToMenu}
           onChangeTier={changeTier}
+          signedIn={signedIn}
+          cloud={!!session?.user}
         />
       )}
 
@@ -265,11 +309,8 @@ function useGame<T>(game: Game, selector: (s: GameState) => T): T {
   return useStore(game.store, selector);
 }
 
-/**
- * Login arrives with the backend (Phase 6). Until then nobody is signed in, except
- * `?debug=1` which unlocks the hero editor for testing.
- */
-function isSignedIn(): boolean {
+/** `?debug=1` unlocks signed-in features locally for testing (saved in the browser only). */
+function isDebug(): boolean {
   return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug');
 }
 
@@ -288,6 +329,8 @@ function GameHud({
   onResume,
   onExit,
   onChangeTier,
+  signedIn,
+  cloud,
 }: {
   game: Game;
   isTouch: boolean;
@@ -296,6 +339,8 @@ function GameHud({
   onResume: () => void;
   onExit: () => void;
   onChangeTier: (t: TierChoice) => void;
+  signedIn: boolean;
+  cloud: boolean;
 }) {
   const status = useGame(game, (s) => s.status);
   const lastInput = useGame(game, (s) => s.lastInput);
@@ -565,9 +610,18 @@ function GameHud({
               হিরো · অপরাধ: {crimes} · ভালো কাজ ❤️ {publicLove}
             </p>
             <HeroPanel
-              signedIn={isSignedIn()}
+              signedIn={signedIn}
               current={heroFull}
-              onSave={(id) => game.setHeroIdentity(id)}
+              onSave={async (id) => {
+                if (cloud) {
+                  const r = await saveProfile(id);
+                  if (!r.ok) return r.error;
+                  game.setHeroIdentity(r.id);
+                } else {
+                  game.setHeroIdentity(id);
+                }
+                return null;
+              }}
             />
             <div className={styles.menuRow}>
               <button

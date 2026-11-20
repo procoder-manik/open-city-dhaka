@@ -74,6 +74,15 @@ const damp = (current: number, target: number, rate: number, dt: number) =>
   THREE.MathUtils.lerp(current, target, 1 - Math.exp(-rate * dt));
 const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
+export interface SaveData {
+  v: 1;
+  taka: number;
+  notoriety: number;
+  publicLove: number;
+  hour: number;
+  crime: { heat: number; record: Record<string, number> };
+}
+
 export interface HudState {
   mode: 'foot' | 'vehicle';
   prompt: string | null;
@@ -974,6 +983,33 @@ export class SliceScene {
       this.hudDirty = true;
     }
     return spent / 3;
+  }
+
+  /** Serializable progress (cloud/local save). */
+  exportSave(): SaveData {
+    return {
+      v: 1,
+      taka: this.hud.taka,
+      notoriety: this.hud.notoriety,
+      publicLove: this.hud.publicLove,
+      hour: +this.env.hour.toFixed(2),
+      crime: { heat: this.crime.heat, record: { ...this.crime.record } },
+    };
+  }
+
+  importSave(s: Partial<SaveData>) {
+    if (typeof s.taka === 'number') this.hud.taka = Math.max(0, Math.floor(s.taka));
+    if (typeof s.notoriety === 'number') this.hud.notoriety = Math.max(0, Math.floor(s.notoriety));
+    if (typeof s.publicLove === 'number') this.hud.publicLove = Math.max(0, Math.floor(s.publicLove));
+    if (typeof s.hour === 'number') this.setHour(s.hour);
+    if (s.crime) {
+      this.crime.heat = Math.min(5, Math.max(0, s.crime.heat ?? 0));
+      for (const k of Object.keys(this.crime.record) as Array<keyof typeof this.crime.record>) {
+        const n = s.crime.record?.[k];
+        if (typeof n === 'number') this.crime.record[k] = Math.max(0, Math.floor(n));
+      }
+    }
+    this.hudDirty = true;
   }
 
   setIdentity(id: HeroIdentity) {

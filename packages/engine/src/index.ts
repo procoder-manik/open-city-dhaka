@@ -2,7 +2,7 @@ export { createGame, type Game, type GameOptions } from './Game';
 export type { GameState, GameStatus, GameStore } from './state/store';
 export type { Action, InputDevice } from './input/actions';
 export type { TalkOption } from './actors/Npc';
-export type { HudState } from './scenes/SliceScene';
+export type { HudState, SaveData } from './scenes/SliceScene';
 export type { Subtitle } from './dialogue/DialogueSystem';
 export type { VoiceMode } from './audio/VoicePlayer';
 export { InputManager } from './input/InputManager';

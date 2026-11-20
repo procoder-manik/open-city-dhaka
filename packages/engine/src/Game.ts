@@ -14,7 +14,7 @@ import { detectDevice, type DeviceInfo } from './platform/device';
 import { DynamicResolution } from './platform/DynamicResolution';
 import { pickQualityTier } from './platform/quality';
 import { createRenderer, renderStats } from './render/createRenderer';
-import { SliceScene } from './scenes/SliceScene';
+import { SliceScene, type SaveData } from './scenes/SliceScene';
 import { createGameStore, type GameStore } from './state/store';
 import { setBanglaFont } from './world/textures';
 
@@ -58,6 +58,9 @@ export interface Game {
   redeemGoodDeeds(): number;
   /** Change the hero's title/name (the app only allows this for signed-in players). */
   setHeroIdentity(id: HeroIdentity): void;
+  /** Progress to store (cloud for signed-in players, browser for guests). */
+  exportSave(): SaveData;
+  importSave(data: Partial<SaveData>): void;
   /** Voice source: auto (generated files → device AI), device AI, or off. */
   setVoiceMode(mode: VoiceMode): void;
   pause(): void;
@@ -258,6 +261,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     setHeroIdentity(id: HeroIdentity) {
       world.setIdentity(id);
+    },
+    exportSave() {
+      return world.exportSave();
+    },
+    importSave(data: Partial<SaveData>) {
+      world.importSave(data);
     },
     chooseTalk(option: TalkOption) {
       return world.chooseTalk(option);

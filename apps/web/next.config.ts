@@ -43,6 +43,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ['@game/engine', '@game/shared', '@game/content'],
+  // Native/WASM database drivers load at runtime from node_modules (not bundled).
+  serverExternalPackages: ['@electric-sql/pglite', 'pg'],
   async headers() {
     return [
       {

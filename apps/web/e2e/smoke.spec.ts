@@ -104,3 +104,14 @@ test('crimes raise the wanted level and show a headline', async ({ page }) => {
   await expect(page.getByTestId('headline')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('bribe-btn')).toBeVisible();
 });
+
+test('player can create an account and is signed in on the game page', async ({ page }) => {
+  const email = `e2e-${Date.now()}@example.com`;
+  await page.goto('/login');
+  await page.getByTestId('switch-mode').click();
+  await page.getByTestId('email').fill(email);
+  await page.getByTestId('password').fill('supersecret123');
+  await page.getByTestId('submit').click();
+  await page.waitForURL('**/play', { timeout: 30_000 });
+  await expect(page.getByTestId('signed-in')).toBeVisible({ timeout: 20_000 });
+});
