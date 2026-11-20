@@ -10,13 +10,18 @@ const AUTO_SPRINT = 0.95;
 
 interface Props {
   input: InputManager;
+  mode: 'foot' | 'vehicle';
+  /** Label for the enter/exit button, or null to hide it (nothing nearby). */
+  interactLabel: string | null;
 }
 
 /**
  * Mobile/tablet controls: floating joystick (left half), drag-to-look (right half),
  * action buttons. Multi-touch: move + look + press buttons at the same time.
  */
-export function TouchControls({ input }: Props) {
+export function TouchControls({ input, mode, interactLabel }: Props) {
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const stickPointer = useRef<number | null>(null);
   const stickOrigin = useRef({ x: 0, y: 0 });
   const lookPointer = useRef<number | null>(null);
@@ -70,8 +75,13 @@ export function TouchControls({ input }: Props) {
     }
     const nx = dx / JOYSTICK_RADIUS;
     const ny = -dy / JOYSTICK_RADIUS;
-    input.setTouchMove(nx, ny);
-    input.setTouchButton('sprint', Math.hypot(nx, ny) >= AUTO_SPRINT);
+    if (modeRef.current === 'vehicle') {
+      // Driving: stick steers only; gas/brake are pedal buttons on the right.
+      input.setTouchMove(nx, 0);
+    } else {
+      input.setTouchMove(nx, ny);
+      input.setTouchButton('sprint', Math.hypot(nx, ny) >= AUTO_SPRINT);
+    }
     showStick(stickOrigin.current.x, stickOrigin.current.y, dx, dy, true);
   };
 
@@ -96,10 +106,37 @@ export function TouchControls({ input }: Props) {
     if (e.pointerId === lookPointer.current) lookPointer.current = null;
   };
 
-  const button = (action: Action, label: string, className: string) => (
+  // Release everything held when switching between walking and driving.
+  useEffect(() => {
+    input.setTouchThrottle(0);
+    input.setTouchButton('sprint', false);
+    input.setTouchButton('jump', false);
+  }, [mode, input]);
+
+  const pedal = (value: number, label: string, className: string, testId: string) => (
     <button
       type="button"
       aria-label={label}
+      data-testid={testId}
+      className={`${styles.touchBtn} ${className}`}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        input.setTouchThrottle(value);
+      }}
+      onPointerUp={() => input.setTouchThrottle(0)}
+      onPointerCancel={() => input.setTouchThrottle(0)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {label}
+    </button>
+  );
+
+  const button = (action: Action, label: string, className: string, testId?: string) => (
+    <button
+      type="button"
+      aria-label={label}
+      data-testid={testId}
       className={`${styles.touchBtn} ${className}`}
       onPointerDown={(e) => {
         e.stopPropagation();
@@ -134,11 +171,23 @@ export function TouchControls({ input }: Props) {
         onPointerUp={onLookUp}
         onPointerCancel={onLookUp}
       />
-      <div className={styles.btnCluster}>
-        {button('interact', 'F', styles.btnSmall ?? '')}
-        {button('sprint', '»', styles.btnSmall ?? '')}
-        {button('jump', '⤒', styles.btnBig ?? '')}
-      </div>
+      {interactLabel && (
+        <div className={styles.interactWrap}>
+          {button('interact', interactLabel, styles.interactBtn ?? '', 'touch-interact')}
+        </div>
+      )}
+      {mode === 'foot' ? (
+        <div className={styles.btnCluster}>
+          {button('sprint', '»', styles.btnSmall ?? '')}
+          {button('jump', '⤒', styles.btnBig ?? '', 'touch-jump')}
+        </div>
+      ) : (
+        <div className={styles.pedalCluster}>
+          {button('jump', 'HB', styles.btnSmall ?? '')}
+          {pedal(-1, '▼', styles.pedalBrake ?? '', 'touch-brake')}
+          {pedal(1, '▲', styles.pedalGas ?? '', 'touch-gas')}
+        </div>
+      )}
     </div>
   );
 }

@@ -19,7 +19,7 @@ test('game boots: canvas renders and engine reports running', async ({ page }) =
   await play.click();
 
   await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId('stats')).toHaveAttribute('data-status', 'running', {
+  await expect(page.getByTestId('clock')).toHaveAttribute('data-status', 'running', {
     timeout: 30_000,
   });
 
@@ -27,7 +27,7 @@ test('game boots: canvas renders and engine reports running', async ({ page }) =
   await page.getByTestId('pause-btn').click();
   await expect(page.getByTestId('resume-btn')).toBeVisible();
   await page.getByTestId('resume-btn').click();
-  await expect(page.getByTestId('stats')).toHaveAttribute('data-status', 'running');
+  await expect(page.getByTestId('clock')).toHaveAttribute('data-status', 'running');
 
   expect(errors).toEqual([]);
 });
@@ -36,4 +36,35 @@ test('health endpoint responds', async ({ request }) => {
   const res = await request.get('/api/health');
   expect(res.ok()).toBe(true);
   expect((await res.json()).ok).toBe(true);
+});
+
+/** Debug handle exposed on window by /play?debug=1. */
+interface DebugGame {
+  store: { getState(): { status: string } };
+  debugEnterVehicle(id: string): boolean;
+  debugInfo(): { mode: string; vehicle: { speedKmh: number } | null };
+}
+type DebugWindow = Window & { __game?: DebugGame };
+
+test('player can get into a vehicle and drive it', async ({ page }) => {
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  await page.evaluate(() => (window as DebugWindow).__game!.debugEnterVehicle('car-sedan'));
+  await expect(page.getByTestId('speedo')).toBeVisible();
+  await page.keyboard.down('KeyW');
+  // Software rendering on CI can run slower than real time, so wait for speed, not a timer.
+  await page.waitForFunction(
+    () => Math.abs((window as DebugWindow).__game!.debugInfo().vehicle?.speedKmh ?? 0) > 10,
+    null,
+    { timeout: 30_000 },
+  );
+  await page.keyboard.up('KeyW');
+  const info = await page.evaluate(() => (window as DebugWindow).__game!.debugInfo());
+  expect(info.mode).toBe('vehicle');
+  await page.keyboard.press('KeyS');
 });

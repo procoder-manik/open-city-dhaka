@@ -1,19 +1,29 @@
 import { PhysicsWorld } from './PhysicsWorld';
-import type { BodyDesc, FromPhysics, StepInput, ToPhysics } from './protocol';
+import type {
+  BodyDesc,
+  CharacterInput,
+  FromPhysics,
+  PhysicsFrame,
+  StepInput,
+  ToPhysics,
+  VehicleBodyDesc,
+} from './protocol';
 
 export type PhysicsMode = 'worker' | 'inline';
 
 /**
  * Main-thread handle to physics. Prefers a Web Worker (keeps the render thread free);
- * falls back to running the same world inline if workers/WASM-in-worker fail.
+ * falls back to running the same world inline if the worker can't start.
  */
 export class PhysicsClient {
   private worker: Worker | null = null;
   private inline: PhysicsWorld | null = null;
   private busy = false;
   private pendingSteps = 0;
+  /** Jumps/teleports issued while the worker was busy — never dropped. */
   private pendingJumps = new Set<number>();
-  private latest: Float32Array | null = null;
+  private pendingTeleports = new Map<number, [number, number, number]>();
+  private latest: PhysicsFrame | null = null;
   mode: PhysicsMode = 'worker';
 
   /**
@@ -23,12 +33,13 @@ export class PhysicsClient {
    */
   async init(
     bodies: BodyDesc[],
+    vehicles: VehicleBodyDesc[],
     gravity = 9.81,
     createWorker?: () => Worker,
   ): Promise<PhysicsMode> {
     if (createWorker) {
       try {
-        await this.initWorker(createWorker, bodies, gravity);
+        await this.initWorker(createWorker, bodies, vehicles, gravity);
         this.mode = 'worker';
         return this.mode;
       } catch (err) {
@@ -38,7 +49,7 @@ export class PhysicsClient {
       }
     }
     this.inline = new PhysicsWorld();
-    await this.inline.init(bodies, gravity);
+    await this.inline.init(bodies, gravity, vehicles);
     this.mode = 'inline';
     return this.mode;
   }
@@ -46,6 +57,7 @@ export class PhysicsClient {
   private initWorker(
     createWorker: () => Worker,
     bodies: BodyDesc[],
+    vehicles: VehicleBodyDesc[],
     gravity: number,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -67,7 +79,7 @@ export class PhysicsClient {
           reject(new Error(msg.message));
         }
       };
-      this.post({ type: 'init', bodies, gravity });
+      this.post({ type: 'init', bodies, vehicles, gravity });
     });
   }
 
@@ -77,7 +89,7 @@ export class PhysicsClient {
 
   private onMessage(msg: FromPhysics) {
     if (msg.type === 'frame') {
-      this.latest = msg.transforms;
+      this.latest = msg.frame;
       this.busy = false;
     } else if (msg.type === 'error') {
       console.error('[physics]', msg.message);
@@ -87,31 +99,40 @@ export class PhysicsClient {
 
   /** Advance physics. In worker mode results arrive next frame (1 frame latency). */
   step(input: StepInput) {
-    if (input.steps === 0) return;
     if (this.inline) {
-      this.latest = this.inline.step(input);
+      if (input.steps > 0 || input.characters.some((c) => c.teleport)) {
+        this.latest = this.inline.step(input);
+      }
       return;
     }
-    // While the worker is busy, bank the steps and send them together next time,
-    // so simulation time never gets lost and messages never pile up.
+    // While the worker is busy, bank steps and one-off commands and send them together
+    // next time, so simulation time and commands are never lost.
     this.pendingSteps = Math.min(this.pendingSteps + input.steps, 8);
-    for (const c of input.characters) if (c.jump) this.pendingJumps.add(c.bodyId);
-    if (this.busy) return;
+    for (const c of input.characters) {
+      if (c.jump) this.pendingJumps.add(c.bodyId);
+      if (c.teleport) this.pendingTeleports.set(c.bodyId, c.teleport);
+    }
+    if (this.busy || (this.pendingSteps === 0 && this.pendingTeleports.size === 0)) return;
     this.busy = true;
-    const characters = input.characters.map((c) => ({
-      ...c,
-      jump: this.pendingJumps.has(c.bodyId),
-    }));
+    const characters: CharacterInput[] = input.characters.map((c) => {
+      const teleport = this.pendingTeleports.get(c.bodyId);
+      return {
+        ...c,
+        jump: this.pendingJumps.has(c.bodyId),
+        ...(teleport ? { teleport } : {}),
+      };
+    });
     this.post({ type: 'step', input: { ...input, steps: this.pendingSteps, characters } });
     this.pendingSteps = 0;
     this.pendingJumps.clear();
+    this.pendingTeleports.clear();
   }
 
-  /** Latest transforms snapshot (see FLOATS_PER_BODY layout), consumed once. */
-  takeTransforms(): Float32Array | null {
-    const t = this.latest;
+  /** Latest physics frame, consumed once. */
+  takeFrame(): PhysicsFrame | null {
+    const f = this.latest;
     this.latest = null;
-    return t;
+    return f;
   }
 
   dispose() {

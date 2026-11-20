@@ -90,27 +90,57 @@ export function PlayClient() {
     void lock.enter();
     setPhase('loading');
     try {
-      const g = await mod.createGame({
-        container,
-        ...(tier === 'auto' ? {} : { tier }),
-        onPauseRequest: togglePause,
-        createPhysicsWorker: () =>
-          new Worker(new URL('../../workers/physics.worker.ts', import.meta.url), {
-            type: 'module',
-          }),
-      });
-      gameRef.current = g;
-      if (new URLSearchParams(window.location.search).has('debug')) {
-        (window as unknown as { __game?: Game }).__game = g;
-      }
-      setGame(g);
-      setPhase('playing');
+      await boot(mod, container, tier);
     } catch (err) {
       await lock.exit();
       setError(err instanceof Error ? err.message : String(err));
       setPhase('error');
     }
-  }, [tier, togglePause]);
+  }, [tier, togglePause]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function boot(mod: EngineModule, container: HTMLElement, t: TierChoice) {
+    const banglaFont = getComputedStyle(document.documentElement)
+      .getPropertyValue('--font-bangla')
+      .trim();
+    const g = await mod.createGame({
+      container,
+      ...(t === 'auto' ? {} : { tier: t }),
+      ...(banglaFont ? { banglaFont } : {}),
+      onPauseRequest: togglePause,
+      createPhysicsWorker: () =>
+        new Worker(new URL('../../workers/physics.worker.ts', import.meta.url), {
+          type: 'module',
+        }),
+    });
+    gameRef.current = g;
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      (window as unknown as { __game?: Game }).__game = g;
+    }
+    setGame(g);
+    setPhase('playing');
+  }
+
+  /** Switch graphics quality from the pause menu: rebuild the game with the new preset. */
+  const changeTier = useCallback(
+    async (t: TierChoice) => {
+      const mod = engineRef.current;
+      const container = containerRef.current;
+      if (!mod || !container) return;
+      saveTier(t);
+      setTier(t);
+      gameRef.current?.dispose();
+      gameRef.current = null;
+      setGame(null);
+      setPhase('loading');
+      try {
+        await boot(mod, container, t);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        setPhase('error');
+      }
+    },
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const resume = useCallback(async () => {
     if (!game) return;
@@ -175,7 +205,7 @@ export function PlayClient() {
             )}
             {!isTouch && engineReady && (
               <p className={styles.tip}>
-                WASD হাঁটা · মাউস দিয়ে দেখা · Shift দৌড় · Space লাফ · Esc পজ
+                WASD হাঁটা · মাউস দেখা · Shift দৌড় · Space লাফ · F গাড়িতে ওঠা · Esc পজ
               </p>
             )}
           </div>
@@ -208,9 +238,11 @@ export function PlayClient() {
         <GameHud
           game={game}
           isTouch={isTouch}
+          tier={tier}
           onPause={togglePause}
           onResume={resume}
           onExit={exitToMenu}
+          onChangeTier={changeTier}
         />
       )}
 
@@ -231,24 +263,44 @@ function useGame<T>(game: Game, selector: (s: GameState) => T): T {
   return useStore(game.store, selector);
 }
 
+function formatHour(h: number): string {
+  const hh = Math.floor(h);
+  const mm = Math.floor((h - hh) * 60);
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return h12 + ':' + String(mm).padStart(2, '0') + (hh < 12 ? ' AM' : ' PM');
+}
+
 function GameHud({
   game,
   isTouch,
+  tier,
   onPause,
   onResume,
   onExit,
+  onChangeTier,
 }: {
   game: Game;
   isTouch: boolean;
+  tier: TierChoice;
   onPause: () => void;
   onResume: () => void;
   onExit: () => void;
+  onChangeTier: (t: TierChoice) => void;
 }) {
   const status = useGame(game, (s) => s.status);
   const lastInput = useGame(game, (s) => s.lastInput);
-  const [showStats, setShowStats] = useState(true);
+  const mode = useGame(game, (s) => s.mode);
+  const prompt = useGame(game, (s) => s.prompt);
+  const speed = useGame(game, (s) => s.speedKmh);
+  const hour = useGame(game, (s) => Math.floor(s.hour * 6) / 6);
+  const activeTier = useGame(game, (s) => s.tier);
+  const [showStats, setShowStats] = useState(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
+  );
+  const [showHelp, setShowHelp] = useState(false);
   // Phones/tablets always; touch laptops once the screen is touched; hidden while using a gamepad.
   const showTouch = (isTouch || lastInput === 'touch') && lastInput !== 'gamepad';
+  const interactLabel = prompt ? (mode === 'vehicle' ? 'নামো' : 'উঠো') : null;
 
   return (
     <>
@@ -274,7 +326,26 @@ function GameHud({
         ❚❚
       </button>
 
-      {showTouch && status === 'running' && <TouchControls input={game.input} />}
+      <div className={styles.clock} data-testid="clock" data-status={status}>
+        {formatHour(hour)}
+      </div>
+
+      {mode === 'vehicle' && (
+        <div className={styles.speedo} data-testid="speedo">
+          <b>{speed}</b> km/h
+        </div>
+      )}
+
+      {prompt && !showTouch && status === 'running' && (
+        <div className={styles.prompt} data-testid="prompt">
+          <kbd>{lastInput === 'gamepad' ? 'Y' : 'F'}</kbd>
+          {prompt}
+        </div>
+      )}
+
+      {showTouch && status === 'running' && (
+        <TouchControls input={game.input} mode={mode} interactLabel={interactLabel} />
+      )}
 
       {status === 'paused' && (
         <div className={styles.overlay}>
@@ -283,6 +354,45 @@ function GameHud({
             <button className="btn" type="button" onClick={onResume} data-testid="resume-btn">
               চালিয়ে যাও ▶
             </button>
+            <p className={styles.muted}>গ্রাফিক্স (এখন: {activeTier})</p>
+            <div className={styles.menuRow} role="group" aria-label="Graphics quality">
+              {(['auto', ...QUALITY_TIERS] as TierChoice[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`${styles.chip} ${tier === t ? styles.chipActive : ''}`}
+                  onClick={() => onChangeTier(t)}
+                >
+                  {t === 'auto' ? 'Auto' : t[0]!.toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className={styles.menuRow}>
+              <button className={styles.chip} type="button" onClick={() => setShowHelp((v) => !v)}>
+                কন্ট্রোল {showHelp ? '▲' : '▼'}
+              </button>
+              <button className={styles.chip} type="button" onClick={() => setShowStats((v) => !v)}>
+                FPS {showStats ? 'বন্ধ' : 'চালু'}
+              </button>
+            </div>
+            {showHelp && (
+              <dl className={styles.help}>
+                <dt>হাঁটা</dt>
+                <dd>WASD / জয়স্টিক</dd>
+                <dt>দৌড়</dt>
+                <dd>Shift / জয়স্টিক পুরো ঠেলো</dd>
+                <dt>লাফ</dt>
+                <dd>Space / ⤒</dd>
+                <dt>গাড়িতে ওঠা/নামা</dt>
+                <dd>F / উঠো-নামো বাটন</dd>
+                <dt>গাড়ি চালানো</dt>
+                <dd>W/S গ্যাস-ব্রেক, A/D স্টিয়ার, Space হ্যান্ডব্রেক</dd>
+                <dt>মোবাইলে গাড়ি</dt>
+                <dd>জয়স্টিকে স্টিয়ার, ▲ গ্যাস, ▼ ব্রেক, HB হ্যান্ডব্রেক</dd>
+                <dt>ক্যামেরা</dt>
+                <dd>মাউস / ডান দিকে আঙুল টানো</dd>
+              </dl>
+            )}
             <button className="btn secondary" type="button" onClick={onExit}>
               মেনুতে ফিরে যাও
             </button>

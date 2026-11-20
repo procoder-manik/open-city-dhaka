@@ -20,14 +20,14 @@ export function startPhysicsWorker(): void {
     try {
       switch (msg.type) {
         case 'init':
-          await world.init(msg.bodies, msg.gravity);
+          await world.init(msg.bodies, msg.gravity, msg.vehicles);
           ready = true;
           post({ type: 'ready' });
           break;
         case 'step': {
           if (!ready) return;
-          const transforms = world.step(msg.input);
-          post({ type: 'frame', transforms }, [transforms.buffer]);
+          const frame = world.step(msg.input);
+          post({ type: 'frame', frame }, [frame.transforms.buffer, frame.vehicles.buffer]);
           break;
         }
         case 'dispose':

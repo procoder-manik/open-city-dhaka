@@ -59,6 +59,8 @@ export class InputManager {
   private down = new Set<Action>();
   private prevDown = new Set<Action>();
   private touchMove: Vec2 = { x: 0, y: 0 };
+  /** Touch pedals (vehicle gas/brake), added to move.y. */
+  private touchThrottle = 0;
   private lookAccum: Vec2 = { x: 0, y: 0 };
   private gamepadMove: Vec2 = { x: 0, y: 0 };
   private gamepadLook: Vec2 = { x: 0, y: 0 };
@@ -155,6 +157,12 @@ export class InputManager {
     if (x !== 0 || y !== 0) this.setDevice('touch');
   }
 
+  /** Touch gas (+1) / brake-reverse (-1) pedals for vehicles. */
+  setTouchThrottle(v: number) {
+    this.touchThrottle = Math.max(-1, Math.min(1, v));
+    if (v !== 0) this.setDevice('touch');
+  }
+
   addTouchLook(dxPixels: number, dyPixels: number) {
     this.lookAccum.x += dxPixels * this.touchSensitivity;
     this.lookAccum.y += dyPixels * this.touchSensitivity;
@@ -198,7 +206,7 @@ export class InputManager {
     this.pollGamepad(dt);
 
     let mx = this.touchMove.x + this.gamepadMove.x;
-    let my = this.touchMove.y + this.gamepadMove.y;
+    let my = this.touchMove.y + this.gamepadMove.y + this.touchThrottle;
     for (const code of this.keys) {
       const m = MOVE_KEYS[code];
       if (m) {
@@ -244,6 +252,7 @@ export class InputManager {
     this.tapped.clear();
     this.touchButtons.clear();
     this.touchMove.x = this.touchMove.y = 0;
+    this.touchThrottle = 0;
     this.lookAccum.x = this.lookAccum.y = 0;
   }
 

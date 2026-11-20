@@ -33,4 +33,4 @@ Other commands: `pnpm build`, `pnpm start`, `pnpm typecheck`, `pnpm lint`, `pnpm
 - `packages/content`: game data (quality presets; later missions, vehicles, weapons)
 - `tools/asset-pipeline`, `tools/map-builder`: build tools
 
-Status: **Phase 0 (foundation) done. Next: Phase 1 "feel" vertical slice.** Details in [PROGRESS.md](PROGRESS.md).
+Status: **Phase 1 ("feel" vertical slice) done: walk, run, jump, drive a car, CNG and motorbike on a Tajmahal Road block with day–night. Next: Phase 2 (full Mohammadpur map).** Details in [PROGRESS.md](PROGRESS.md).

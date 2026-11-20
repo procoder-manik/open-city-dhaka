@@ -1,4 +1,6 @@
-import type * as THREE from 'three/webgpu';
+import * as THREE from 'three/webgpu';
+import { pass } from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
 import type { QualityTier } from '@game/shared';
 import { FixedStepLoop } from './core/FixedStepLoop';
@@ -8,8 +10,9 @@ import { detectDevice, type DeviceInfo } from './platform/device';
 import { DynamicResolution } from './platform/DynamicResolution';
 import { pickQualityTier } from './platform/quality';
 import { createRenderer, renderStats } from './render/createRenderer';
-import { TestScene } from './scenes/TestScene';
+import { SliceScene } from './scenes/SliceScene';
 import { createGameStore, type GameStore } from './state/store';
+import { setBanglaFont } from './world/textures';
 
 export interface GameOptions {
   /** Element the canvas is mounted into (also the fullscreen root). */
@@ -19,6 +22,8 @@ export interface GameOptions {
   forceWebGL?: boolean;
   /** Creates the physics Web Worker (app-owned entry). Omit to run physics on the main thread. */
   createPhysicsWorker?: () => Worker;
+  /** CSS font-family of the loaded Bangla web font (for signboards). */
+  banglaFont?: string;
   /** Player pressed pause (Esc / Start / HUD). Back-gesture & tab-hide come from GameLock in the app. */
   onPauseRequest?: () => void;
 }
@@ -30,6 +35,10 @@ export interface Game {
   readonly canvas: HTMLCanvasElement;
   /** Positions etc. for debugging/tests. */
   debugInfo(): Record<string, unknown>;
+  /** Debug: set time of day (0–24). */
+  setHour(hour: number): void;
+  /** Debug/tests: get into a vehicle by definition id (e.g. 'car-sedan'). */
+  debugEnterVehicle(defId: string): boolean;
   pause(): void;
   resume(): void;
   dispose(): void;
@@ -37,12 +46,27 @@ export interface Game {
 
 const STATS_INTERVAL_MS = 500;
 
+async function waitForFont(family: string | undefined) {
+  if (!family || !document.fonts?.load) return;
+  try {
+    await Promise.race([
+      document.fonts.load(`700 40px ${family}`, 'বাংলা'),
+      new Promise((r) => setTimeout(r, 1500)),
+    ]);
+  } catch {
+    /* fall back to system Bangla fonts */
+  }
+}
+
 export async function createGame(opts: GameOptions): Promise<Game> {
   const device = detectDevice();
   const tier = opts.tier ?? pickQualityTier(device);
   const preset = qualityPresets[tier];
   const store = createGameStore(tier);
   store.setState({ status: 'loading' });
+
+  setBanglaFont(opts.banglaFont);
+  await waitForFont(opts.banglaFont);
 
   const { renderer, backend } = await createRenderer(preset, {
     forceWebGL: opts.forceWebGL ?? false,
@@ -59,9 +83,28 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   store.setState({ lastInput: initialInput });
   const requestPause = () => opts.onPauseRequest?.();
 
-  const world = new TestScene(preset);
+  const world = new SliceScene(preset, (hud) => store.setState(hud));
   const physics = new PhysicsClient();
-  const physicsMode = await physics.init(world.bodies, 9.81, opts.createPhysicsWorker);
+  const physicsMode = await physics.init(
+    world.bodies,
+    world.vehicleBodies,
+    9.81,
+    opts.createPhysicsWorker,
+  );
+
+  // Post-processing: bloom on Medium+ (signboards and lights glow at dusk).
+  let pipeline: THREE.RenderPipeline | null = null;
+  if (preset.postFx.bloom) {
+    try {
+      pipeline = new THREE.RenderPipeline(renderer);
+      const scenePass = pass(world.scene, world.camera);
+      const color = scenePass.getTextureNode('output');
+      pipeline.outputNode = color.add(bloom(color, 0.35, 0.35, 0.8));
+    } catch (err) {
+      console.warn('[render] bloom unavailable:', err);
+      pipeline = null;
+    }
+  }
 
   const loop = new FixedStepLoop(1 / 60);
   const dynRes = new DynamicResolution(
@@ -102,13 +145,16 @@ export async function createGame(opts: GameOptions): Promise<Game> {
 
     if (!paused) {
       const { steps } = loop.advance(dt);
-      physics.step({ steps, dt: loop.step, characters: world.characterInputs(input) });
-      const transforms = physics.takeTransforms();
-      if (transforms) world.applyTransforms(transforms);
-      world.updateVisuals(dt);
+      const cmds = world.preStep(dt, input);
+      physics.step({ steps, dt: loop.step, ...cmds });
+      const physicsFrame = physics.takeFrame();
+      if (physicsFrame) world.applyFrame(physicsFrame);
+      world.update(dt, input);
+      renderer.toneMappingExposure = world.exposure;
     }
 
-    renderer.render(world.scene, world.camera as unknown as THREE.Camera);
+    if (pipeline) pipeline.render();
+    else renderer.render(world.scene, world.camera);
 
     if (dynRes.sample(frameMs)) applySize();
 
@@ -140,6 +186,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     debugInfo() {
       return { ...world.debugInfo(), physicsMode, paused };
     },
+    setHour(hour: number) {
+      world.setHour(hour);
+    },
+    debugEnterVehicle(defId: string) {
+      return world.debugEnterVehicle(defId);
+    },
     pause() {
       paused = true;
       input.clear();
@@ -156,6 +208,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       resizeObserver.disconnect();
       input.dispose();
       physics.dispose();
+      pipeline?.dispose();
       world.dispose();
       renderer.dispose();
       canvas.remove();
