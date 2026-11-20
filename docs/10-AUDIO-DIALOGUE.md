@@ -34,6 +34,13 @@ Keyboard: `T` talk / `1–4` options · Touch: "কথা" button opens a radial
 
 **Rules:** we write **original lines**. We do not copy recordings or exact dialogue from other games (e.g. Baper Rasta), films or dramas; we may write lines in the same *style* (Dhallywood drama, meme tone). No real people's voices or impressions of real politicians.
 
+### Chosen route (owner, 2026-11-21): free + AI voice
+1. **Device AI voice (works now):** `audio/VoicePlayer.ts` speaks every line with the phone/PC's built-in Bangla text-to-speech (Chrome/Android have Bangla; iPhone usually doesn't → subtitles only). Each character gets its own speed/pitch; the tourist speaks the English line. Pause menu → কণ্ঠ: Auto / ডিভাইস AI / বন্ধ.
+2. **Generated AI voices (better, free tier):** `pnpm voice:gen` creates an MP3 for every line with Microsoft Azure neural voices (bn-BD Pradeep/Nabanita, bn-IN Bashkar, en-GB Ryan for the tourist), cast per character with emotion-based delivery. Free tier = 500k characters/month; all 56 lines ≈ 2,300 characters.
+   - Owner setup (once): free Azure account → create a **Speech** resource, pricing tier **Free F0**, region e.g. `southeastasia` → copy **Key 1** into `apps/web/.env.local` as `AZURE_SPEECH_KEY=…` and `AZURE_SPEECH_REGION=southeastasia` (never commit this file) → run `pnpm voice:gen` → commit `apps/web/public/assets/voice/`.
+   - The game uses generated files automatically (listed in `assets/voice/manifest.json`); device voice is the fallback.
+3. **Later:** swap any file for a real actor's recording with the same name.
+
 ## 3. Dialogue data (changeable anytime)
 `packages/content/src/dialogue/*.json`. Each line:
 ```json

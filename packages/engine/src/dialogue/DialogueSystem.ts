@@ -29,7 +29,8 @@ export class DialogueSystem {
   constructor(
     private readonly data: DialogueFile,
     private readonly onSubtitle: (s: Subtitle | null) => void,
-    private readonly playVoice?: (url: string) => void,
+    /** Called when a line starts (voice playback). */
+    private readonly onSpeak?: (line: DialogueLine) => void,
   ) {
     for (const l of data.lines) {
       const key = `${l.speaker}:${l.situation}`;
@@ -113,7 +114,7 @@ export class DialogueSystem {
     this.current = { sub, timer: dur };
     actor?.setEmotion(line.emotion, dur + 1);
     actor?.talk(dur * 0.85);
-    if (line.audio) this.playVoice?.(line.audio);
+    this.onSpeak?.(line);
     this.onSubtitle(sub);
   }
 }

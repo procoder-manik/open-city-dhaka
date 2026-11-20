@@ -17,7 +17,9 @@
     "e2e": "pnpm --filter @game/web e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "budget": "node tools/asset-pipeline/check-budget.mjs"
+    "budget": "node tools/asset-pipeline/check-budget.mjs",
+    "voice:gen": "node tools/voice-gen/generate.mjs",
+    "assets:textures": "node tools/asset-pipeline/fetch-textures.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

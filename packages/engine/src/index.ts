@@ -4,6 +4,7 @@ export type { Action, InputDevice } from './input/actions';
 export type { TalkOption } from './actors/Npc';
 export type { HudState } from './scenes/SliceScene';
 export type { Subtitle } from './dialogue/DialogueSystem';
+export type { VoiceMode } from './audio/VoicePlayer';
 export { InputManager } from './input/InputManager';
 export { GameLock, type GameLockStatus } from './gamelock/GameLock';
 export { detectDevice, type DeviceInfo, type FormFactor } from './platform/device';

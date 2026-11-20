@@ -304,6 +304,8 @@ function GameHud({
   const zones = useGame(game, (s) => s.damageZones);
   const engineDead = useGame(game, (s) => s.engineDead);
   const muted = useGame(game, (s) => s.muted);
+  const voiceMode = useGame(game, (s) => s.voiceMode);
+  const voiceEffective = useGame(game, (s) => s.voiceEffective);
   const [showStats, setShowStats] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
   );
@@ -463,6 +465,34 @@ function GameHud({
               >
                 {muted ? '🔇 সাউন্ড চালু করো' : '🔊 সাউন্ড বন্ধ করো'}
               </button>
+            </div>
+            <p className={styles.muted}>
+              কণ্ঠ (এখন:{' '}
+              {voiceEffective === 'recorded'
+                ? 'AI ভয়েস ফাইল'
+                : voiceEffective === 'device'
+                  ? 'ডিভাইসের AI ভয়েস'
+                  : 'শুধু লেখা'}
+              )
+            </p>
+            <div className={styles.menuRow} role="group" aria-label="Voice">
+              {(
+                [
+                  ['auto', 'Auto'],
+                  ['device', 'ডিভাইস AI'],
+                  ['off', 'বন্ধ'],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`${styles.chip} ${voiceMode === m ? styles.chipActive : ''}`}
+                  onClick={() => game.setVoiceMode(m)}
+                  data-testid={`voice-${m}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             {showHelp && (
               <dl className={styles.help}>

@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import type { QualityTier } from '@game/shared';
 import type { InputDevice } from '../input/actions';
 import type { HudState } from '../scenes/SliceScene';
+import type { VoiceMode } from '../audio/VoicePlayer';
 
 export type GameStatus = 'idle' | 'loading' | 'running' | 'paused' | 'error';
 
@@ -18,6 +19,9 @@ export interface GameState extends HudState {
   resolutionScale: number;
   lastInput: InputDevice;
   muted: boolean;
+  voiceMode: VoiceMode;
+  voiceEffective: 'recorded' | 'device' | 'off';
+  deviceBangla: boolean;
 }
 
 /** Shared game state: engine writes, React HUD reads (and vice versa for settings). */
@@ -49,6 +53,9 @@ export const createGameStore = (tier: QualityTier) =>
     damageZones: { front: 0, rear: 0, left: 0, right: 0 },
     engineDead: false,
     muted: false,
+    voiceMode: 'auto',
+    voiceEffective: 'off',
+    deviceBangla: false,
   }));
 
 export type GameStore = ReturnType<typeof createGameStore>;

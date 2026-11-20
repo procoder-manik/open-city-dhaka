@@ -4,6 +4,7 @@ import type { QualityPreset, VehicleDef } from '@game/shared';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import type { AudioEngine } from '../audio/AudioEngine';
+import type { VoicePlayer } from '../audio/VoicePlayer';
 import { CameraRig } from '../camera/CameraRig';
 import { DialogueSystem, type Subtitle } from '../dialogue/DialogueSystem';
 import type { InputManager } from '../input/InputManager';
@@ -184,6 +185,7 @@ export class SliceScene {
     private readonly preset: QualityPreset,
     private readonly onHud: (s: HudState) => void,
     private readonly audio: AudioEngine | null = null,
+    private readonly voice: VoicePlayer | null = null,
   ) {
     this.camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 900);
     this.env = new Environment(this.scene, preset, 17.2);
@@ -201,7 +203,7 @@ export class SliceScene {
         this.hud.subtitle = sub;
         this.hudDirty = true;
       },
-      (url) => void this.audio?.playVoice(url),
+      (line) => this.voice?.speak(line),
     );
 
     // Player

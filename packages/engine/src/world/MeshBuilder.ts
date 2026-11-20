@@ -38,8 +38,11 @@ export class MeshBuilder {
     pos: [number, number, number],
     color?: THREE.ColorRepresentation,
     rotY = 0,
+    /** World-scale UVs: one texture repeat every `uvTile` metres (no stretching). */
+    uvTile?: number,
   ): this {
     const g = new THREE.BoxGeometry(...size);
+    if (uvTile) boxWorldUV(g, size, uvTile);
     if (rotY) g.rotateY(rotY);
     g.translate(...pos);
     return this.add(g, color);
@@ -125,6 +128,30 @@ export class MeshBuilder {
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
     return mesh;
+  }
+}
+
+/** Rescale a BoxGeometry's UVs so textures tile at real-world size. Face order: px nx py ny pz nz. */
+export function boxWorldUV(
+  g: THREE.BufferGeometry,
+  [w, h, d]: [number, number, number],
+  tile: number,
+) {
+  const uv = g.getAttribute('uv');
+  const dims: Array<[number, number]> = [
+    [d, h],
+    [d, h],
+    [w, d],
+    [w, d],
+    [w, h],
+    [w, h],
+  ];
+  const perFace = uv.count / 6;
+  for (let f = 0; f < 6; f++) {
+    const [du, dv] = dims[f]!;
+    for (let i = f * perFace; i < (f + 1) * perFace; i++) {
+      uv.setXY(i, (uv.getX(i) * du) / tile, (uv.getY(i) * dv) / tile);
+    }
   }
 }
 

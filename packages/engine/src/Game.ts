@@ -5,6 +5,7 @@ import { qualityPresets } from '@game/content';
 import type { QualityTier } from '@game/shared';
 import type { TalkOption } from './actors/Npc';
 import { AudioEngine } from './audio/AudioEngine';
+import { VoicePlayer, type VoiceMode } from './audio/VoicePlayer';
 import { FixedStepLoop } from './core/FixedStepLoop';
 import { InputManager } from './input/InputManager';
 import { PhysicsClient } from './physics/PhysicsClient';
@@ -46,6 +47,8 @@ export interface Game {
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
   setMuted(muted: boolean): void;
+  /** Voice source: auto (generated files → device AI), device AI, or off. */
+  setVoiceMode(mode: VoiceMode): void;
   pause(): void;
   resume(): void;
   dispose(): void;
@@ -102,7 +105,15 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   window.addEventListener('pointerdown', unlockAudio);
   window.addEventListener('keydown', unlockAudio);
 
-  const world = new SliceScene(preset, (hud) => store.setState(hud), audio);
+  const voice = new VoicePlayer();
+  await Promise.race([voice.init(), new Promise((r) => setTimeout(r, 1500))]);
+  store.setState({
+    voiceMode: voice.mode,
+    voiceEffective: voice.effective,
+    deviceBangla: voice.hasDeviceBangla,
+  });
+
+  const world = new SliceScene(preset, (hud) => store.setState(hud), audio, voice);
   const physics = new PhysicsClient();
   const physicsMode = await physics.init(
     world.bodies,
@@ -219,11 +230,19 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     setMuted(muted: boolean) {
       audio?.setMuted(muted);
+      voice.muted = muted;
+      if (muted) voice.stop();
       store.setState({ muted });
+    },
+    setVoiceMode(mode: VoiceMode) {
+      voice.mode = mode;
+      voice.stop();
+      store.setState({ voiceMode: mode, voiceEffective: voice.effective });
     },
     pause() {
       paused = true;
       audio?.setPaused(true);
+      voice.stop();
       input.clear();
       store.setState({ status: 'paused' });
     },
@@ -241,6 +260,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
       audio?.dispose();
+      voice.stop();
       input.dispose();
       physics.dispose();
       pipeline?.dispose();

@@ -12,8 +12,8 @@
 |---|---|
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
-| Current phase | **Phase 1.5 Part A ✅ done (life, sound, talk, damage) → owner decisions for Part B (assets/voices), then Phase 2** |
-| Overall progress | Planning 100 % · P0 100 % · P1 100 % · P1.5-A 100 % · P1.5-B 0 % (needs owner decision) · P2 0 % |
+| Current phase | **Phase 1.5 Part B (free route) in progress → then Phase 2** |
+| Overall progress | Planning 100 % · P0 100 % · P1 100 % · P1.5-A 100 % · P1.5-B ~35 % (textures + AI voice done; models need owner downloads) · P2 0 % |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | **PostgreSQL (Neon) + Drizzle**, confirmed by owner. Not wired yet (Phase 6) |
@@ -87,19 +87,24 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] Particles (`world/Particles.ts`, 1 draw call): tyre dust, exhaust puffs, grey/black damage smoke, crash debris
   - [x] Draw calls after optimisation: Lite ≈ 81, Mobile ≈ 135, Medium ≈ 148
 
-## ▶ NEXT STEP
-**Owner decisions needed (Phase 1.5 Part B):**
-1. **Assets for realism** (`docs/11-ART-REALISM.md §6`): free route (MakeHuman + Mixamo + CC0/CC-BY models) or paid (buy packs / hire a 3D artist). Realistic faces/cars are impossible with code-generated shapes.
-2. **Voices** (`docs/10-AUDIO-DIALOGUE.md §2`): hire Bangladeshi voice actors (recommended) or start with AI text-to-speech.
-3. Test on a real phone + laptop and give feel feedback.
+- [x] **Phase 1.5 Part B (free route) — started**
+  - [x] Owner chose **free assets + AI voice**
+  - [x] CC0 Poly Haven textures (asphalt, plaster, concrete, brick paving, rusted shutter, tin) → road, footpaths, walls, awnings, poles; 1024/512 px + normal maps (`tools/asset-pipeline/fetch-textures.mjs`, `pnpm assets:textures`)
+  - [x] Device AI voice (`audio/VoicePlayer.ts`): built-in Bangla TTS per character (speed/pitch), tourist in English; pause-menu voice selector
+  - [x] `pnpm voice:gen` (`tools/voice-gen/generate.mjs`): Azure neural voices (bn-BD) for all lines → MP3 + manifest; free tier
 
-**Then Phase 2 — Mohammadpur map** (see `docs/03-ROADMAP.md`):
+## ▶ NEXT STEP
+**Waiting on the owner (Part B):**
+1. **Azure Speech key** (free F0) in `apps/web/.env.local` → run `pnpm voice:gen` → commit `apps/web/public/assets/voice/` (steps in `docs/10-AUDIO-DIALOGUE.md`).
+2. **Models** into `assets-src/incoming/`: MakeHuman characters (CC0), Mixamo animations, CC0/CC-BY car models (steps in `docs/11-ART-REALISM.md §6`). Then: build glTF loading (Meshopt/KTX2), swap placeholders, add facial blendshapes + lip sync.
+3. Real-phone test + feedback.
+
+**In parallel the next coding phase can start: Phase 2 — Mohammadpur map** (see `docs/03-ROADMAP.md`):
 1. `tools/map-builder`: OSM export (Overpass) → roads, footprints, water (Beribadh)
-2. Chunks (128 m) reusing `world/StreetBlock.ts` generators (buildings, shops, signs, posters, wires) driven by OSM data
-3. Streaming + skyline impostors + IndexedDB cache; lane graph + navmesh for Phase 3 traffic/pedestrians
-4. Landmarks: Asad Gate, Town Hall bazar, Thana, Krishi Market, bus stand, Japan Garden City, Beribadh haat
-5. Minimap + full map; water physics (swimming, vehicles stalling) at Beribadh
-6. Keep Lite ≤ 150 draw calls, 30 FPS on phones
+2. Chunks (128 m) reusing `world/StreetBlock.ts` generators driven by OSM data
+3. Streaming + skyline impostors + IndexedDB cache; lane graph + navmesh
+4. Landmarks, minimap/full map, water physics at Beribadh
+5. Keep Lite ≤ 150 draw calls, 30 FPS on phones
 
 ## Phase 1 result — notes for whoever continues
 - Character is **procedural** on purpose (tiny, no licences, no foot sliding). `Humanoid.update(dt, LocomotionState)` is the contract — a skinned glTF model can replace it later without touching `SliceScene`.
@@ -136,6 +141,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | 2026-11-21 | Lines are original, written per archetype; voices recorded later (subtitles now) | No copying other games/films; funniest delivery needs real actors |
 | 2026-11-21 | Procedural characters baked into one skinned mesh each | Draw calls on phones (was ~60 per character) |
 | 2026-11-21 | Sounds synthesized with Web Audio until recorded samples exist | Zero download size, no licences |
+| 2026-11-21 | Free route: CC0 textures (Poly Haven), device TTS + Azure free-tier generated voices; models via MakeHuman/Mixamo/CC0 once owner downloads | Owner choice |
 | 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
@@ -152,7 +158,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - Parked vehicles can be pushed by walking into them (light parked brake) — OK for now
 - No real-phone test yet (only headless Chromium phone emulation)
 - Characters and cars are still code-generated shapes (not realistic) until Part B assets arrive
-- No voice audio yet: subtitles only (`audio` field in dialogue.json is ready)
+- Generated voices need the owner's free Azure key; until then device TTS (not on most iPhones) + subtitles
+- Software GPU (CI/headless) can run out of memory if several game sessions run in one browser back-to-back; e2e runs serially and passes
 - Vehicle damage is HUD/smoke only, no visible dents yet (needs real car models)
 - Refuelling not implemented yet (fuel only goes down; tank starts 85%)
 - NPCs stand in place (walking pedestrians come in Phase 3)
@@ -161,6 +168,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Free route: downloaded & verified 6 CC0 Poly Haven texture sets, applied to road/footpath/walls/awnings/poles; device Bangla AI voice per character + voice selector; Azure `voice:gen` tool | Waiting on owner: Azure key, model downloads; Phase 2 can start |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 1.5 Part A: mastan hero with expressive face, skinned characters, 4 talking NPCs, 60 funny Bangla lines + subtitles, talk/order/snatch menu, money & reputation, synthesized engine/horn/crash/footstep/city sounds, funny posters & banner, fuel + zone damage dashboard, dust/smoke particles; docs 10 & 11 | Waiting on owner: asset route + voices (Part B), real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Built Phase 1: procedural Mostofa with gait animation, collision camera, car/CNG/bike physics + enter/exit, Tajmahal Road block with Bangla signs & wires, day–night + bloom, driving HUD & touch pedals, pause-menu quality switch; 29 unit + 8 e2e tests; tuned braking | Phase 1 done; owner to test on a real phone, then Phase 2 |
 | 2026-11-21 | Claude (Opus 5.5) | Built Phase 0: monorepo, engine (renderer, loop, input, presets, Game Lock, physics worker, test scene), Next.js app (landing, /play, touch HUD, PWA, headers), tests, CI; verified desktop + phone in headless Chromium | Phase 0 done; start Phase 1 |

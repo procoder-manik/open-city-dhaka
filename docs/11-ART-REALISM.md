@@ -51,6 +51,17 @@ Until real models arrive, the procedural hero has eyes that blink, brows and a m
 
 LODs and impostors keep phones at 30 FPS. All assets pass `pnpm budget` in CI.
 
-## 6. What the owner needs to decide
+## 6. Chosen route (owner, 2026-11-21): FREE assets
+| Step | Status |
+|---|---|
+| CC0 photo textures from Poly Haven (asphalt, plaster, concrete, brick paving, rusted shutter, corrugated tin) — checksum-verified, resized 1024 px desktop / 512 px phones, normal maps except Lite (`pnpm assets:textures`, credits in `public/assets/textures/CREDITS.md`) | ✅ done |
+| Realistic characters: **MakeHuman** (free desktop app, CC0 output) → export `.glb`/FBX with a game skeleton, faces with expressions | ⏳ needs owner: install MakeHuman and export bodies (guide below), or approve a specific downloadable CC0 base |
+| Animations: **Mixamo** (free with an Adobe account, allowed in games) → walk/run/jump/punch/drive/talk | ⏳ needs owner login to download |
+| Realistic cars: CC0/CC-BY models (Sketchfab, Poly Pizza) → our parody names, no logos | ⏳ needs owner login to download; we keep a credits list for CC-BY |
+| Engine support for loading these models (glTF + Meshopt + KTX2, skinned characters with blendshapes) | next coding step once the first files arrive |
+
+**How to send models:** put the files in `assets-src/incoming/` (characters, animations, cars). The pipeline (`tools/asset-pipeline/optimize.mjs`) compresses them and the engine swaps the code-generated placeholders for them — same game code (`Humanoid` / `VehicleVisual` APIs).
+
+## 7. Original decision options
 1. **Asset budget:** free (MakeHuman + Mixamo + CC0/CC-BY models, more of my own Blender work) vs paid (buy realistic car/character packs ~US$20–80 each, or hire a 3D artist).
 2. **Voice:** hire Bangladeshi voice actors (best and funniest) or start with AI text-to-speech (see `10-AUDIO-DIALOGUE.md`).

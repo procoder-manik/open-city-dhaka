@@ -61,7 +61,16 @@ export interface StreetResult {
  * electric poles with tangled wires, a tea stall and a parked rickshaw.
  * Generated from a seed; heavy merging keeps it to ~20 draw calls.
  */
-export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult {
+export interface StreetOptions {
+  /** Where the CC0 PBR textures live (see tools/asset-pipeline/fetch-textures.mjs). */
+  textureBase?: string;
+}
+
+export function buildStreetBlock(
+  preset: QualityPreset,
+  seed = 7,
+  opts: StreetOptions = {},
+): StreetResult {
   const rand = seededRandom(seed);
   const group = new THREE.Group();
   const bodies: Omit<BodyDesc, 'id'>[] = [];
@@ -96,25 +105,44 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
   ground.receiveShadow = true;
   group.add(ground);
 
-  const asphalt = tex(asphaltTexture(seed));
-  const roadMat = track(new THREE.MeshStandardMaterial({ map: asphalt, roughness: 0.92 }));
+  // Real CC0 photo textures (Poly Haven): 1024 px on desktop tiers, 512 px on phones;
+  // normal maps everywhere except Lite. Canvas textures remain as instant fallback.
+  const texBase = opts.textureBase ?? '/assets/textures';
+  const texSize = preset.maxTextureSize >= 2048 ? 1024 : 512;
+  const useNormals = preset.maxTextureSize > 1024 || preset.shadows;
+  const loader = new THREE.TextureLoader();
+  const pbr = (name: string) => {
+    const map = tex(loader.load(`${texBase}/${name}_diff_${texSize}.jpg`));
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = map.wrapT = THREE.RepeatWrapping;
+    map.anisotropy = 8;
+    let normalMap: THREE.Texture | null = null;
+    if (useNormals) {
+      normalMap = tex(loader.load(`${texBase}/${name}_nor_${texSize}.jpg`));
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+    }
+    return normalMap ? { map, normalMap, normalScale: new THREE.Vector2(0.8, 0.8) } : { map };
+  };
+
+  const roadMat = track(new THREE.MeshStandardMaterial({ ...pbr('asphalt'), roughness: 0.9 }));
+  void asphaltTexture; // canvas fallback kept for offline/tests
   const road = new MeshBuilder().ground(0, 0.005, zMid, roadHalf * 2, length, [
-    roadHalf / 4,
-    length / 8,
+    (roadHalf * 2) / 4.5,
+    length / 4.5,
   ]);
   // Cross lane surfaces (galis) at the gaps
   road.ground(-buildX - 15, 0.004, 33, 30, 6, [7, 1.5]);
   road.ground(buildX + 15, 0.004, -47, 30, 6, [7, 1.5]);
   group.add(road.build(roadMat, { castShadow: false })!);
 
-  const paving = tex(pavementTexture(seed + 1));
+  void pavementTexture;
   const pathMat = track(
-    new THREE.MeshStandardMaterial({ map: paving, roughness: 0.95, vertexColors: true }),
+    new THREE.MeshStandardMaterial({ ...pbr('pavement'), roughness: 0.92, vertexColors: true }),
   );
   const paths = new MeshBuilder();
   for (const side of [-1, 1] as const) {
     const cx = side * (roadHalf + footWidth / 2);
-    paths.box([footWidth, curbHeight, length], [cx, curbHeight / 2, zMid], 0xffffff);
+    paths.box([footWidth, curbHeight, length], [cx, curbHeight / 2, zMid], 0xffffff, 0, 1.6);
     addStatic([cx, curbHeight / 2, zMid], [footWidth / 2, curbHeight / 2, length / 2], false);
     // Curb stones: painted black/yellow stripes near the crossing
     paths.box(
@@ -192,6 +220,7 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
   const shops = new MeshBuilder();
   const details = new MeshBuilder(); // balconies, AC units, awnings, tanks, rebar
   const posters = new MeshBuilder();
+  const awnings = new MeshBuilder(); // corrugated tin sheets
   let posterIdx = 0;
   const posterUV = (i: number): [number, number, number, number] => {
     const k = i % POSTER_COUNT;
@@ -244,7 +273,7 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
       const wallColor = WALL_COLORS[Math.floor(rand() * WALL_COLORS.length)]!;
       const variant = Math.floor(rand() * facades.length);
 
-      walls.box([depth, height, width], [cx, height / 2, cz], wallColor);
+      walls.box([depth, height, width], [cx, height / 2, cz], wallColor, 0, 2.2);
       addStatic([cx, height / 2, cz], [depth / 2, height / 2, width / 2]);
       // Parapet
       walls.box([depth, 0.9, 0.2], [cx, height + 0.45, z + 0.1], wallColor);
@@ -311,7 +340,7 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
           const awning = new THREE.BoxGeometry(1.4, 0.05, shopW - 0.3);
           awning.rotateZ(side * 0.25);
           awning.translate(frontX - side * 0.7, 2.55, sz);
-          details.add(awning, AWNING_COLORS[Math.floor(rand() * AWNING_COLORS.length)]);
+          awnings.add(awning, AWNING_COLORS[Math.floor(rand() * AWNING_COLORS.length)]);
         }
       }
 
@@ -381,7 +410,18 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
     addStatic([0, 15, zEnd], [30, 15, 7]);
   }
 
-  const wallMat = track(new THREE.MeshStandardMaterial({ roughness: 0.92, vertexColors: true }));
+  const wallMat = track(
+    new THREE.MeshStandardMaterial({ ...pbr('plaster'), roughness: 0.95, vertexColors: true }),
+  );
+  wallMat.color.setScalar(1.25); // plaster photo is darker than paint; keep wall colours bright
+  const tinMat = track(
+    new THREE.MeshStandardMaterial({
+      ...pbr('tin'),
+      roughness: 0.7,
+      metalness: 0.35,
+      vertexColors: true,
+    }),
+  );
   group.add(walls.build(wallMat)!);
   for (const f of facades) group.add(f.builder.build(f.material, { castShadow: false })!);
 
@@ -413,6 +453,8 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
 
   const detailMat = track(new THREE.MeshStandardMaterial({ roughness: 0.85, vertexColors: true }));
   group.add(details.build(detailMat)!);
+  const awningMesh = awnings.build(tinMat);
+  if (awningMesh) group.add(awningMesh);
   group.add(skyline.build(wallMat, { castShadow: false })!);
 
   // ---------- Electric poles, street lights, wires ----------
@@ -433,7 +475,7 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
     const px = side * (roadHalf + 0.5);
     let prev: [number, number, number] | null = null;
     for (let z = zMin + 6; z < zMax; z += 22) {
-      poles.cylinder(0.11, 0.16, 9, [px, 4.5, z], 0x8f8a80, 8);
+      poles.cylinder(0.11, 0.16, 9, [px, 4.5, z], 0xd8d2c8, 8);
       poles.box([0.12, 0.12, 2.2], [px, 8.3, z], 0x6a655c, side * 0.0);
       poles.box([1.6, 0.08, 0.08], [px - side * 0.8, 7.3, z], 0x6a655c); // lamp arm
       poles.box([0.4, 0.25, 0.35], [px + side * 0.25, 6.2, z], 0x56585a); // transformer box
@@ -507,7 +549,11 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
   poolMesh.renderOrder = 2;
   group.add(poolMesh);
   group.add(
-    poles.build(track(new THREE.MeshStandardMaterial({ roughness: 0.9, vertexColors: true })))!,
+    poles.build(
+      track(
+        new THREE.MeshStandardMaterial({ ...pbr('concrete'), roughness: 0.9, vertexColors: true }),
+      ),
+    )!,
   );
   group.add(lamps.build(lampMat, { castShadow: false })!);
   // Poster atlas (one draw call) + a political banner across the road
