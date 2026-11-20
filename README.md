@@ -18,6 +18,8 @@ Browser-based open-world action-comedy set in Dhaka, starting with Mohammadpur. 
 7. [Feature Checklist](docs/07-FEATURE-CHECKLIST.md): everything a full open-world game needs, by phase (living backlog)
 8. [Extending](docs/08-EXTENDING.md): how to add or improve features, maps, missions later
 9. [Branding](docs/09-BRANDING.md): name, renaming checklist, candidates
+10. [Audio & Dialogue](docs/10-AUDIO-DIALOGUE.md): voices, barks, talk menu, sounds
+11. [Art & Realism](docs/11-ART-REALISM.md): realistic characters/cars plan, asset budgets
 
 ## Run it
 ```bash
@@ -33,4 +35,4 @@ Other commands: `pnpm build`, `pnpm start`, `pnpm typecheck`, `pnpm lint`, `pnpm
 - `packages/content`: game data (quality presets; later missions, vehicles, weapons)
 - `tools/asset-pipeline`, `tools/map-builder`: build tools
 
-Status: **Phase 1 ("feel" vertical slice) done: walk, run, jump, drive a car, CNG and motorbike on a Tajmahal Road block with day–night. Next: Phase 2 (full Mohammadpur map).** Details in [PROGRESS.md](PROGRESS.md).
+Status: **Phase 1.5 Part A done: mastan hero, talking NPCs with funny Bangla subtitles, sounds, posters, fuel & damage. Next: asset/voice decisions (Part B), then Phase 2 (Mohammadpur map).** Details in [PROGRESS.md](PROGRESS.md).

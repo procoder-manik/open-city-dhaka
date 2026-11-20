@@ -3,6 +3,8 @@ import { pass } from 'three/tsl';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
 import type { QualityTier } from '@game/shared';
+import type { TalkOption } from './actors/Npc';
+import { AudioEngine } from './audio/AudioEngine';
 import { FixedStepLoop } from './core/FixedStepLoop';
 import { InputManager } from './input/InputManager';
 import { PhysicsClient } from './physics/PhysicsClient';
@@ -39,6 +41,11 @@ export interface Game {
   setHour(hour: number): void;
   /** Debug/tests: get into a vehicle by definition id (e.g. 'car-sedan'). */
   debugEnterVehicle(defId: string): boolean;
+  /** Debug/tests: talk to an NPC by id from anywhere. */
+  debugTalk(npcId: string, option: TalkOption): boolean;
+  /** Pick a talk option for the NPC in front of the player. */
+  chooseTalk(option: TalkOption): boolean;
+  setMuted(muted: boolean): void;
   pause(): void;
   resume(): void;
   dispose(): void;
@@ -83,7 +90,19 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   store.setState({ lastInput: initialInput });
   const requestPause = () => opts.onPauseRequest?.();
 
-  const world = new SliceScene(preset, (hud) => store.setState(hud));
+  // Audio (Web Audio). Browsers unlock it on a user gesture — we resume on any input.
+  let audio: AudioEngine | null = null;
+  try {
+    audio = new AudioEngine();
+    audio.resume();
+  } catch (err) {
+    console.warn('[audio] unavailable:', err);
+  }
+  const unlockAudio = () => audio?.resume();
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('keydown', unlockAudio);
+
+  const world = new SliceScene(preset, (hud) => store.setState(hud), audio);
   const physics = new PhysicsClient();
   const physicsMode = await physics.init(
     world.bodies,
@@ -192,13 +211,26 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     debugEnterVehicle(defId: string) {
       return world.debugEnterVehicle(defId);
     },
+    debugTalk(npcId: string, option: TalkOption) {
+      return world.debugTalk(npcId, option);
+    },
+    chooseTalk(option: TalkOption) {
+      return world.chooseTalk(option);
+    },
+    setMuted(muted: boolean) {
+      audio?.setMuted(muted);
+      store.setState({ muted });
+    },
     pause() {
       paused = true;
+      audio?.setPaused(true);
       input.clear();
       store.setState({ status: 'paused' });
     },
     resume() {
       paused = false;
+      audio?.setPaused(false);
+      audio?.resume();
       loop.reset();
       lastTime = performance.now();
       store.setState({ status: 'running' });
@@ -206,6 +238,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     dispose() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      audio?.dispose();
       input.dispose();
       physics.dispose();
       pipeline?.dispose();

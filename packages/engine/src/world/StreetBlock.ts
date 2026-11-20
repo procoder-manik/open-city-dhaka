@@ -3,6 +3,7 @@ import type { QualityPreset } from '@game/shared';
 import { boxToAABB, type AABB } from '../camera/raycast';
 import type { BodyDesc } from '../physics/protocol';
 import { MeshBuilder } from './MeshBuilder';
+import { POSTER_COLS, POSTER_COUNT, POSTER_ROWS, bannerTexture, posterAtlas } from './posters';
 import { seededRandom } from './random';
 import {
   FACADE_CELLS,
@@ -190,6 +191,19 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
   const signs = new MeshBuilder();
   const shops = new MeshBuilder();
   const details = new MeshBuilder(); // balconies, AC units, awnings, tanks, rebar
+  const posters = new MeshBuilder();
+  let posterIdx = 0;
+  const posterUV = (i: number): [number, number, number, number] => {
+    const k = i % POSTER_COUNT;
+    const col = k % POSTER_COLS;
+    const row = Math.floor(k / POSTER_COLS);
+    return [
+      col / POSTER_COLS,
+      1 - (row + 1) / POSTER_ROWS,
+      (col + 1) / POSTER_COLS,
+      1 - row / POSTER_ROWS,
+    ];
+  };
   const skyline = new MeshBuilder();
 
   const usedSigns = new Set<number>();
@@ -265,6 +279,25 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
           dir,
           open ? [0.5, 0, 1, 1] : [0, 0, 0.5, 1],
         );
+        // Posters glued on closed shutters, and small ones on shop pillars
+        if (!open || rand() < 0.35) {
+          const n = open ? 1 : 2 + Math.floor(rand() * 2);
+          for (let k = 0; k < n; k++) {
+            const pz = open ? z + shopW * s + 0.2 : sz + (k - (n - 1) / 2) * 0.72;
+            const size = open ? 0.32 : 0.62;
+            const py = open ? 1.9 : 1.1 + rand() * 0.5;
+            posters.facadeX(
+              frontX - side * 0.05,
+              py,
+              pz,
+              size,
+              size,
+              dir,
+              posterUV(posterIdx + Math.floor(rand() * 7)),
+            );
+            posterIdx++;
+          }
+        }
         const si = pickSign();
         const col = si % SIGN_COLS;
         const row = Math.floor(si / SIGN_COLS);
@@ -405,6 +438,20 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
       poles.box([1.6, 0.08, 0.08], [px - side * 0.8, 7.3, z], 0x6a655c); // lamp arm
       poles.box([0.4, 0.25, 0.35], [px + side * 0.25, 6.2, z], 0x56585a); // transformer box
       lamps.box([0.5, 0.12, 0.25], [px - side * 1.55, 7.22, z], 0xffffff);
+      // Posters stacked on every pole, facing the road (classic Dhaka)
+      const poleDir: 1 | -1 = side === -1 ? 1 : -1;
+      for (let k = 0; k < 2; k++) {
+        posters.facadeX(
+          px - side * 0.17,
+          1.9 + k * 0.62,
+          z,
+          0.5,
+          0.58,
+          poleDir,
+          posterUV(posterIdx + Math.floor(rand() * 9)),
+        );
+        posterIdx++;
+      }
       addStatic([px, 4.5, z], [0.16, 4.5, 0.16], false);
       const top: [number, number, number] = [px, 8.3, z];
       poleTops.push(top);
@@ -463,6 +510,33 @@ export function buildStreetBlock(preset: QualityPreset, seed = 7): StreetResult 
     poles.build(track(new THREE.MeshStandardMaterial({ roughness: 0.9, vertexColors: true })))!,
   );
   group.add(lamps.build(lampMat, { castShadow: false })!);
+  // Poster atlas (one draw call) + a political banner across the road
+  const posterTex = tex(posterAtlas(seed + 5));
+  const posterMat = track(
+    new THREE.MeshStandardMaterial({
+      map: posterTex,
+      roughness: 0.9,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    }),
+  );
+  group.add(posters.build(posterMat, { castShadow: false })!);
+  const bannerMat = track(
+    new THREE.MeshStandardMaterial({
+      map: tex(bannerTexture()),
+      roughness: 0.95,
+      side: THREE.DoubleSide,
+    }),
+  );
+  for (const bz of [-38, 72]) {
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(roadHalf * 2 - 1.5, 1.35), bannerMat);
+    banner.position.set(0, 6.3, bz);
+    banner.rotation.y = bz > 0 ? Math.PI : 0;
+    banner.castShadow = preset.shadows;
+    group.add(banner);
+    sagWire(wirePoints, [-(roadHalf + 0.5), 7.4, bz], [roadHalf + 0.5, 7.4, bz], 0.4);
+  }
+
   const wireGeo = new THREE.BufferGeometry();
   wireGeo.setAttribute('position', new THREE.Float32BufferAttribute(wirePoints, 3));
   const wires = new THREE.LineSegments(

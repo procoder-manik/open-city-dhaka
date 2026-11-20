@@ -69,7 +69,10 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | PL-3 | Over-the-shoulder camera with collision, aim zoom, sprint FOV kick, camera shake | P0 |
 | PL-4 | Health, armour, stamina; ragdoll-lite on death/knockdown | P0 |
 | PL-5 | Climb low walls/vault fences; swim in Beribadh/Turag area water | P1 |
-| PL-6 | Character customisation: outfits (lungi, panjabi, jersey, jacket), hair, sunglasses | P1 |
+| PL-6 | Character customisation: outfits (jeans/shirt, lungi, panjabi, jersey, jacket), hair, sunglasses | P1 |
+| PL-8 | **Hero look:** smart young mastan/gangster (fitted jeans, shirt over tee, sneakers, sunglasses, gold chain, beard), swagger walk — not a cartoon | P0 |
+| PL-9 | **Human-like characters:** realistic proportions & skin, facial expressions (happy, angry, scared, smug, surprised), natural eye blinks, lip movement when talking (visemes) | P0 |
+| PL-10 | **Physically correct movement:** real-world walk ≈ 1.4–1.6 m/s, jog ≈ 3.5 m/s, sprint ≈ 7 m/s, jump ≈ 0.5 m; momentum, no foot sliding; punches/kicks with hit reactions driven by physics impulses | P0 |
 | PL-7 | Dual protagonists with switch (story-driven) | P2 |
 
 ### 5.2 Vehicles
@@ -78,7 +81,11 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | VH-1 | Enter/exit any vehicle; **carjack** occupied vehicles (pull driver out) | P0 |
 | VH-2 | Vehicle types: rickshaw (pedal), CNG auto-rickshaw, motorbike, private car, police pickup, local bus, microbus, truck, bicycle | P0 (rickshaw, CNG, bike, car, police) / P1 rest |
 | VH-3 | Arcade-realistic physics: suspension, drift, handbrake, damage, flip & respawn | P0 |
-| VH-4 | Vehicle damage (deformation-lite, smoke, fire, explosion) | P1 |
+| VH-4 | Vehicle damage: per-zone health (front/rear/left/right), dents, smoke → fire → explosion; HUD shows damage % and where | **P0** |
+| VH-8 | Dashboard HUD: speedometer, **fuel gauge** (fuel use, refuel at CNG/petrol pump), damage % with zone diagram | P0 |
+| VH-9 | Realistic vehicles (proportions, PBR materials, lights) with original parody brand names, no real logos (see `11-ART-REALISM.md`) | P0 |
+| VH-10 | Vehicle sounds: engine per type (car, bike, CNG two-stroke, bus diesel), horns (incl. CNG squeak, bus air horn, rickshaw bell), skids, crashes | P0 |
+| VH-11 | Physically plausible speeds/brakes: realistic acceleration & top speeds per type, ~0.8–1 g braking, weight transfer, tyre grip | P0 |
 | VH-5 | Radio while driving (original stations, see GDD) | P1 |
 | VH-6 | Garage to save owned vehicles | P1 |
 | VH-7 | Boats on Buriganga/Turag (later maps) | P2 |
@@ -93,6 +100,7 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | CB-5 | Buy weapons/ammo at a hidden "Ostad's Armoury" shop | P0 |
 | CB-6 | Cover system (snap to wall) | P1 |
 | CB-7 | No gore; stylised hit effects | P0 |
+| CB-8 | **Real physics for combat:** bullets as fast raycasts with drop on long range, recoil, impact impulses; grenades thrown on a ballistic arc, bounce/roll, blast falloff and impulse on bodies/vehicles; ragdoll on knockout | P0 |
 
 ### 5.4 World & AI
 | ID | Requirement | P |
@@ -104,6 +112,10 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | WD-5 | Day–night cycle (1 game day = 48 real minutes), lighting presets | P0 |
 | WD-6 | Weather: clear, monsoon rain + waterlogging, fog, load-shedding blackout event | P1 |
 | WD-7 | Random street events: mugging, cow escaped from haat, wedding procession, traffic fight, VIP motorcade | P0 (mugging) / P1 rest |
+| WD-8 | **Variety of Bangladeshi people:** rickshaw-wala, CNG driver, shopkeeper, tea-stall chacha, hawker, office-goer, garments worker, aunty (sari/salwar), students, madrasa students, police, gangsters, foreigners — each with own look, walk and speech | P0 |
+| WD-9 | **Funny posters, banners & graffiti** on walls, poles and across roads (original, data-driven) | P0 |
+| WD-10 | Atmosphere: air-pollution smog, dust kicked up by vehicles, exhaust smoke, wet-road reflections in rain | P0 (dust/smoke/smog) / P1 rain |
+| WD-11 | **Water physics:** swimming, buoyancy for bodies & boats, vehicles sinking/stalling in deep water, splash effects (Beribadh/Turag, waterlogging) | P1 |
 
 ### 5.5 Missions & progression
 | ID | Requirement | P |
@@ -114,6 +126,8 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | MS-4 | Money (Taka), Respect (XP/levels), stats | P0 |
 | MS-5 | In-game phone: map, missions, contacts, camera/selfie, "FaceBoi" social feed parody | P1 |
 | MS-6 | Achievements | P1 |
+| MS-7 | **Talk to anyone:** talk menu near NPCs — greet, threaten, snatch; at shops/stalls order food or grab it without paying; NPCs answer with funny Bangla lines (see `10-AUDIO-DIALOGUE.md`) | P0 |
+| MS-8 | **Funny Bangla voice & barks:** every archetype speaks its own way (Dhakaiya, rickshaw-wala, neta speeches, shopkeepers, police; foreigners in English); subtitles always on; voices recorded by Bangladeshi actors for launch | P0 |
 
 ### 5.6 UI / HUD
 | ID | Requirement | P |

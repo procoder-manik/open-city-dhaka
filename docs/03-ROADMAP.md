@@ -35,6 +35,19 @@ P0 Foundation ─► P1 "Feel" slice ─► P2 Mohammadpur map ─► P3 Vehicle
 
 **Done when:** a 5-minute playtest of walking + driving feels smooth and "cinematic" **on PC and on a mid Android phone (30 FPS)**. You sign off on the look & feel before we scale.
 
+## Phase 1.5 — Life, sound & realism upgrade (owner feedback)
+**Part A (no external assets, built now):**
+- Hero redesigned as a smart young mastan (jeans, shirt, sneakers, sunglasses, chain, beard) with an expressive face (blink, brows, mouth, emotions, talking)
+- Synthesized sound: engines per vehicle, horns, skids, crashes, footsteps, city ambience; volume/mute
+- Dialogue system (data JSON, subtitles, emotions), NPCs at the tea stall/shops/rickshaw, talk menu: greet / threaten / snatch / order / grab food; Taka counter
+- Funny posters & banners on walls and poles
+- Vehicle dashboard: fuel gauge + per-zone damage %, smoke when damaged, dust & exhaust particles, smog
+
+**Part B (needs assets — owner decision in `11-ART-REALISM.md`):**
+- Realistic skinned characters (MakeHuman + Mixamo), facial blendshapes + lip sync
+- Realistic vehicle models with parody brands, deformable panels
+- Recorded Bangla voices (actors) or TTS
+
 ## Phase 2 — Mohammadpur map
 - `tools/map-builder`: OSM export of Mohammadpur → road meshes (with lanes, footpaths, medians), building footprints → procedural buildings (Dhaka style: 4–10 floors, balconies, grills, water tanks, signboards), parks, water (Beribadh)
 - Chunking (128 m), streaming, LOD, far skyline impostors, IndexedDB caching

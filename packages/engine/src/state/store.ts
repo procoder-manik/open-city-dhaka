@@ -1,10 +1,11 @@
 import { createStore } from 'zustand/vanilla';
 import type { QualityTier } from '@game/shared';
 import type { InputDevice } from '../input/actions';
+import type { HudState } from '../scenes/SliceScene';
 
 export type GameStatus = 'idle' | 'loading' | 'running' | 'paused' | 'error';
 
-export interface GameState {
+export interface GameState extends HudState {
   status: GameStatus;
   error: string | null;
   backend: 'webgpu' | 'webgl2' | 'unknown';
@@ -16,12 +17,7 @@ export interface GameState {
   triangles: number;
   resolutionScale: number;
   lastInput: InputDevice;
-  /** Gameplay HUD */
-  mode: 'foot' | 'vehicle';
-  prompt: string | null;
-  vehicleName: string | null;
-  speedKmh: number;
-  hour: number;
+  muted: boolean;
 }
 
 /** Shared game state: engine writes, React HUD reads (and vice versa for settings). */
@@ -43,6 +39,16 @@ export const createGameStore = (tier: QualityTier) =>
     vehicleName: null,
     speedKmh: 0,
     hour: 17,
+    taka: 120,
+    notoriety: 0,
+    publicLove: 0,
+    subtitle: null,
+    talk: null,
+    fuel: 1,
+    damage: 0,
+    damageZones: { front: 0, rear: 0, left: 0, right: 0 },
+    engineDead: false,
+    muted: false,
   }));
 
 export type GameStore = ReturnType<typeof createGameStore>;

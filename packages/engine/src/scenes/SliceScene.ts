@@ -1,8 +1,11 @@
 import * as THREE from 'three/webgpu';
-import { getVehicleDef } from '@game/content';
+import { dialogue, getVehicleDef } from '@game/content';
 import type { QualityPreset, VehicleDef } from '@game/shared';
 import { Humanoid } from '../actors/Humanoid';
+import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
+import type { AudioEngine } from '../audio/AudioEngine';
 import { CameraRig } from '../camera/CameraRig';
+import { DialogueSystem, type Subtitle } from '../dialogue/DialogueSystem';
 import type { InputManager } from '../input/InputManager';
 import {
   FLOATS_PER_BODY,
@@ -13,23 +16,38 @@ import {
   type VehicleBodyDesc,
   type VehicleInput,
 } from '../physics/protocol';
+import {
+  applyImpact,
+  burnFuel,
+  enginePower,
+  impactZone,
+  newCondition,
+  totalDamage,
+  type DamageZone,
+  type VehicleCondition,
+} from '../vehicles/condition';
 import { computeVehicleControls, parkedControls } from '../vehicles/controls';
 import { VehicleVisual, type WheelState } from '../vehicles/VehicleVisual';
 import { Environment } from '../world/Environment';
-import { buildStreetBlock, type StreetResult } from '../world/StreetBlock';
+import { Particles } from '../world/Particles';
+import { STREET, buildStreetBlock, type StreetResult } from '../world/StreetBlock';
 
 const PLAYER_ID = 1;
 const BALL_ID = 50;
 const VEHICLE_ID_BASE = 10;
+const NPC_ID_BASE = 100;
 const STATIC_ID_BASE = 1000;
 
 const CAPSULE_HALF = 0.5;
 const CAPSULE_RADIUS = 0.32;
 const CAPSULE_CENTER = CAPSULE_HALF + CAPSULE_RADIUS; // feet → capsule centre
-const WALK_SPEED = 3.6;
-const SPRINT_SPEED = 7.5;
-const GROUND_ACCEL = 14;
+/** Real-world speeds (m/s): walk, jog, sprint. */
+const WALK_SPEED = 1.6;
+const JOG_SPEED = 3.6;
+const SPRINT_SPEED = 7.2;
+const GROUND_ACCEL = 10;
 const ENTER_RANGE = 3.6;
+const TALK_RANGE = 2.6;
 const MAX_EXIT_SPEED = 14;
 
 const damp = (current: number, target: number, rate: number, dt: number) =>
@@ -42,6 +60,15 @@ export interface HudState {
   vehicleName: string | null;
   speedKmh: number;
   hour: number;
+  taka: number;
+  notoriety: number;
+  publicLove: number;
+  subtitle: Subtitle | null;
+  talk: { name: string; options: Array<{ id: TalkOption; label: string }> } | null;
+  fuel: number;
+  damage: number;
+  damageZones: Record<DamageZone, number>;
+  engineDead: boolean;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -76,13 +103,10 @@ class SmoothedBody {
 
   update(dt: number) {
     this.age = Math.min(this.age + dt, 0.1);
-    const tx = this.pos.x + this.vel.x * this.age;
-    const ty = this.pos.y + this.vel.y * this.age;
-    const tz = this.pos.z + this.vel.z * this.age;
     const k = 1 - Math.exp(-30 * dt);
-    this.renderPos.x += (tx - this.renderPos.x) * k;
-    this.renderPos.y += (ty - this.renderPos.y) * k;
-    this.renderPos.z += (tz - this.renderPos.z) * k;
+    this.renderPos.x += (this.pos.x + this.vel.x * this.age - this.renderPos.x) * k;
+    this.renderPos.y += (this.pos.y + this.vel.y * this.age - this.renderPos.y) * k;
+    this.renderPos.z += (this.pos.z + this.vel.z * this.age - this.renderPos.z) * k;
     this.renderQuat.slerp(this.quat, k);
   }
 }
@@ -95,11 +119,18 @@ interface VehicleEntity {
   speed: number;
   wheels: WheelState[];
   steer: number;
+  throttle: number;
+  brake: number;
+  handbrake: boolean;
+  cond: VehicleCondition;
+  prevVel: THREE.Vector3;
+  hasPrev: boolean;
+  fxTimer: number;
 }
 
 /**
- * Phase 1 vertical slice: Tajmahal Road block, Mostofa on foot, three drivable
- * vehicles (car, CNG, motorbike), day–night and a collision-aware camera.
+ * Vertical slice: Tajmahal Road block, Mostofa on foot, drivable car/CNG/bike with
+ * fuel & damage, talking NPCs (greet/threaten/snatch/order/grab), sounds, dust & smoke.
  */
 export class SliceScene {
   readonly scene = new THREE.Scene();
@@ -114,6 +145,9 @@ export class SliceScene {
   private ball = new SmoothedBody();
   private ballMesh: THREE.Mesh;
   private vehicles: VehicleEntity[] = [];
+  private npcs: Npc[] = [];
+  private particles: Particles;
+  private dialogue: DialogueSystem;
   private driving: VehicleEntity | null = null;
   private moveVel = new THREE.Vector2();
   private facing = 0;
@@ -124,12 +158,32 @@ export class SliceScene {
   private lastVy = 0;
   private pendingTeleport: [number, number, number] | null = null;
   private nearest: VehicleEntity | null = null;
-  private hud: HudState = { mode: 'foot', prompt: null, vehicleName: null, speedKmh: 0, hour: 17 };
+  private talkTarget: Npc | null = null;
+  private crashBarkCooldown = 0;
+  private hornOn = false;
+  private hud: HudState = {
+    mode: 'foot',
+    prompt: null,
+    vehicleName: null,
+    speedKmh: 0,
+    hour: 17,
+    taka: 120,
+    notoriety: 0,
+    publicLove: 0,
+    subtitle: null,
+    talk: null,
+    fuel: 1,
+    damage: 0,
+    damageZones: { front: 0, rear: 0, left: 0, right: 0 },
+    engineDead: false,
+  };
   private hudTimer = 0;
+  private hudDirty = true;
 
   constructor(
     private readonly preset: QualityPreset,
     private readonly onHud: (s: HudState) => void,
+    private readonly audio: AudioEngine | null = null,
   ) {
     this.camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 900);
     this.env = new Environment(this.scene, preset, 17.2);
@@ -138,6 +192,18 @@ export class SliceScene {
     this.scene.add(this.street.group);
     this.street.bodies.forEach((b, i) => this.bodies.push({ ...b, id: STATIC_ID_BASE + i }));
 
+    this.particles = new Particles(preset.npcDensity < 0.5 ? 120 : 220);
+    this.scene.add(this.particles.mesh);
+
+    this.dialogue = new DialogueSystem(
+      dialogue,
+      (sub) => {
+        this.hud.subtitle = sub;
+        this.hudDirty = true;
+      },
+      (url) => void this.audio?.playVoice(url),
+    );
+
     // Player
     const spawn = this.street.points.spawn!;
     this.bodies.push({
@@ -145,16 +211,31 @@ export class SliceScene {
       shape: { kind: 'capsule', halfHeight: CAPSULE_HALF, radius: CAPSULE_RADIUS },
       position: spawn,
       type: 'dynamic',
-      mass: 70,
+      mass: 75,
       friction: 0,
       lockRotations: true,
     });
     this.player.snap(new THREE.Vector3(...spawn));
-    this.facing = Math.PI; // face the road
+    this.facing = Math.PI;
     this.hero.root.rotation.y = this.facing;
+    this.hero.onFootstep = (s) => this.audio?.footstep(s);
     this.scene.add(this.hero.root);
 
-    // A football to kick around
+    // NPCs (fixed colliders so you bump into them)
+    defaultNpcs(STREET.roadHalf, STREET.footWidth, STREET.curbHeight).forEach((def, i) => {
+      const npc = new Npc(def);
+      if (!preset.shadows || preset.npcDensity < 1) npc.humanoid.setCastShadow(false);
+      this.npcs.push(npc);
+      this.scene.add(npc.humanoid.root);
+      this.bodies.push({
+        id: NPC_ID_BASE + i,
+        shape: { kind: 'box', halfExtents: [0.22, 0.85, 0.22] },
+        position: [def.position[0], def.position[1] + 0.85, def.position[2]],
+        type: 'fixed',
+      });
+    });
+
+    // Football
     this.ballMesh = new THREE.Mesh(
       new THREE.SphereGeometry(0.11, 16, 12),
       new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: 0.5 }),
@@ -195,6 +276,13 @@ export class SliceScene {
         body,
         speed: 0,
         steer: 0,
+        throttle: 0,
+        brake: 0,
+        handbrake: false,
+        cond: newCondition(),
+        prevVel: new THREE.Vector3(),
+        hasPrev: false,
+        fxTimer: 0,
         wheels: def.wheels.map(() => ({
           suspension: def.suspension.restLength,
           rotation: 0,
@@ -224,33 +312,56 @@ export class SliceScene {
     if (input.pressed('interact')) this.toggleVehicle();
 
     const vehicles: VehicleInput[] = this.vehicles.map((v) => {
-      const c =
-        v === this.driving
-          ? computeVehicleControls(
-              v.def,
-              { throttle: input.move.y, steer: input.move.x, handbrake: input.isDown('jump') },
-              v.speed,
-              v.steer,
-              dt,
-            )
-          : parkedControls(v.def);
+      if (v === this.driving) {
+        const c = computeVehicleControls(
+          v.def,
+          { throttle: input.move.y, steer: input.move.x, handbrake: input.isDown('jump') },
+          v.speed,
+          v.steer,
+          dt,
+        );
+        const power = enginePower(v.cond);
+        c.engine *= power;
+        v.throttle = power > 0 ? Math.max(0, input.move.y) : 0;
+        v.brake = c.brake;
+        v.handbrake = c.handbrake;
+        v.steer = c.steer;
+        burnFuel(v.cond, v.def.kind, input.move.y, dt);
+        return { bodyId: v.id, ...c };
+      }
+      v.throttle = 0;
+      v.handbrake = false;
+      const c = parkedControls(v.def);
       v.steer = c.steer;
       return { bodyId: v.id, ...c };
     });
+
+    // Horn
+    const horn = !!this.driving && input.isDown('horn');
+    if (horn !== this.hornOn) {
+      this.hornOn = horn;
+      this.audio?.horn(this.driving?.def.kind ?? 'car', horn);
+      if (horn) this.npcReact('honked', 18);
+    }
 
     let vx = 0;
     let vz = 0;
     if (!this.driving) {
       const sprint = input.isDown('sprint');
-      const mag = Math.hypot(input.move.x, input.move.y);
-      const speed = (sprint ? SPRINT_SPEED : WALK_SPEED) * Math.min(1, mag);
+      const mag = Math.min(1, Math.hypot(input.move.x, input.move.y));
+      // Joystick: small push = walk, full = jog; sprint button/key = sprint.
+      const base =
+        mag < 0.55
+          ? WALK_SPEED * (mag / 0.55)
+          : WALK_SPEED + (JOG_SPEED - WALK_SPEED) * ((mag - 0.55) / 0.45);
+      const speed = sprint && mag > 0.1 ? SPRINT_SPEED : base;
       const [fx, fz] = this.rig.forward;
-      // right = (-fz, fx) on the ground plane
-      const dx = mag > 0 ? (-fz * input.move.x + fx * input.move.y) / mag : 0;
-      const dz = mag > 0 ? (fx * input.move.x + fz * input.move.y) / mag : 0;
+      const dx = mag > 0 ? (-fz * input.move.x + fx * input.move.y) / Math.max(mag, 1e-3) : 0;
+      const dz = mag > 0 ? (fx * input.move.x + fz * input.move.y) / Math.max(mag, 1e-3) : 0;
+      const len = Math.hypot(dx, dz) || 1;
       const k = 1 - Math.exp(-GROUND_ACCEL * dt);
-      this.moveVel.x += (dx * speed - this.moveVel.x) * k;
-      this.moveVel.y += (dz * speed - this.moveVel.y) * k;
+      this.moveVel.x += ((dx / len) * speed - this.moveVel.x) * k;
+      this.moveVel.y += ((dz / len) * speed - this.moveVel.y) * k;
       vx = this.moveVel.x;
       vz = this.moveVel.y;
     }
@@ -271,7 +382,6 @@ export class SliceScene {
     if (this.driving) {
       const v = this.driving;
       if (Math.abs(v.speed) > MAX_EXIT_SPEED) return;
-      // Step out on the vehicle's left (footpath side when keeping left).
       const left = new THREE.Vector3(1, 0, 0).applyQuaternion(v.body.renderQuat);
       left.y = 0;
       left.normalize();
@@ -287,6 +397,13 @@ export class SliceScene {
       this.hero.root.position.set(out.x, out.y - CAPSULE_CENTER, out.z);
       this.hero.root.rotation.set(0, this.facing, 0);
       this.hero.setVisible(true);
+      this.audio?.setEngine(null);
+      this.audio?.setSkid(0);
+      if (this.hornOn) {
+        this.audio?.horn('car', false);
+        this.hornOn = false;
+      }
+      this.hudDirty = true;
     } else if (this.nearest) {
       const v = this.nearest;
       this.driving = v;
@@ -298,8 +415,88 @@ export class SliceScene {
         this.hero.setVisible(false);
       }
       this.rig.addShake(0.15);
+      this.audio?.setEngine(v.def.kind);
+      if (Math.random() < 0.5 && !this.dialogue.busy)
+        this.dialogue.say('hero', 'enterVehicle', this.hero);
+      this.hudDirty = true;
     }
   }
+
+  // ---------------- Talking ----------------
+
+  /** Player picked a talk option (menu button or number key). */
+  chooseTalk(option: TalkOption): boolean {
+    const npc = this.talkTarget;
+    if (!npc || this.driving || !npc.options.includes(option)) return false;
+    const sp = npc.def.speaker;
+    const h = npc.humanoid;
+    switch (option) {
+      case 'greet':
+        this.dialogue.interrupt('hero', 'greet', this.hero);
+        this.dialogue.say(sp, 'greetReply', h, 0.25);
+        this.hud.publicLove += 1;
+        break;
+      case 'threaten':
+        this.dialogue.interrupt('hero', 'threaten', this.hero);
+        this.dialogue.say(sp, 'threatenReply', h, 0.2);
+        npc.fear = 1;
+        this.hud.notoriety += 1;
+        break;
+      case 'snatch': {
+        const amount = Math.min(npc.wallet, 80 + Math.floor(Math.random() * 300));
+        npc.wallet -= amount;
+        npc.snatchCooldown = 90;
+        npc.fear = 1;
+        this.hud.taka += amount;
+        this.hud.notoriety += 2;
+        this.dialogue.interrupt('hero', 'snatch', this.hero);
+        this.dialogue.say(sp, 'snatched', h, 0.1);
+        this.audio?.coin();
+        break;
+      }
+      case 'order': {
+        const price = npc.def.price ?? 10;
+        if (this.hud.taka < price) {
+          this.dialogue.interrupt('hero', 'broke', this.hero);
+          break;
+        }
+        this.hud.taka -= price;
+        this.hud.publicLove += 1;
+        this.dialogue.interrupt('hero', 'order', this.hero);
+        this.dialogue.say(
+          sp,
+          this.dialogue.has(sp, 'orderReply') ? 'orderReply' : 'greetReply',
+          h,
+          0.25,
+        );
+        this.audio?.coin();
+        break;
+      }
+      case 'grab':
+        this.dialogue.interrupt('hero', 'grab', this.hero);
+        this.dialogue.say(sp, this.dialogue.has(sp, 'grabbed') ? 'grabbed' : 'snatched', h, 0.15);
+        this.hud.notoriety += 1;
+        npc.fear = 0.6;
+        break;
+    }
+    this.hudDirty = true;
+    return true;
+  }
+
+  /** Nearby NPCs bark at a situation (honk, near miss…), with per-NPC cooldown. */
+  private npcReact(situation: string, radius: number, from?: THREE.Vector3) {
+    const at = from ?? (this.driving ? this.driving.body.renderPos : this.player.renderPos);
+    for (const npc of this.npcs) {
+      if (npc.barkCooldown > 0 || npc.position.distanceTo(at) > radius) continue;
+      if (!this.dialogue.has(npc.def.speaker, situation)) continue;
+      if (this.dialogue.busy && situation !== 'nearMiss' && situation !== 'bumped') continue;
+      this.dialogue.interrupt(npc.def.speaker, situation, npc.humanoid);
+      npc.barkCooldown = 6;
+      return;
+    }
+  }
+
+  // ---------------- Physics results ----------------
 
   applyFrame(frame: PhysicsFrame) {
     const t = frame.transforms;
@@ -310,7 +507,9 @@ export class SliceScene {
       } else if (id === BALL_ID) {
         this.ball.set(t, o);
       } else if (id >= VEHICLE_ID_BASE && id < VEHICLE_ID_BASE + this.vehicles.length) {
-        this.vehicles[id - VEHICLE_ID_BASE]!.body.set(t, o);
+        const v = this.vehicles[id - VEHICLE_ID_BASE]!;
+        v.body.set(t, o);
+        this.detectImpact(v);
       }
     }
     const vs = frame.vehicles;
@@ -335,13 +534,51 @@ export class SliceScene {
     }
   }
 
-  /** After physics: animation, camera, lighting, HUD. */
+  /** Sudden velocity change between physics frames = collision → zone damage. */
+  private detectImpact(v: VehicleEntity) {
+    const vel = v.body.vel;
+    if (!v.hasPrev) {
+      v.prevVel.copy(vel);
+      v.hasPrev = true;
+      return;
+    }
+    const dv = vel.clone().sub(v.prevVel);
+    v.prevVel.copy(vel);
+    const mag = dv.length();
+    if (mag < 2.5) return;
+    const local = dv.clone().applyQuaternion(v.body.quat.clone().invert());
+    const zone = impactZone(local.x, local.z);
+    const added = applyImpact(v.cond, zone, mag, v.def.kind === 'car' ? 1.2 : 0.9);
+    if (added <= 0) return;
+    const strength = Math.min(1, mag / 14);
+    this.audio?.crash(strength);
+    this.particles.emit(
+      'debris',
+      v.body.renderPos.clone().add(new THREE.Vector3(0, 0.4, 0)),
+      undefined,
+      Math.round(4 + strength * 8),
+    );
+    this.particles.emit('dust', v.body.renderPos, undefined, 4);
+    if (v === this.driving) {
+      this.rig.addShake(0.3 + strength * 0.7);
+      if (this.crashBarkCooldown <= 0 && strength > 0.3) {
+        this.dialogue.interrupt('hero', 'crash', this.hero);
+        this.crashBarkCooldown = 8;
+      }
+    }
+    this.hudDirty = true;
+  }
+
+  // ---------------- Per-frame ----------------
+
   update(dt: number, input: InputManager) {
+    this.crashBarkCooldown = Math.max(0, this.crashBarkCooldown - dt);
     for (const v of this.vehicles) {
       v.body.update(dt);
       v.visual.root.position.copy(v.body.renderPos);
       v.visual.root.quaternion.copy(v.body.renderQuat);
       v.visual.update(dt, v.speed, v.wheels);
+      this.vehicleEffects(v, dt);
     }
     this.ball.update(dt);
     this.ballMesh.position.copy(this.ball.renderPos);
@@ -363,8 +600,6 @@ export class SliceScene {
       const heading = Math.atan2(fwd.x, fwd.z);
       const speed = Math.abs(v.speed);
       pivot.copy(v.body.renderPos).y += v.def.camera.height;
-      // Hard impact → shake
-      if (this.prevSpeed - speed > 6) this.rig.addShake(Math.min(1, (this.prevSpeed - speed) / 12));
       this.prevSpeed = speed;
       if (speed > 25) this.rig.addShake(dt * 0.15);
       this.rig.update(dt, {
@@ -376,12 +611,20 @@ export class SliceScene {
         lookInput: input.look,
       });
       this.nearest = null;
+      this.talkTarget = null;
+      this.audio?.updateEngine(
+        v.speed,
+        v.throttle,
+        v.def.maxSpeedKmh / 3.6,
+        enginePower(v.cond) === 0,
+      );
+      // Near misses with NPCs
+      if (speed > 6) this.npcReact('nearMiss', 2.8);
     } else {
       this.player.update(dt);
       const p = this.player.renderPos;
       this.hero.root.position.set(p.x, p.y - CAPSULE_CENTER, p.z);
       const hSpeed = Math.hypot(this.player.vel.x, this.player.vel.z);
-      // Face movement direction (from intended velocity: responsive, no physics jitter)
       if (this.moveVel.lengthSq() > 0.04) {
         const target = Math.atan2(this.moveVel.x, this.moveVel.y);
         this.facing += wrapAngle(target - this.facing) * (1 - Math.exp(-12 * dt));
@@ -408,7 +651,7 @@ export class SliceScene {
         riding: false,
       });
 
-      const sprinting = hSpeed > WALK_SPEED + 0.8;
+      const sprinting = hSpeed > JOG_SPEED + 0.8;
       pivot.set(p.x, p.y - CAPSULE_CENTER + 1.55, p.z);
       this.rig.update(dt, {
         pivot,
@@ -419,7 +662,7 @@ export class SliceScene {
         lookInput: input.look,
       });
 
-      // Nearest enterable vehicle
+      // Nearest vehicle & NPC
       let best: VehicleEntity | null = null;
       let bestD = ENTER_RANGE;
       for (const v of this.vehicles) {
@@ -430,15 +673,97 @@ export class SliceScene {
         }
       }
       this.nearest = best;
+      let bestNpc: Npc | null = null;
+      let bestNpcD = TALK_RANGE;
+      for (const npc of this.npcs) {
+        const d = Math.hypot(npc.position.x - p.x, npc.position.z - p.z);
+        if (d < bestNpcD) {
+          bestNpcD = d;
+          bestNpc = npc;
+        }
+        // Bumping into someone while moving
+        if (d < 0.8 && hSpeed > 1.8 && npc.barkCooldown <= 0) {
+          this.dialogue.interrupt(npc.def.speaker, 'bumped', npc.humanoid);
+          npc.barkCooldown = 5;
+        }
+      }
+      if (bestNpc !== this.talkTarget) {
+        this.talkTarget = bestNpc;
+        this.hudDirty = true;
+      }
     }
+
+    // NPC life: face the player, idle calls when the player is around
+    const playerPos = this.driving ? this.driving.body.renderPos : this.player.renderPos;
+    for (const npc of this.npcs) {
+      npc.update(dt, playerPos);
+      if (npc.idleTimer <= 0) {
+        npc.idleTimer = 14 + Math.random() * 18;
+        if (!this.dialogue.busy && npc.position.distanceTo(playerPos) < 14) {
+          this.dialogue.say(npc.def.speaker, 'idle', npc.humanoid);
+        }
+      }
+    }
+    this.dialogue.update(dt);
 
     const focus = this.driving ? this.driving.body.renderPos : this.player.renderPos;
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials)
       nm.material.emissiveIntensity = nm.max * this.env.night;
     for (const g of this.street.nightGlows) g.material.opacity = g.max * this.env.night;
+    this.particles.setFogColor((this.scene.fog as THREE.Fog).color);
+    this.particles.update(dt, this.camera);
+    this.audio?.update(dt, this.env.night);
 
     this.publishHud(dt);
+  }
+
+  /** Dust, exhaust, damage smoke and tyre squeal. */
+  private vehicleEffects(v: VehicleEntity, dt: number) {
+    v.fxTimer -= dt;
+    const speed = Math.abs(v.speed);
+    const q = v.body.renderQuat;
+    const local = v.body.vel.clone().applyQuaternion(q.clone().invert());
+    const slip = Math.abs(local.x);
+    const hardBrake = v.brake > v.def.brakeForce * 0.5 && speed > 6;
+    const wheelspin = v.throttle > 0.8 && speed < 7;
+    const skid = Math.min(
+      1,
+      Math.max(
+        slip > 2 ? (slip - 2) / 4 : 0,
+        hardBrake ? 0.6 : 0,
+        v.handbrake && speed > 4 ? 0.8 : 0,
+      ),
+    );
+    if (v === this.driving) this.audio?.setSkid(skid);
+    if (v.fxTimer > 0) return;
+    v.fxTimer = 0.06;
+    const rear = new THREE.Vector3(
+      0,
+      -v.def.chassisHalfExtents[1] - 0.15,
+      -v.def.chassisHalfExtents[2],
+    )
+      .applyQuaternion(q)
+      .add(v.body.renderPos);
+    if (skid > 0.2 || wheelspin)
+      this.particles.emit('dust', rear, v.body.vel.clone().multiplyScalar(-0.1));
+    if (
+      v === this.driving &&
+      (v.def.kind === 'cng' || v.def.kind === 'bike') &&
+      Math.random() < 0.5
+    ) {
+      this.particles.emit('exhaust', rear.clone().add(new THREE.Vector3(0, 0.2, 0)));
+    }
+    const dmg = totalDamage(v.cond);
+    const front = new THREE.Vector3(
+      0,
+      v.def.chassisHalfExtents[1],
+      v.def.chassisHalfExtents[2] * 0.7,
+    )
+      .applyQuaternion(q)
+      .add(v.body.renderPos);
+    if (v.cond.damage.front > 80 || dmg >= 90) this.particles.emit('blackSmoke', front);
+    else if (v.cond.damage.front > 45 && Math.random() < 0.6) this.particles.emit('smoke', front);
   }
 
   private publishHud(dt: number) {
@@ -450,17 +775,42 @@ export class SliceScene {
         ? `ওঠো: ${this.nearest.def.nameBn}`
         : null;
     const mode = this.driving ? 'vehicle' : 'foot';
+    const talk =
+      !this.driving && this.talkTarget
+        ? {
+            name: dialogue.speakers[this.talkTarget.def.speaker]?.name ?? '',
+            options: this.talkTarget.options.map((id) => ({
+              id,
+              label:
+                id === 'order' && this.talkTarget?.def.orderName
+                  ? `${this.talkTarget.def.orderName} অর্ডার (৳${this.talkTarget.def.price})`
+                  : TALK_LABELS[id],
+            })),
+          }
+        : null;
     this.hudTimer -= dt;
-    const changed = prompt !== this.hud.prompt || mode !== this.hud.mode;
+    const changed =
+      this.hudDirty ||
+      prompt !== this.hud.prompt ||
+      mode !== this.hud.mode ||
+      JSON.stringify(talk) !== JSON.stringify(this.hud.talk);
     if (changed || this.hudTimer <= 0) {
+      const c = this.driving?.cond;
       this.hud = {
+        ...this.hud,
         mode,
         prompt,
+        talk,
         vehicleName: this.driving?.def.nameBn ?? null,
         speedKmh: this.driving ? Math.round(Math.abs(this.driving.speed) * 3.6) : 0,
         hour: this.env.hour,
+        fuel: c ? c.fuel : 1,
+        damage: c ? totalDamage(c) : 0,
+        damageZones: c ? { ...c.damage } : { front: 0, rear: 0, left: 0, right: 0 },
+        engineDead: c ? enginePower(c) === 0 : false,
       };
       this.hudTimer = 0.1;
+      this.hudDirty = false;
       this.onHud(this.hud);
     }
   }
@@ -477,14 +827,21 @@ export class SliceScene {
             id: this.driving.def.id,
             pos: r(this.driving.body.renderPos),
             speedKmh: +(this.driving.speed * 3.6).toFixed(1),
+            fuel: +this.driving.cond.fuel.toFixed(3),
+            damage: { ...this.driving.cond.damage },
           }
         : null,
       nearest: this.nearest?.def.id ?? null,
+      talkTarget: this.talkTarget?.def.id ?? null,
+      taka: this.hud.taka,
+      notoriety: this.hud.notoriety,
+      subtitle: this.hud.subtitle?.text ?? null,
       vehicles: this.vehicles.map((v) => ({
         id: v.def.id,
         pos: r(v.body.renderPos),
         speed: +v.speed.toFixed(2),
       })),
+      npcs: this.npcs.map((n) => ({ id: n.def.id, pos: r(n.position) })),
       hour: +this.env.hour.toFixed(2),
     };
   }
@@ -499,7 +856,14 @@ export class SliceScene {
     return true;
   }
 
-  /** Testing/debug: jump the clock. */
+  /** Testing/debug: talk to an NPC by id from anywhere. */
+  debugTalk(npcId: string, option: TalkOption): boolean {
+    const npc = this.npcs.find((n) => n.def.id === npcId);
+    if (!npc) return false;
+    this.talkTarget = npc;
+    return this.chooseTalk(option);
+  }
+
   setHour(h: number) {
     this.env.hour = ((h % 24) + 24) % 24;
   }
@@ -508,7 +872,9 @@ export class SliceScene {
     this.street.dispose();
     this.env.dispose();
     this.hero.dispose();
+    for (const n of this.npcs) n.humanoid.dispose();
     for (const v of this.vehicles) v.visual.dispose();
+    this.particles.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }

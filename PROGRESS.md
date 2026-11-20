@@ -12,12 +12,12 @@
 |---|---|
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
-| Current phase | **Phase 1 ✅ done (feel slice) → Phase 2 (Mohammadpur map) next** |
-| Overall progress | Planning 100 % · P0 100 % · P1 100 % (real-phone test pending) · P2 0 % |
+| Current phase | **Phase 1.5 Part A ✅ done (life, sound, talk, damage) → owner decisions for Part B (assets/voices), then Phase 2** |
+| Overall progress | Planning 100 % · P0 100 % · P1 100 % · P1.5-A 100 % · P1.5-B 0 % (needs owner decision) · P2 0 % |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | **PostgreSQL (Neon) + Drizzle**, confirmed by owner. Not wired yet (Phase 6) |
-| Build status | `pnpm typecheck`, `lint`, `test` (29 unit), `build`, `e2e` (8 Playwright, desktop + phone) all pass locally. CI run on GitHub not yet checked |
+| Build status | `pnpm typecheck`, `lint`, `test` (36 unit), `build`, `e2e` (10 Playwright, desktop + phone) all pass locally. CI run on GitHub not yet checked |
 
 ## How to run
 ```bash
@@ -29,6 +29,7 @@ pnpm --filter @game/web exec playwright install chromium   # once
 pnpm build && pnpm e2e
 # manual checks with screenshots (server on :3100): node apps/web/e2e/phase1-check.mjs <outDir> [tier]
 #                                                   node apps/web/e2e/drive-check.mjs <outDir>
+#                                                   node apps/web/e2e/life-check.mjs <outDir> [tier]
 ```
 
 ## Phase tracker
@@ -39,7 +40,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | — | Planning docs | ✅ | `docs/01`–`09` |
 | P0 | Foundation (monorepo, Next.js, engine boot, Game Lock, PWA, CI) | ✅ | See "Phase 0 result" below |
 | P1 | "Feel" vertical slice (character, camera, 3 vehicles, one street, touch controls) | ✅ | See "Phase 1 result"; real-phone test pending |
-| P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ⬜ | Next |
+| P1.5 | Life, sound & realism upgrade (owner feedback) | 🟨 | Part A done; Part B needs assets/voice decision (`docs/11-ART-REALISM.md`) |
+| P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ⬜ | Next after P1.5-B decision |
 | P3 | Vehicles & city life (traffic, peds, carjacking) | ⬜ | |
 | P4 | Combat, weapons & police (Thana Alert) | ⬜ | |
 | P5 | Missions & story Act 1 | ⬜ | |
@@ -72,16 +74,32 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] Debug hooks (`?debug=1`): `__game.debugInfo()`, `setHour(h)`, `debugEnterVehicle(id)`
   - [x] Tuned & measured (Lite, headless): car 0→88 km/h in 5 s, bike 0→90 km/h in 5 s, CNG 0→30 km/h in 2 s; braking ≈ 0.95 g (car 49 km/h → 0 in 8.5 m)
 
-## ▶ NEXT STEP
-**First:** owner tests Phase 1 on a real mid-range Android phone + a laptop and gives feel feedback (walk speed, camera distance, driving). Tune `vehicles.json` / constants in `scenes/SliceScene.ts` from that.
+- [x] **Phase 1.5 Part A — life, sound, talk, damage** (owner feedback 2026-11-21)
+  - [x] Docs: PRD (PL-8..10, VH-4/8..11, CB-8, WD-8..11, MS-7/8), `docs/10-AUDIO-DIALOGUE.md`, `docs/11-ART-REALISM.md`, GDD §9, roadmap Phase 1.5
+  - [x] Hero redesign (`actors/Humanoid.ts`): smart young mastan — open red shirt over black tee, jeans, white sneakers, aviators, gold chain, stubble + mustache, quiff; swagger walk; real-world speeds (walk 1.6 / jog 3.6 / sprint 7.2 m/s); expressive face (blink, brows, smile, mouth flaps while talking, 6 emotions); idle gestures while talking
+  - [x] Characters are **one skinned mesh** each (parts rigidly bound to bones, vertex colours) → ~1–2 draw calls per character
+  - [x] NPCs (`actors/Npc.ts`): Mofiz Chacha (tea stall), rickshaw-wala, shopkeeper, foreign tourist (English); face the player, idle calls, react when bumped/honked/near-missed
+  - [x] Dialogue (`dialogue/DialogueSystem.ts`, data `content/src/dialogue.json`, schema `shared/src/dialogue.ts`): 60 original funny Dhakaiya lines, anti-repeat, conversations, GTA-style subtitles with English meaning, emotions → face, `audio` slot per line for recorded voices
+  - [x] Talk menu: greet / threaten / snatch / order / grab (number keys 1–5 or buttons); money ৳, notoriety 😈, public love ❤️
+  - [x] Sound (`audio/AudioEngine.ts`, Web Audio, no files): engine per vehicle (car, bike, CNG two-stroke) following gears/speed, horns (H / LB / 📯), tyre skid, crash + glass, footsteps, city hum + distant horns, coin sound; mute in pause menu
+  - [x] Posters & banners (`world/posters.ts`): 16 original funny posters on shutters and poles, banner across the road (fictional neta)
+  - [x] Vehicle condition (`vehicles/condition.ts`): fuel use, per-zone damage from crashes, engine power loss, engine dead at 100%/empty tank; dashboard with speed, fuel, damage % and car zone diagram
+  - [x] Particles (`world/Particles.ts`, 1 draw call): tyre dust, exhaust puffs, grey/black damage smoke, crash debris
+  - [x] Draw calls after optimisation: Lite ≈ 81, Mobile ≈ 135, Medium ≈ 148
 
-**Then Phase 2 — Mohammadpur map** (see `docs/03-ROADMAP.md`). Suggested order:
-1. `tools/map-builder`: export Mohammadpur from OpenStreetMap (Overpass) → roads (with widths/lanes), building footprints, water (Beribadh)
-2. Generate chunks (128 m) reusing `world/StreetBlock.ts` building/shop/sign/wire generators, but driven by OSM footprints instead of a straight street
-3. Chunk streaming + far skyline impostors + IndexedDB cache; lane graph + navmesh output for Phase 3
-4. Hand-made landmarks: Asad Gate, Town Hall bazar, Thana, Krishi Market, bus stand, Japan Garden City, Beribadh haat
-5. Minimap + full map from the same data
-6. Keep Lite ≤ 150 draw calls and 30 FPS on phones
+## ▶ NEXT STEP
+**Owner decisions needed (Phase 1.5 Part B):**
+1. **Assets for realism** (`docs/11-ART-REALISM.md §6`): free route (MakeHuman + Mixamo + CC0/CC-BY models) or paid (buy packs / hire a 3D artist). Realistic faces/cars are impossible with code-generated shapes.
+2. **Voices** (`docs/10-AUDIO-DIALOGUE.md §2`): hire Bangladeshi voice actors (recommended) or start with AI text-to-speech.
+3. Test on a real phone + laptop and give feel feedback.
+
+**Then Phase 2 — Mohammadpur map** (see `docs/03-ROADMAP.md`):
+1. `tools/map-builder`: OSM export (Overpass) → roads, footprints, water (Beribadh)
+2. Chunks (128 m) reusing `world/StreetBlock.ts` generators (buildings, shops, signs, posters, wires) driven by OSM data
+3. Streaming + skyline impostors + IndexedDB cache; lane graph + navmesh for Phase 3 traffic/pedestrians
+4. Landmarks: Asad Gate, Town Hall bazar, Thana, Krishi Market, bus stand, Japan Garden City, Beribadh haat
+5. Minimap + full map; water physics (swimming, vehicles stalling) at Beribadh
+6. Keep Lite ≤ 150 draw calls, 30 FPS on phones
 
 ## Phase 1 result — notes for whoever continues
 - Character is **procedural** on purpose (tiny, no licences, no foot sliding). `Humanoid.update(dt, LocomotionState)` is the contract — a skinned glTF model can replace it later without touching `SliceScene`.
@@ -114,6 +132,10 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | 2026-11-21 | COOP/COEP (credentialless) on every route | Workers & service worker must carry COEP on an isolated page |
 | 2026-11-21 | Procedural character + vehicles (no downloaded 3D assets yet) | No licence risk, tiny download, full control; swap for skinned models later |
 | 2026-11-21 | Night lighting via emissive + fake light pools, no dynamic lights | Phone performance |
+| 2026-11-21 | Hero = smart young mastan (jeans/shirt/sunglasses), lungi only as NPC/outfit | Owner feedback |
+| 2026-11-21 | Lines are original, written per archetype; voices recorded later (subtitles now) | No copying other games/films; funniest delivery needs real actors |
+| 2026-11-21 | Procedural characters baked into one skinned mesh each | Draw calls on phones (was ~60 per character) |
+| 2026-11-21 | Sounds synthesized with Web Audio until recorded samples exist | Zero download size, no licences |
 | 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
@@ -129,11 +151,17 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - Medium/Mobile with shadows ≈ 155 draw calls (shadow pass doubles them); fine on desktop, watch on phones
 - Parked vehicles can be pushed by walking into them (light parked brake) — OK for now
 - No real-phone test yet (only headless Chromium phone emulation)
+- Characters and cars are still code-generated shapes (not realistic) until Part B assets arrive
+- No voice audio yet: subtitles only (`audio` field in dialogue.json is ready)
+- Vehicle damage is HUD/smoke only, no visible dents yet (needs real car models)
+- Refuelling not implemented yet (fuel only goes down; tank starts 85%)
+- NPCs stand in place (walking pedestrians come in Phase 3)
 - Character has no hands-on-wheel pose in cars/CNG (player is hidden inside); only the bike shows the rider
 
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Phase 1.5 Part A: mastan hero with expressive face, skinned characters, 4 talking NPCs, 60 funny Bangla lines + subtitles, talk/order/snatch menu, money & reputation, synthesized engine/horn/crash/footstep/city sounds, funny posters & banner, fuel + zone damage dashboard, dust/smoke particles; docs 10 & 11 | Waiting on owner: asset route + voices (Part B), real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Built Phase 1: procedural Mostofa with gait animation, collision camera, car/CNG/bike physics + enter/exit, Tajmahal Road block with Bangla signs & wires, day–night + bloom, driving HUD & touch pedals, pause-menu quality switch; 29 unit + 8 e2e tests; tuned braking | Phase 1 done; owner to test on a real phone, then Phase 2 |
 | 2026-11-21 | Claude (Opus 5.5) | Built Phase 0: monorepo, engine (renderer, loop, input, presets, Game Lock, physics worker, test scene), Next.js app (landing, /play, touch HUD, PWA, headers), tests, CI; verified desktop + phone in headless Chromium | Phase 0 done; start Phase 1 |
 | 2026-11-20 | Claude (Opus 5.5) | Active name → GTM: Great Thief Mostofa; connected GitHub repo open-city-dhaka and pushed | Waiting for DB choice before Phase 0 |

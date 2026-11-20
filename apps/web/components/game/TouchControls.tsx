@@ -183,6 +183,7 @@ export function TouchControls({ input, mode, interactLabel }: Props) {
         </div>
       ) : (
         <div className={styles.pedalCluster}>
+          {button('horn', '📯', styles.btnSmall ?? '', 'touch-horn')}
           {button('jump', 'HB', styles.btnSmall ?? '')}
           {pedal(-1, '▼', styles.pedalBrake ?? '', 'touch-brake')}
           {pedal(1, '▲', styles.pedalGas ?? '', 'touch-gas')}

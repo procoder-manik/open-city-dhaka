@@ -10,6 +10,7 @@ const KEY_BINDINGS: Record<string, Action> = {
   KeyQ: 'melee',
   Escape: 'pause',
   KeyP: 'pause',
+  KeyH: 'horn',
 };
 
 const MOVE_KEYS: Record<string, [number, number]> = {
@@ -34,6 +35,7 @@ const GAMEPAD_BINDINGS: Array<[number, Action]> = [
   [7, 'fire'],
   [10, 'sprint'],
   [9, 'pause'],
+  [4, 'horn'],
 ];
 
 const DEADZONE = 0.15;

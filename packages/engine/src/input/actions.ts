@@ -9,6 +9,7 @@ export const ACTIONS = [
   'reload',
   'melee',
   'pause',
+  'horn',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 

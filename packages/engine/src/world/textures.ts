@@ -3,6 +3,10 @@ import { seededRandom } from './random';
 
 /** Font stack for Bangla text drawn into canvases (set from the app's loaded web font). */
 let banglaFont = "'Hind Siliguri', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', sans-serif";
+export function getBanglaFont(): string {
+  return banglaFont;
+}
+
 export function setBanglaFont(family: string | null | undefined) {
   if (family) banglaFont = `${family}, ${banglaFont}`;
 }

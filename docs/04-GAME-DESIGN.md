@@ -65,7 +65,7 @@ The comedy comes from how absurd Dhaka's crime world is: bribe-hungry cops, exto
 
 | Character | Role | Archetype / joke |
 |---|---|---|
-| **Mostofa ("Mostu")** | Protagonist | Ex-bus helper turned rising gangster; shouts route names out of habit ("Motijheel! Gulistan! Khali! Khali!") |
+| **Mostofa ("Mostu")** | Protagonist | Ex-bus helper turned **smart young mastan**: fitted jeans, open printed shirt over a black tee, white sneakers, aviator sunglasses, gold chain, trimmed beard, swept hair. Swagger walk, cocky one-liners, secretly soft-hearted. Still shouts bus routes out of habit ("Motijheel! Gulistan! Khali! Khali!") |
 | **Shirin "Shiri Apa" Akter** | Protagonist 2 | CNG queen, zero patience, best driver in Dhaka |
 | **Chacha Mofiz** | Mentor / info broker | Tea-stall owner who knows every secret; sells "special cha" |
 | **Ostad Bulbul** | Melee trainer | Retired Dhallywood stuntman, speaks only in 90s movie dialogue, slow-motion poses |
@@ -182,3 +182,9 @@ Original stations (royalty-free/commissioned music, parody DJ talk):
 
 ## 8. Accessibility
 Subtitles (Bangla/English), colour-blind HUD palette, aim assist toggle, hold-vs-toggle options, reduced camera shake, adjustable difficulty.
+
+## 9. Voices, talk & funny details (see `10-AUDIO-DIALOGUE.md`)
+- Every NPC archetype has its own speech style and funny barks: rickshaw-wala ("মামা ২০ টাকা বেশি দিয়েন, রাস্তা খারাপ"), tea chacha, shopkeeper, hawker, aunty, neta (long empty speeches), police ("কাগজপত্র কই?"), foreigners in English ("Is this the way to Dhanmondi? Everything is honking!").
+- Mostofa can **greet, threaten or snatch** from anyone, **order or grab food** at stalls; NPCs react with lines + facial emotion.
+- Faces: blink, smile, angry brows, mouth moves while talking.
+- Funny posters/banners on every wall and pole (original). Examples: "এখানে প্রস্রাব করা নিষেধ — করিলে ৫০০ টাকা জরিমানা", "জিন-পরী তাড়ানো হয় — গ্যারান্টি সহকারে", "হারানো বিজ্ঞপ্তি: আমার মন", "বাসা ভাড়া দেওয়া হইবে — ব্যাচেলর নিষেধ", "ভাইয়ের আগমনে শুভেচ্ছা" (fictional neta Bablu), "এখানে ময়লা ফেলিলে গাধা", "১০০% গ্যারান্টিতে ইংলিশ শিখুন ৭ দিনে".

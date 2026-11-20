@@ -68,3 +68,21 @@ test('player can get into a vehicle and drive it', async ({ page }) => {
   expect(info.mode).toBe('vehicle');
   await page.keyboard.press('KeyS');
 });
+
+test('player can talk to an NPC and see Bangla subtitles', async ({ page }) => {
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  const ok = await page.evaluate(() =>
+    (
+      window as unknown as { __game: { debugTalk(id: string, o: string): boolean } }
+    ).__game.debugTalk('mofiz', 'greet'),
+  );
+  expect(ok).toBe(true);
+  await expect(page.getByTestId('subtitle')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('subtitle')).toContainText('মোস্তফা');
+});

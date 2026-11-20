@@ -1,0 +1,467 @@
+{
+  "speakers": {
+    "hero": { "name": "মোস্তফা", "nameEn": "Mostofa", "color": "#ff9f1c" },
+    "teaChacha": { "name": "মফিজ চাচা", "nameEn": "Mofiz Chacha", "color": "#8fd694" },
+    "rickshawWala": { "name": "রিকশাওয়ালা", "nameEn": "Rickshaw-wala", "color": "#7ec8e3" },
+    "shopkeeper": { "name": "দোকানদার", "nameEn": "Shopkeeper", "color": "#f4d35e" },
+    "foreigner": { "name": "বিদেশি সাহেব", "nameEn": "Tourist", "color": "#c5a3ff" }
+  },
+  "lines": [
+    {
+      "id": "hero.greet.1",
+      "speaker": "hero",
+      "situation": "greet",
+      "emotion": "smug",
+      "bn": "কী অবস্থা? ভালো তো? না ভালো রাখার ব্যবস্থা করমু?",
+      "en": "How's it going? Fine? Or should I make it fine?"
+    },
+    {
+      "id": "hero.greet.2",
+      "speaker": "hero",
+      "situation": "greet",
+      "emotion": "happy",
+      "bn": "সালাম! এলাকার মানুষ, এলাকার ভাই — মোস্তফা!",
+      "en": "Salam! Local people, local bro — Mostofa!"
+    },
+    {
+      "id": "hero.greet.3",
+      "speaker": "hero",
+      "situation": "greet",
+      "emotion": "smug",
+      "bn": "চিনছেন? না চিনলে আজকে থেকে চিনবেন।",
+      "en": "Recognise me? If not, you will from today."
+    },
+    {
+      "id": "hero.greet.4",
+      "speaker": "hero",
+      "situation": "greet",
+      "emotion": "happy",
+      "bn": "ভাই, মন খারাপ কইরেন না, আমি আছি না!",
+      "en": "Don't be sad, bro, I'm here!"
+    },
+
+    {
+      "id": "hero.threaten.1",
+      "speaker": "hero",
+      "situation": "threaten",
+      "emotion": "angry",
+      "bn": "বেশি কথা কইলে কিন্তু নাম চেঞ্জ কইরা দিমু!",
+      "en": "Talk too much and I'll change your name!"
+    },
+    {
+      "id": "hero.threaten.2",
+      "speaker": "hero",
+      "situation": "threaten",
+      "emotion": "angry",
+      "bn": "এই এলাকায় কার রাজত্ব, জানেন তো?",
+      "en": "You know whose kingdom this area is, right?"
+    },
+    {
+      "id": "hero.threaten.3",
+      "speaker": "hero",
+      "situation": "threaten",
+      "emotion": "smug",
+      "bn": "চুপচাপ থাকেন, শরীরের জন্য ভালো।",
+      "en": "Stay quiet. It's good for your health."
+    },
+    {
+      "id": "hero.threaten.4",
+      "speaker": "hero",
+      "situation": "threaten",
+      "emotion": "angry",
+      "bn": "চোখ নামান! সানগ্লাস পইরা আছি বইলা কিছু দেখি না ভাবছেন?",
+      "en": "Eyes down! Think I can't see because of the sunglasses?"
+    },
+
+    {
+      "id": "hero.snatch.1",
+      "speaker": "hero",
+      "situation": "snatch",
+      "emotion": "smug",
+      "bn": "মানিব্যাগটা একটু দেখি… ধন্যবাদ, আবার আসবেন!",
+      "en": "Let me see that wallet… thanks, come again!"
+    },
+    {
+      "id": "hero.snatch.2",
+      "speaker": "hero",
+      "situation": "snatch",
+      "emotion": "smug",
+      "bn": "এইটা ট্যাক্স। মোস্তফা ট্যাক্স।",
+      "en": "This is tax. Mostofa tax."
+    },
+    {
+      "id": "hero.snatch.3",
+      "speaker": "hero",
+      "situation": "snatch",
+      "emotion": "happy",
+      "bn": "টেনশন নিয়েন না, ভালো কাজে খরচ করমু।",
+      "en": "Don't worry, I'll spend it on good causes."
+    },
+
+    {
+      "id": "hero.order.1",
+      "speaker": "hero",
+      "situation": "order",
+      "emotion": "happy",
+      "bn": "চাচা, একটা কড়া লিকার, চিনি বেশি, প্রেম কম!",
+      "en": "Chacha, one strong tea — extra sugar, less love!"
+    },
+    {
+      "id": "hero.order.2",
+      "speaker": "hero",
+      "situation": "order",
+      "emotion": "happy",
+      "bn": "একটা চা আর দুইটা বিস্কুট। বাকি পরে দিমু… মজা করলাম, নেন টাকা।",
+      "en": "One tea, two biscuits. Pay later… kidding, here's the money."
+    },
+    {
+      "id": "hero.grab.1",
+      "speaker": "hero",
+      "situation": "grab",
+      "emotion": "smug",
+      "bn": "এইটা আমার! বিল? বিল গেটসের কাছে চান।",
+      "en": "This is mine! The bill? Ask Bill Gates."
+    },
+    {
+      "id": "hero.grab.2",
+      "speaker": "hero",
+      "situation": "grab",
+      "emotion": "smug",
+      "bn": "টেস্ট কইরা দেখলাম। খারাপ না, আবার আসমু।",
+      "en": "Just a taste test. Not bad, I'll be back."
+    },
+
+    {
+      "id": "hero.enterVehicle.1",
+      "speaker": "hero",
+      "situation": "enterVehicle",
+      "emotion": "smug",
+      "bn": "চাবি লাগে না, স্টাইল লাগে।",
+      "en": "Don't need a key, need style."
+    },
+    {
+      "id": "hero.enterVehicle.2",
+      "speaker": "hero",
+      "situation": "enterVehicle",
+      "emotion": "happy",
+      "bn": "গুলিস্তান! মতিঝিল! খালি! খালি!… ওহ, অভ্যাস।",
+      "en": "Gulistan! Motijheel! Empty seats!… oops, old habit."
+    },
+    {
+      "id": "hero.enterVehicle.3",
+      "speaker": "hero",
+      "situation": "enterVehicle",
+      "emotion": "smug",
+      "bn": "মালিক খুঁজলে বলবেন, মোস্তফা ভাই টেস্ট ড্রাইভে।",
+      "en": "If the owner asks — Mostofa bhai's on a test drive."
+    },
+    {
+      "id": "hero.crash.1",
+      "speaker": "hero",
+      "situation": "crash",
+      "emotion": "surprised",
+      "bn": "আরে! রাস্তা কে বানাইছে?!",
+      "en": "Hey! Who built this road?!"
+    },
+    {
+      "id": "hero.crash.2",
+      "speaker": "hero",
+      "situation": "crash",
+      "emotion": "angry",
+      "bn": "ওই দেয়াল! সাইড দেস না ক্যান?",
+      "en": "Oi wall! Why won't you give way?"
+    },
+    {
+      "id": "hero.crash.3",
+      "speaker": "hero",
+      "situation": "crash",
+      "emotion": "surprised",
+      "bn": "ইন্স্যুরেন্স আছে তো? …আমারও নাই।",
+      "en": "Got insurance? …me neither."
+    },
+    {
+      "id": "hero.broke.1",
+      "speaker": "hero",
+      "situation": "broke",
+      "emotion": "scared",
+      "bn": "পকেট তো ফাঁকা… চাচা, বাকির খাতায় লেখেন।",
+      "en": "Pocket's empty… put it on my tab, chacha."
+    },
+
+    {
+      "id": "chacha.greetReply.1",
+      "speaker": "teaChacha",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "আরে মোস্তফা বাবা! বহো বহো, চা খাইয়া যাও।",
+      "en": "Ah, Mostofa son! Sit, sit, have some tea."
+    },
+    {
+      "id": "chacha.greetReply.2",
+      "speaker": "teaChacha",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "তোমার আব্বায়ও এই দোকানে বাকি খাইত, তুমিও খাইবা জানি।",
+      "en": "Your father ran a tab here too. I know you will."
+    },
+    {
+      "id": "chacha.threatenReply.1",
+      "speaker": "teaChacha",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "বাবা, আমি বুড়া মানুষ, প্রেশারের রোগী, আস্তে কথা কও!",
+      "en": "Son, I'm an old man with blood pressure, speak softly!"
+    },
+    {
+      "id": "chacha.snatched.1",
+      "speaker": "teaChacha",
+      "situation": "snatched",
+      "emotion": "angry",
+      "bn": "হায় হায়! সারাদিনের বেচাকেনা! আল্লাহ বিচার করব!",
+      "en": "Oh no! A whole day's sales! God will judge you!"
+    },
+    {
+      "id": "chacha.orderReply.1",
+      "speaker": "teaChacha",
+      "situation": "orderReply",
+      "emotion": "happy",
+      "bn": "এই নাও, স্পেশাল চা। খাইলে মাথা ঠান্ডা, দিল গরম!",
+      "en": "Here, special tea. Cool head, warm heart!"
+    },
+    {
+      "id": "chacha.orderReply.2",
+      "speaker": "teaChacha",
+      "situation": "orderReply",
+      "emotion": "happy",
+      "bn": "দশ টাকা। বিস্কুট ফ্রি, কারণ মিয়ানো।",
+      "en": "Ten taka. Biscuit's free because it's soggy."
+    },
+    {
+      "id": "chacha.grabbed.1",
+      "speaker": "teaChacha",
+      "situation": "grabbed",
+      "emotion": "angry",
+      "bn": "ওই! কাপটা অন্তত ফেরত দিয়া যা!",
+      "en": "Oi! At least return the cup!"
+    },
+    {
+      "id": "chacha.grabbed.2",
+      "speaker": "teaChacha",
+      "situation": "grabbed",
+      "emotion": "angry",
+      "bn": "দাঁড়া! তোর নাম খাতায় লাল কালিতে লেখলাম!",
+      "en": "Stop! Your name's going in my book in red ink!"
+    },
+    {
+      "id": "chacha.bumped.1",
+      "speaker": "teaChacha",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "আস্তে! গরম চা গায়ে পড়লে ফ্রিতে গোসল!",
+      "en": "Careful! Hot tea on you = free bath!"
+    },
+    {
+      "id": "chacha.idle.1",
+      "speaker": "teaChacha",
+      "situation": "idle",
+      "emotion": "happy",
+      "bn": "গরম চা! গরম চা! খাইলে দুঃখ যায়!",
+      "en": "Hot tea! Hot tea! Drink it and sorrow goes away!"
+    },
+
+    {
+      "id": "rick.greetReply.1",
+      "speaker": "rickshawWala",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "যাইবেন মামা? মোহাম্মদপুর টু ধানমন্ডি একশো টাকা, ফিক্সড!",
+      "en": "Going somewhere, mama? Mohammadpur to Dhanmondi, 100 taka, fixed!"
+    },
+    {
+      "id": "rick.greetReply.2",
+      "speaker": "rickshawWala",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "মামা, রাস্তা খারাপ, বিশ টাকা বেশি দিয়েন।",
+      "en": "Mama, road's bad, give 20 taka extra."
+    },
+    {
+      "id": "rick.threatenReply.1",
+      "speaker": "rickshawWala",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "মামা, আমি গরিব মানুষ, প্যাডেল মারি, আপনারে মারি না!",
+      "en": "Mama, I'm poor, I pedal — I don't punch!"
+    },
+    {
+      "id": "rick.snatched.1",
+      "speaker": "rickshawWala",
+      "situation": "snatched",
+      "emotion": "angry",
+      "bn": "ধর! ধর! ছিনতাইকারী! কেউ ধরেন!",
+      "en": "Catch him! Catch him! Snatcher! Somebody!"
+    },
+    {
+      "id": "rick.bumped.1",
+      "speaker": "rickshawWala",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "ওই মিয়া! চোখ কি পকেটে রাখছেন?",
+      "en": "Hey! Did you leave your eyes in your pocket?"
+    },
+    {
+      "id": "rick.honked.1",
+      "speaker": "rickshawWala",
+      "situation": "honked",
+      "emotion": "angry",
+      "bn": "হর্ন দিয়া কী লাভ? সামনে তো জ্যাম, আকাশে উড়বো নাকি?",
+      "en": "What's the honking for? It's a jam — should I fly?"
+    },
+    {
+      "id": "rick.honked.2",
+      "speaker": "rickshawWala",
+      "situation": "honked",
+      "emotion": "angry",
+      "bn": "এত হর্ন দেন ক্যান? বিয়া বাড়ির বাজনা নাকি?",
+      "en": "Why so much honking? Is this a wedding band?"
+    },
+    {
+      "id": "rick.nearMiss.1",
+      "speaker": "rickshawWala",
+      "situation": "nearMiss",
+      "emotion": "scared",
+      "bn": "আল্লাহ রে! আরেকটু হইলে উপরে চইলা যাইতাম!",
+      "en": "Oh God! A bit more and I'd be in heaven!"
+    },
+    {
+      "id": "rick.idle.1",
+      "speaker": "rickshawWala",
+      "situation": "idle",
+      "emotion": "neutral",
+      "bn": "আসাদগেট! শ্যামলী! যাইবেন কেউ?",
+      "en": "Asad Gate! Shyamoli! Anyone?"
+    },
+
+    {
+      "id": "shop.greetReply.1",
+      "speaker": "shopkeeper",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "আসেন ভাই আসেন, সব আছে! যা নাই, তাও আনায় দিমু!",
+      "en": "Come in, bro, we have everything! What we don't, we'll get!"
+    },
+    {
+      "id": "shop.greetReply.2",
+      "speaker": "shopkeeper",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "বাকি চাইলে কিন্তু হাসি বন্ধ।",
+      "en": "Ask for credit and the smile stops."
+    },
+    {
+      "id": "shop.threatenReply.1",
+      "speaker": "shopkeeper",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "ভাই, চাঁদা তো গত সপ্তাহেই দিলাম! রশিদও আছে!",
+      "en": "Bro, I paid the 'donation' last week! I have a receipt!"
+    },
+    {
+      "id": "shop.snatched.1",
+      "speaker": "shopkeeper",
+      "situation": "snatched",
+      "emotion": "angry",
+      "bn": "ক্যাশ নিয়া গেল! সিসি ক্যামেরা… ওহ, ওইটা তো নষ্ট!",
+      "en": "He took the cash! CCTV… oh, it's broken!"
+    },
+    {
+      "id": "shop.orderReply.1",
+      "speaker": "shopkeeper",
+      "situation": "orderReply",
+      "emotion": "happy",
+      "bn": "নেন ভাই, ঠান্ডা কোল্ড ড্রিংক্স, গরম গরম!",
+      "en": "Here, bro — cold drink, piping hot!"
+    },
+    {
+      "id": "shop.grabbed.1",
+      "speaker": "shopkeeper",
+      "situation": "grabbed",
+      "emotion": "angry",
+      "bn": "টাকা দেন! এইটা দোকান, এতিমখানা না!",
+      "en": "Pay up! This is a shop, not an orphanage!"
+    },
+    {
+      "id": "shop.bumped.1",
+      "speaker": "shopkeeper",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "ধাক্কা দিলেন ক্যান? কিনবেন না, শুধু ধাক্কাবেন?",
+      "en": "Why push? Not buying, just pushing?"
+    },
+    {
+      "id": "shop.idle.1",
+      "speaker": "shopkeeper",
+      "situation": "idle",
+      "emotion": "neutral",
+      "bn": "ফ্লেক্সিলোড, ফটোকপি, চানাচুর — এক জায়গায় সব!",
+      "en": "Recharge, photocopy, chanachur — all in one place!"
+    },
+
+    {
+      "id": "tourist.greetReply.1",
+      "speaker": "foreigner",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "হ্যালো! আমি বাংলা জানি… একটু একটু। ঝাল খাই না!",
+      "en": "Hello! I speak Bangla… a little. No spicy food please!"
+    },
+    {
+      "id": "tourist.greetReply.2",
+      "speaker": "foreigner",
+      "situation": "greetReply",
+      "emotion": "surprised",
+      "bn": "এক্সকিউজ মি, ধানমন্ডি কোন দিকে? সবাই সব দিকে দেখায়!",
+      "en": "Excuse me, which way is Dhanmondi? Everyone points everywhere!"
+    },
+    {
+      "id": "tourist.threatenReply.1",
+      "speaker": "foreigner",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "ওকে ওকে! নো প্রবলেম! টেক মাই সেলফি স্টিক!",
+      "en": "Okay okay! No problem! Take my selfie stick!"
+    },
+    {
+      "id": "tourist.snatched.1",
+      "speaker": "foreigner",
+      "situation": "snatched",
+      "emotion": "surprised",
+      "bn": "আমার ওয়ালেট! …এটা কি ট্যুরিস্ট এক্সপেরিয়েন্সের অংশ?",
+      "en": "My wallet! …is this part of the tourist experience?"
+    },
+    {
+      "id": "tourist.bumped.1",
+      "speaker": "foreigner",
+      "situation": "bumped",
+      "emotion": "surprised",
+      "bn": "উপস! সরি! ঢাকায় ফুটপাতও জ্যাম!",
+      "en": "Oops! Sorry! Even the footpath has traffic in Dhaka!"
+    },
+    {
+      "id": "tourist.honked.1",
+      "speaker": "foreigner",
+      "situation": "honked",
+      "emotion": "surprised",
+      "bn": "হোয়াই এভরিবডি হর্নিং? ইজ ইট আ ফেস্টিভাল?",
+      "en": "Why is everybody honking? Is it a festival?"
+    },
+    {
+      "id": "tourist.idle.1",
+      "speaker": "foreigner",
+      "situation": "idle",
+      "emotion": "happy",
+      "bn": "ফুচকা… ভেরি স্পাইসি… বাট আই লাভ ইট!",
+      "en": "Fuchka… very spicy… but I love it!"
+    }
+  ]
+}

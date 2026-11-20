@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { QUALITY_TIERS, brand, type QualityTier } from '@game/shared';
 import type * as Engine from '@game/engine';
-import type { Game, GameLock, GameState } from '@game/engine';
+import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
 import { TouchControls } from './TouchControls';
 import styles from './play.module.css';
 
@@ -294,6 +294,16 @@ function GameHud({
   const speed = useGame(game, (s) => s.speedKmh);
   const hour = useGame(game, (s) => Math.floor(s.hour * 6) / 6);
   const activeTier = useGame(game, (s) => s.tier);
+  const taka = useGame(game, (s) => s.taka);
+  const notoriety = useGame(game, (s) => s.notoriety);
+  const publicLove = useGame(game, (s) => s.publicLove);
+  const subtitle = useGame(game, (s) => s.subtitle);
+  const talk = useGame(game, (s) => s.talk);
+  const fuel = useGame(game, (s) => Math.round(s.fuel * 100));
+  const damage = useGame(game, (s) => s.damage);
+  const zones = useGame(game, (s) => s.damageZones);
+  const engineDead = useGame(game, (s) => s.engineDead);
+  const muted = useGame(game, (s) => s.muted);
   const [showStats, setShowStats] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
   );
@@ -301,6 +311,21 @@ function GameHud({
   // Phones/tablets always; touch laptops once the screen is touched; hidden while using a gamepad.
   const showTouch = (isTouch || lastInput === 'touch') && lastInput !== 'gamepad';
   const interactLabel = prompt ? (mode === 'vehicle' ? 'নামো' : 'উঠো') : null;
+
+  // Number keys 1–5 pick talk options (desktop).
+  useEffect(() => {
+    if (!talk || status !== 'running') return;
+    const onKey = (e: KeyboardEvent) => {
+      const i = Number(e.key) - 1;
+      const opt = talk.options[i];
+      if (opt && !e.repeat) game.chooseTalk(opt.id);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [talk, status, game]);
+
+  const zoneColor = (d: number) =>
+    d < 15 ? '#4caf50' : d < 45 ? '#cddc39' : d < 75 ? '#ff9800' : '#f44336';
 
   return (
     <>
@@ -330,9 +355,65 @@ function GameHud({
         {formatHour(hour)}
       </div>
 
+      <div className={styles.wallet} data-testid="wallet">
+        <span className={styles.taka}>৳{taka.toLocaleString('bn-BD')}</span>
+        <span title="কুখ্যাতি">😈 {notoriety}</span>
+        <span title="জনপ্রিয়তা">❤️ {publicLove}</span>
+      </div>
+
       {mode === 'vehicle' && (
-        <div className={styles.speedo} data-testid="speedo">
-          <b>{speed}</b> km/h
+        <div className={styles.dash} data-testid="speedo">
+          <div className={styles.dashSpeed}>
+            <b>{speed}</b>
+            <span>km/h</span>
+          </div>
+          <div className={styles.dashCol}>
+            <div className={styles.gaugeLabel}>
+              ⛽ জ্বালানি <b>{fuel}%</b>
+            </div>
+            <div className={styles.bar}>
+              <div
+                className={styles.barFill}
+                style={{ width: `${fuel}%`, background: fuel < 15 ? '#f44336' : '#2ec4b6' }}
+              />
+            </div>
+            <div className={styles.gaugeLabel}>
+              🔧 ড্যামেজ <b data-testid="damage">{damage}%</b>
+              {engineDead && <em className={styles.dead}> ইঞ্জিন বন্ধ!</em>}
+            </div>
+          </div>
+          <svg className={styles.carDiagram} viewBox="0 0 40 64" aria-label="Damage by zone">
+            <rect x="8" y="2" width="24" height="14" rx="5" fill={zoneColor(zones.front)} />
+            <rect x="8" y="48" width="24" height="14" rx="5" fill={zoneColor(zones.rear)} />
+            <rect x="32" y="16" width="6" height="32" rx="3" fill={zoneColor(zones.left)} />
+            <rect x="2" y="16" width="6" height="32" rx="3" fill={zoneColor(zones.right)} />
+            <rect x="10" y="18" width="20" height="28" rx="4" fill="rgba(255,255,255,0.15)" />
+          </svg>
+        </div>
+      )}
+
+      {subtitle && (
+        <div className={styles.subtitle} data-testid="subtitle">
+          <b style={{ color: subtitle.color }}>{subtitle.name}:</b> {subtitle.text}
+          <small>{subtitle.en}</small>
+        </div>
+      )}
+
+      {talk && status === 'running' && mode === 'foot' && (
+        <div className={styles.talkMenu} data-testid="talk-menu">
+          <div className={styles.talkName}>{talk.name}</div>
+          {talk.options.map((o, i) => (
+            <button
+              key={o.id}
+              type="button"
+              className={styles.talkBtn}
+              data-testid={`talk-${o.id}`}
+              onClick={() => game.chooseTalk(o.id as TalkOption)}
+            >
+              {!showTouch && <kbd>{i + 1}</kbd>}
+              {o.label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -374,6 +455,14 @@ function GameHud({
               <button className={styles.chip} type="button" onClick={() => setShowStats((v) => !v)}>
                 FPS {showStats ? 'বন্ধ' : 'চালু'}
               </button>
+              <button
+                className={styles.chip}
+                type="button"
+                onClick={() => game.setMuted(!muted)}
+                data-testid="mute-btn"
+              >
+                {muted ? '🔇 সাউন্ড চালু করো' : '🔊 সাউন্ড বন্ধ করো'}
+              </button>
             </div>
             {showHelp && (
               <dl className={styles.help}>
@@ -389,6 +478,10 @@ function GameHud({
                 <dd>W/S গ্যাস-ব্রেক, A/D স্টিয়ার, Space হ্যান্ডব্রেক</dd>
                 <dt>মোবাইলে গাড়ি</dt>
                 <dd>জয়স্টিকে স্টিয়ার, ▲ গ্যাস, ▼ ব্রেক, HB হ্যান্ডব্রেক</dd>
+                <dt>হর্ন</dt>
+                <dd>H / 📯 বাটন</dd>
+                <dt>কথা বলা</dt>
+                <dd>কারো কাছে গিয়ে 1–5 / মেনু বাটন</dd>
                 <dt>ক্যামেরা</dt>
                 <dd>মাউস / ডান দিকে আঙুল টানো</dd>
               </dl>
