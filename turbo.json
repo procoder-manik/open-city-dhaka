@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "../../brand.config.json"],
+      "inputs": ["$TURBO_DEFAULT$", "../../brand.config.json", "../../site.config.json"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {

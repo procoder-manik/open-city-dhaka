@@ -123,3 +123,16 @@
   font-size: 0.75rem;
   color: rgba(201, 180, 160, 0.6);
 }
+
+.community {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.community :global(.btn) {
+  text-decoration: none;
+}

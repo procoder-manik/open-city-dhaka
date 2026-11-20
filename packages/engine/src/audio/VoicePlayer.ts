@@ -77,8 +77,14 @@ export class VoicePlayer {
     return this.recorded.size;
   }
 
-  speak(line: DialogueLine) {
+  speak(line: DialogueLine, text?: { bn: string; en: string }) {
     if (this.muted || this.mode === 'off') return;
+    // Generated files say the default name; personalised lines go to the device voice.
+    const personalised = !!text && (text.bn !== line.bn || text.en !== line.en);
+    if (personalised) {
+      this.speakDevice({ ...line, bn: text.bn, en: text.en });
+      return;
+    }
     const url = line.audio ?? (this.recorded.has(line.id) ? `${this.base}/${line.id}.mp3` : null);
     if (url && this.mode !== 'device') {
       this.stop();

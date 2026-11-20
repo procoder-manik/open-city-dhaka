@@ -33,3 +33,6 @@ Current working title: **GTM: Great Thief Mostofa** (tagline *"Bangladesh's Most
 | Hulia | Bangla for a police "wanted" notice |
 
 Avoid: "GTA", "Grand Thief …" (too close), "Grand Theft …", "Grand … Auto", Rockstar logo font/style.
+
+## Website links (donate, feedback, socials)
+`/site.config.json` → `donateUrl`, `donateNote`, `feedbackFormUrl` (Google Form), `facebookUrl`, `youtubeUrl`. HTTPS only; `null` hides the button. Shown on the landing page and in the pause menu.

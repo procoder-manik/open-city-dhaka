@@ -29,8 +29,12 @@ export class DialogueSystem {
   constructor(
     private readonly data: DialogueFile,
     private readonly onSubtitle: (s: Subtitle | null) => void,
-    /** Called when a line starts (voice playback). */
-    private readonly onSpeak?: (line: DialogueLine) => void,
+    /** Called when a line starts (voice playback) with the personalised text. */
+    private readonly onSpeak?: (line: DialogueLine, text: { bn: string; en: string }) => void,
+    /** Fills {hero}/{heroName} with the player's chosen identity. */
+    private readonly format: (text: string) => string = (t) => t,
+    /** Display name override per speaker (the hero's custom name). */
+    private readonly speakerName: (speaker: string) => string | undefined = () => undefined,
   ) {
     for (const l of data.lines) {
       const key = `${l.speaker}:${l.situation}`;
@@ -103,18 +107,20 @@ export class DialogueSystem {
     this.queue.shift();
     const { line, actor } = next;
     const speaker = this.data.speakers[line.speaker];
-    const dur = DialogueSystem.duration(line.bn);
+    const dur = DialogueSystem.duration(this.format(line.bn));
+    const bn = this.format(line.bn);
+    const en = this.format(line.en);
     const sub: Subtitle = {
       speaker: line.speaker,
-      name: speaker?.name ?? line.speaker,
+      name: this.speakerName(line.speaker) ?? speaker?.name ?? line.speaker,
       color: speaker?.color ?? '#ffffff',
-      text: line.bn,
-      en: line.en,
+      text: bn,
+      en,
     };
     this.current = { sub, timer: dur };
     actor?.setEmotion(line.emotion, dur + 1);
     actor?.talk(dur * 0.85);
-    this.onSpeak?.(line);
+    this.onSpeak?.(line, { bn, en });
     this.onSubtitle(sub);
   }
 }

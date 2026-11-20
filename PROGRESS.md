@@ -17,7 +17,7 @@
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | **PostgreSQL (Neon) + Drizzle**, confirmed by owner. Not wired yet (Phase 6) |
-| Build status | `pnpm typecheck`, `lint`, `test` (36 unit), `build`, `e2e` (10 Playwright, desktop + phone) all pass locally. CI run on GitHub not yet checked |
+| Build status | `pnpm typecheck`, `lint`, `test` (45 unit), `build`, `e2e` (12 Playwright, desktop + phone) all pass locally. CI run on GitHub not yet checked |
 
 ## How to run
 ```bash
@@ -93,7 +93,20 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] Device AI voice (`audio/VoicePlayer.ts`): built-in Bangla TTS per character (speed/pitch), tourist in English; pause-menu voice selector
   - [x] `pnpm voice:gen` (`tools/voice-gen/generate.mjs`): Azure neural voices (bn-BD) for all lines → MP3 + manifest; free tier
 
+- [x] **Hero identity, Wanted & reputation** (owner request)
+  - [x] `shared/src/identity.ts`: default **গ্রেট থিফ মোস্তফা**, preset titles (রংবাজ, গ্যাংস্টার, ডন…), name/title validation (length, links, abuse, real public figures), `{hero}` / `{heroName}` placeholders
+  - [x] Pause menu `HeroPanel`: change title/name — **only for signed-in players** (login arrives in Phase 6; `?debug=1` unlocks for testing); guests see the default
+  - [x] Subtitles, headlines, posters and billboards use each player's own name; personalised lines use the device voice
+  - [x] `gameplay/CrimeSystem.ts`: crime record, Wanted 0–5 (snatch, grab, threaten, vehicle theft, crash), cool-down, bribe OC Kamal Pasha (৳300/star), good deeds (3 ❤️ = 1 crime wiped)
+  - [x] `world/WantedBoards.ts`: wanted posters with a drawn mugshot on poles + 2 roadside "খবর ঝালমুড়ি ২৪" breaking-news billboards; HUD sirens, bribe button, headline toast; NPCs recognise a wanted hero
+  - [x] `site.config.json` + landing/pause links: **Donate**, **feedback Google Form**, Facebook/YouTube (hidden until URLs are set)
+  - [x] Dhaka wall palette + "natural Dhaka" colour grade (CDL + vignette) on Medium+
+
 ## ▶ NEXT STEP
+**Owner to fill in:** `site.config.json` → `donateUrl` (bKash/Nagad merchant page, Buy Me a Coffee, etc.), `feedbackFormUrl` (Google Form link), socials.
+
+**Next coding step (recommended): login (Phase 6 auth pulled forward)** so players can save their own hero name: Better Auth (Google + email) + PostgreSQL (Neon free) + profile table (title, name) + server-side `checkHeroText` validation. Owner needs: free Neon database URL + Google OAuth client (steps will be in `.env.example`).
+
 **Waiting on the owner (Part B):**
 1. **Azure Speech key** (free F0) in `apps/web/.env.local` → run `pnpm voice:gen` → commit `apps/web/public/assets/voice/` (steps in `docs/10-AUDIO-DIALOGUE.md`).
 2. **Models** into `assets-src/incoming/`: MakeHuman characters (CC0), Mixamo animations, CC0/CC-BY car models (steps in `docs/11-ART-REALISM.md §6`). Then: build glTF loading (Meshopt/KTX2), swap placeholders, add facial blendshapes + lip sync.
@@ -142,6 +155,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | 2026-11-21 | Procedural characters baked into one skinned mesh each | Draw calls on phones (was ~60 per character) |
 | 2026-11-21 | Sounds synthesized with Web Audio until recorded samples exist | Zero download size, no licences |
 | 2026-11-21 | Free route: CC0 textures (Poly Haven), device TTS + Azure free-tier generated voices; models via MakeHuman/Mixamo/CC0 once owner downloads | Owner choice |
+| 2026-11-21 | Hero stays Mostofa by default; signed-in players may set title + name (moderated) | Owner request; login-gated to limit abuse |
+| 2026-11-21 | Wanted level is shared by posters, billboards, headlines and (Phase 4) police | One system, many funny surfaces |
 | 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
@@ -168,6 +183,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Hero identity (login-gated editor), crime record + Wanted 0–5, bribe OC, good-deed redemption, wanted posters + news billboards with player's name, headline toasts, NPC recognition, donate/feedback links via site.config.json, Dhaka palette + colour grade | Next: login (Phase 6 auth) or Phase 2 map |
 | 2026-11-21 | Claude (Opus 5.5) | Free route: downloaded & verified 6 CC0 Poly Haven texture sets, applied to road/footpath/walls/awnings/poles; device Bangla AI voice per character + voice selector; Azure `voice:gen` tool | Waiting on owner: Azure key, model downloads; Phase 2 can start |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 1.5 Part A: mastan hero with expressive face, skinned characters, 4 talking NPCs, 60 funny Bangla lines + subtitles, talk/order/snatch menu, money & reputation, synthesized engine/horn/crash/footstep/city sounds, funny posters & banner, fuel + zone damage dashboard, dust/smoke particles; docs 10 & 11 | Waiting on owner: asset route + voices (Part B), real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Built Phase 1: procedural Mostofa with gait animation, collision camera, car/CNG/bike physics + enter/exit, Tajmahal Road block with Bangla signs & wires, day–night + bloom, driving HUD & touch pedals, pause-menu quality switch; 29 unit + 8 e2e tests; tuned braking | Phase 1 done; owner to test on a real phone, then Phase 2 |

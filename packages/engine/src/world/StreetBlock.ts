@@ -29,15 +29,21 @@ export const STREET = {
   bay: 3,
 } as const;
 
+/**
+ * Dhaka palette: weathered off-white, faded salmon, mint, sand, sky blue, butter
+ * yellow, grey concrete, exposed brick. First four also tint the facade textures.
+ */
 const WALL_COLORS = [
-  '#e9cfa9',
-  '#d9a77f',
-  '#cfdccb',
-  '#f1e4c6',
-  '#bccbd8',
-  '#e8bba6',
-  '#ddd5bf',
-  '#b3c6a8',
+  '#e6dfd1',
+  '#dcb3a0',
+  '#b8cdbd',
+  '#d8c6a4',
+  '#a9c0d0',
+  '#e2d08c',
+  '#b6b1a8',
+  '#a8664a',
+  '#cfae92',
+  '#efe9dc',
 ];
 const AWNING_COLORS = [0x1e5aa8, 0xc0392b, 0x2e8b57, 0xe0a526, 0x7d3c98, 0x1f8a8a];
 

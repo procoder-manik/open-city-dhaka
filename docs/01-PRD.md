@@ -127,6 +127,9 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | MS-5 | In-game phone: map, missions, contacts, camera/selfie, "FaceBoi" social feed parody | P1 |
 | MS-6 | Achievements | P1 |
 | MS-7 | **Talk to anyone:** talk menu near NPCs — greet, threaten, snatch; at shops/stalls order food or grab it without paying; NPCs answer with funny Bangla lines (see `10-AUDIO-DIALOGUE.md`) | P0 |
+| MS-9 | **Your own Mostofa:** signed-in players can set the hero's title (e.g. গ্রেট থিফ, রংবাজ, গ্যাংস্টার) and name (default মোস্তফা). Shown in subtitles, wanted posters, billboards, headlines — each player sees their own. Guests always play "গ্রেট থিফ মোস্তফা". Names are moderated (length, links, abuse, real-people list) | P0 |
+| MS-10 | **Crime record & Wanted:** crimes (snatch, grab, threaten, vehicle theft…) raise a 0–5 star Wanted level; it cools down over time. Wanted posters with the player's name + mugshot appear on poles, billboards show news headlines about their crimes, NPCs recognise them | P0 |
+| MS-11 | **Bribe & good deeds:** call OC Kamal Pasha and pay a bribe (cost grows with stars) to clear the Wanted level; good deeds (greeting, paying, helping) earn points that can wipe crimes off the record | P0 |
 | MS-8 | **Funny Bangla voice & barks:** every archetype speaks its own way (Dhakaiya, rickshaw-wala, neta speeches, shopkeepers, police; foreigners in English); subtitles always on; voices recorded by Bangladeshi actors for launch | P0 |
 
 ### 5.6 UI / HUD
@@ -151,11 +154,12 @@ Priority: **P0** = must have for first public release, **P1** = should have, **P
 | MB-6 | Battery saver & low-data mode | P1 |
 | MB-7 | Input auto-switch: touch ↔ keyboard/mouse ↔ gamepad | P1 |
 | UI-6 | Website: landing page, trailer, login, profile, leaderboards, news | P0 |
+| UI-8 | Website & pause menu: **Donate** button and **feedback / bug-report Google Form** link (URLs in `site.config.json`, hidden until set) | P0 |
 
 ### 5.7 Online & backend
 | ID | Requirement | P |
 |---|---|---|
-| BE-1 | Play as guest instantly (local save); optional account (Google / email) for cloud save | P0 |
+| BE-1 | Play as guest instantly (local save); optional account (Google / email) for cloud save **and hero name/title customisation** | P0 |
 | BE-2 | Cloud save slots (3 per user) with version + checksum | P0 |
 | BE-3 | Leaderboards (race times, chhintai caught, longest escape) — server-validated | P1 |
 | BE-4 | Player profile & stats | P1 |

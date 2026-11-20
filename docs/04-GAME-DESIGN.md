@@ -188,3 +188,12 @@ Subtitles (Bangla/English), colour-blind HUD palette, aim assist toggle, hold-vs
 - Mostofa can **greet, threaten or snatch** from anyone, **order or grab food** at stalls; NPCs react with lines + facial emotion.
 - Faces: blink, smile, angry brows, mouth moves while talking.
 - Funny posters/banners on every wall and pole (original). Examples: "এখানে প্রস্রাব করা নিষেধ — করিলে ৫০০ টাকা জরিমানা", "জিন-পরী তাড়ানো হয় — গ্যারান্টি সহকারে", "হারানো বিজ্ঞপ্তি: আমার মন", "বাসা ভাড়া দেওয়া হইবে — ব্যাচেলর নিষেধ", "ভাইয়ের আগমনে শুভেচ্ছা" (fictional neta Bablu), "এখানে ময়লা ফেলিলে গাধা", "১০০% গ্যারান্টিতে ইংলিশ শিখুন ৭ দিনে".
+
+## 10. Your own Mostofa, Wanted & reputation
+- **Name & title:** default **গ্রেট থিফ মোস্তফা**. Signed-in players pick a title (গ্রেট থিফ, রংবাজ, গ্যাংস্টার, মাস্তান, টপ টেরর, চোরের ওস্তাদ… or custom) and may rename the hero. Story lines use `{hero}`, so every subtitle, poster and headline shows *their* name. Pre-generated voices avoid saying the name; lines that contain it use the device voice for custom names.
+- **Crime record:** snatch (+1 star), grab food (+0.5), threaten (+0.3), steal a vehicle (+0.5 first time each). Stars cool down by 1 every ~90 s when no new crimes. Total crimes are kept on the record.
+- **Wanted posters & headlines:** poles get "ওয়ান্টেড" posters with a mugshot, name, title, reward (৳5,000 × stars) and crimes; roadside billboards show breaking-news headlines ("ব্রেকিং: মোহাম্মদপুরে রংবাজ মোস্তফার ছিনতাই, পুলিশ খুঁজছে!"); a newspaper toast appears in the HUD.
+- **Recognition:** at 1+ stars NPCs recognise the hero ("এইটা তো পোস্টারের মোস্তফা!").
+- **Bribe:** phone OC Kamal Pasha (fictional) → pay ৳300 × stars → Wanted cleared, with a funny call. Not enough money → he refuses.
+- **Good deeds:** greeting, paying, helping earn ❤️ points; 3 points wipe 1 crime off the record (redeem in the pause menu).
+- Police chases, arrests and Thana come in Phase 4 and plug into the same Wanted level.

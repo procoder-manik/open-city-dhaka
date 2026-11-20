@@ -86,3 +86,21 @@ test('player can talk to an NPC and see Bangla subtitles', async ({ page }) => {
   await expect(page.getByTestId('subtitle')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('subtitle')).toContainText('মোস্তফা');
 });
+
+test('crimes raise the wanted level and show a headline', async ({ page }) => {
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  await page.evaluate(() =>
+    (
+      window as unknown as { __game: { debugTalk(id: string, o: string): boolean } }
+    ).__game.debugTalk('rickshaw1', 'snatch'),
+  );
+  await expect(page.getByTestId('wanted')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('headline')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('bribe-btn')).toBeVisible();
+});

@@ -1,11 +1,30 @@
 import * as THREE from 'three/webgpu';
 import { dialogue, getVehicleDef } from '@game/content';
-import type { QualityPreset, VehicleDef } from '@game/shared';
+import {
+  DEFAULT_IDENTITY,
+  fillHero,
+  type HeroIdentity,
+  type QualityPreset,
+  type VehicleDef,
+} from '@game/shared';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { VoicePlayer } from '../audio/VoicePlayer';
 import { CameraRig } from '../camera/CameraRig';
+import {
+  bribeCost,
+  commitCrime,
+  headlineFor,
+  newCrimeState,
+  payBribe,
+  redeemGoodDeeds,
+  stars,
+  tickCrime,
+  totalCrimes,
+  type CrimeKind,
+} from '../gameplay/CrimeSystem';
+import { WantedBoards } from '../world/WantedBoards';
 import { DialogueSystem, type Subtitle } from '../dialogue/DialogueSystem';
 import type { InputManager } from '../input/InputManager';
 import {
@@ -70,6 +89,13 @@ export interface HudState {
   damage: number;
   damageZones: Record<DamageZone, number>;
   engineDead: boolean;
+  /** Player's hero, e.g. "গ্রেট থিফ মোস্তফা". */
+  heroFull: string;
+  wanted: number;
+  crimes: number;
+  bribeCost: number;
+  /** Latest news headline (shown as a toast); id changes per headline. */
+  headline: { id: number; text: string } | null;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -124,6 +150,7 @@ interface VehicleEntity {
   brake: number;
   handbrake: boolean;
   cond: VehicleCondition;
+  stolen: boolean;
   prevVel: THREE.Vector3;
   hasPrev: boolean;
   fxTimer: number;
@@ -177,7 +204,17 @@ export class SliceScene {
     damage: 0,
     damageZones: { front: 0, rear: 0, left: 0, right: 0 },
     engineDead: false,
+    heroFull: '',
+    wanted: 0,
+    crimes: 0,
+    bribeCost: 0,
+    headline: null,
   };
+  private identity: HeroIdentity = { ...DEFAULT_IDENTITY };
+  private crime = newCrimeState();
+  private boards: WantedBoards;
+  private headlineId = 0;
+  private recognizeCooldown = 0;
   private hudTimer = 0;
   private hudDirty = true;
 
@@ -203,8 +240,14 @@ export class SliceScene {
         this.hud.subtitle = sub;
         this.hudDirty = true;
       },
-      (line) => this.voice?.speak(line),
+      (line, text) => this.voice?.speak(line, text),
+      (t) => fillHero(t, this.identity),
+      (sp) => (sp === 'hero' ? this.identity.name : undefined),
     );
+    this.hud.heroFull = fillHero('{hero}', this.identity);
+
+    this.boards = new WantedBoards();
+    this.scene.add(this.boards.group);
 
     // Player
     const spawn = this.street.points.spawn!;
@@ -282,6 +325,7 @@ export class SliceScene {
         brake: 0,
         handbrake: false,
         cond: newCondition(),
+        stolen: false,
         prevVel: new THREE.Vector3(),
         hasPrev: false,
         fxTimer: 0,
@@ -409,6 +453,10 @@ export class SliceScene {
     } else if (this.nearest) {
       const v = this.nearest;
       this.driving = v;
+      if (!v.stolen) {
+        v.stolen = true;
+        this.crimeEvent('vehicleTheft');
+      }
       if (v.def.kind === 'bike') {
         v.visual.seat.add(this.hero.root);
         this.hero.root.position.set(0, 0, 0);
@@ -443,6 +491,7 @@ export class SliceScene {
         this.dialogue.say(sp, 'threatenReply', h, 0.2);
         npc.fear = 1;
         this.hud.notoriety += 1;
+        this.crimeEvent('threaten');
         break;
       case 'snatch': {
         const amount = Math.min(npc.wallet, 80 + Math.floor(Math.random() * 300));
@@ -451,6 +500,7 @@ export class SliceScene {
         npc.fear = 1;
         this.hud.taka += amount;
         this.hud.notoriety += 2;
+        this.crimeEvent('snatch');
         this.dialogue.interrupt('hero', 'snatch', this.hero);
         this.dialogue.say(sp, 'snatched', h, 0.1);
         this.audio?.coin();
@@ -479,6 +529,7 @@ export class SliceScene {
         this.dialogue.say(sp, this.dialogue.has(sp, 'grabbed') ? 'grabbed' : 'snatched', h, 0.15);
         this.hud.notoriety += 1;
         npc.fear = 0.6;
+        this.crimeEvent('grab');
         break;
     }
     this.hudDirty = true;
@@ -563,6 +614,7 @@ export class SliceScene {
     this.particles.emit('dust', v.body.renderPos, undefined, 4);
     if (v === this.driving) {
       this.rig.addShake(0.3 + strength * 0.7);
+      if (strength > 0.5) this.crimeEvent('crash');
       if (this.crashBarkCooldown <= 0 && strength > 0.3) {
         this.dialogue.interrupt('hero', 'crash', this.hero);
         this.crashBarkCooldown = 8;
@@ -706,6 +758,31 @@ export class SliceScene {
         }
       }
     }
+    // Wanted level cools down; NPCs recognise a wanted hero
+    tickCrime(this.crime, dt);
+    this.recognizeCooldown = Math.max(0, this.recognizeCooldown - dt);
+    if (stars(this.crime) >= 1 && this.recognizeCooldown <= 0 && !this.dialogue.busy) {
+      for (const npc of this.npcs) {
+        if (
+          npc.position.distanceTo(playerPos) < 6 &&
+          this.dialogue.has(npc.def.speaker, 'recognized')
+        ) {
+          this.dialogue.say(npc.def.speaker, 'recognized', npc.humanoid);
+          npc.fear = Math.max(npc.fear, 0.5);
+          this.recognizeCooldown = 25;
+          break;
+        }
+      }
+    }
+    this.boards.update({
+      heroFull: fillHero('{hero}', this.identity),
+      heroName: this.identity.name,
+      stars: stars(this.crime),
+      crimes: totalCrimes(this.crime),
+      snatches: this.crime.record.snatch,
+      thefts: this.crime.record.vehicleTheft,
+      headline: this.hud.headline?.text ?? null,
+    });
     this.dialogue.update(dt);
 
     const focus = this.driving ? this.driving.body.renderPos : this.player.renderPos;
@@ -810,6 +887,10 @@ export class SliceScene {
         damage: c ? totalDamage(c) : 0,
         damageZones: c ? { ...c.damage } : { front: 0, rear: 0, left: 0, right: 0 },
         engineDead: c ? enginePower(c) === 0 : false,
+        heroFull: fillHero('{hero}', this.identity),
+        wanted: stars(this.crime),
+        crimes: totalCrimes(this.crime),
+        bribeCost: bribeCost(this.crime),
       };
       this.hudTimer = 0.1;
       this.hudDirty = false;
@@ -836,6 +917,9 @@ export class SliceScene {
       nearest: this.nearest?.def.id ?? null,
       talkTarget: this.talkTarget?.def.id ?? null,
       taka: this.hud.taka,
+      wanted: stars(this.crime),
+      crimes: totalCrimes(this.crime),
+      heroFull: fillHero('{hero}', this.identity),
       notoriety: this.hud.notoriety,
       subtitle: this.hud.subtitle?.text ?? null,
       vehicles: this.vehicles.map((v) => ({
@@ -848,6 +932,55 @@ export class SliceScene {
     };
   }
 
+  // ---------------- Crime, bribe, good deeds, identity ----------------
+
+  private crimeEvent(kind: CrimeKind) {
+    const before = stars(this.crime);
+    commitCrime(this.crime, kind);
+    const text = headlineFor(kind, Math.random());
+    if (text && (kind !== 'crash' || Math.random() < 0.5)) {
+      this.hud.headline = { id: ++this.headlineId, text: fillHero(text, this.identity) };
+    }
+    if (stars(this.crime) > before) this.audio?.coin();
+    this.hudDirty = true;
+  }
+
+  /** Phone OC Kamal Pasha and pay to clear the wanted level. */
+  bribe(): 'paid' | 'refused' | 'clean' {
+    if (stars(this.crime) === 0) {
+      this.dialogue.interrupt('oc', 'clean', null);
+      return 'clean';
+    }
+    this.dialogue.interrupt('hero', 'bribe', this.hero);
+    const paid = payBribe(this.crime, this.hud.taka);
+    if (paid > 0) {
+      this.hud.taka -= paid;
+      this.dialogue.say('oc', 'bribeOk', null, 0.3);
+      this.audio?.coin();
+    } else {
+      this.dialogue.say('oc', 'bribeRefuse', null, 0.3);
+    }
+    this.hudDirty = true;
+    return paid > 0 ? 'paid' : 'refused';
+  }
+
+  /** Spend good-deed points (❤️) to wipe crimes off the record. Returns crimes removed. */
+  redeemGoodDeeds(): number {
+    const spent = redeemGoodDeeds(this.crime, this.hud.publicLove);
+    if (spent > 0) {
+      this.hud.publicLove -= spent;
+      this.crime.heat = Math.max(0, this.crime.heat - spent / 3);
+      this.dialogue.interrupt('hero', 'redeem', this.hero);
+      this.hudDirty = true;
+    }
+    return spent / 3;
+  }
+
+  setIdentity(id: HeroIdentity) {
+    this.identity = { ...id };
+    this.hudDirty = true;
+  }
+
   /** Testing/debug: get into a vehicle by definition id, wherever it is. */
   debugEnterVehicle(defId: string): boolean {
     if (this.driving) this.toggleVehicle();
@@ -856,6 +989,16 @@ export class SliceScene {
     this.nearest = v;
     this.toggleVehicle();
     return true;
+  }
+
+  /** Testing/debug: put the player on foot at (x, z) with a camera yaw/pitch. */
+  debugView(x: number, z: number, yaw: number, pitch = 0.2) {
+    if (this.driving) this.toggleVehicle();
+    const p = new THREE.Vector3(x, STREET.curbHeight + CAPSULE_CENTER + 0.1, z);
+    this.pendingTeleport = [p.x, p.y, p.z];
+    this.player.snap(p);
+    this.rig.yaw = yaw;
+    this.rig.pitch = pitch;
   }
 
   /** Testing/debug: talk to an NPC by id from anywhere. */
@@ -877,6 +1020,7 @@ export class SliceScene {
     for (const n of this.npcs) n.humanoid.dispose();
     for (const v of this.vehicles) v.visual.dispose();
     this.particles.dispose();
+    this.boards.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }

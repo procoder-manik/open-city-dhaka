@@ -1,10 +1,35 @@
 {
   "speakers": {
-    "hero": { "name": "মোস্তফা", "nameEn": "Mostofa", "color": "#ff9f1c" },
-    "teaChacha": { "name": "মফিজ চাচা", "nameEn": "Mofiz Chacha", "color": "#8fd694" },
-    "rickshawWala": { "name": "রিকশাওয়ালা", "nameEn": "Rickshaw-wala", "color": "#7ec8e3" },
-    "shopkeeper": { "name": "দোকানদার", "nameEn": "Shopkeeper", "color": "#f4d35e" },
-    "foreigner": { "name": "বিদেশি সাহেব", "nameEn": "Tourist", "color": "#c5a3ff" }
+    "hero": {
+      "name": "মোস্তফা",
+      "nameEn": "Mostofa",
+      "color": "#ff9f1c"
+    },
+    "teaChacha": {
+      "name": "মফিজ চাচা",
+      "nameEn": "Mofiz Chacha",
+      "color": "#8fd694"
+    },
+    "rickshawWala": {
+      "name": "রিকশাওয়ালা",
+      "nameEn": "Rickshaw-wala",
+      "color": "#7ec8e3"
+    },
+    "shopkeeper": {
+      "name": "দোকানদার",
+      "nameEn": "Shopkeeper",
+      "color": "#f4d35e"
+    },
+    "foreigner": {
+      "name": "বিদেশি সাহেব",
+      "nameEn": "Tourist",
+      "color": "#c5a3ff"
+    },
+    "oc": {
+      "name": "ওসি কামাল পাশা",
+      "nameEn": "OC Kamal Pasha",
+      "color": "#90caf9"
+    }
   },
   "lines": [
     {
@@ -39,7 +64,6 @@
       "bn": "ভাই, মন খারাপ কইরেন না, আমি আছি না!",
       "en": "Don't be sad, bro, I'm here!"
     },
-
     {
       "id": "hero.threaten.1",
       "speaker": "hero",
@@ -72,7 +96,6 @@
       "bn": "চোখ নামান! সানগ্লাস পইরা আছি বইলা কিছু দেখি না ভাবছেন?",
       "en": "Eyes down! Think I can't see because of the sunglasses?"
     },
-
     {
       "id": "hero.snatch.1",
       "speaker": "hero",
@@ -97,7 +120,6 @@
       "bn": "টেনশন নিয়েন না, ভালো কাজে খরচ করমু।",
       "en": "Don't worry, I'll spend it on good causes."
     },
-
     {
       "id": "hero.order.1",
       "speaker": "hero",
@@ -130,7 +152,6 @@
       "bn": "টেস্ট কইরা দেখলাম। খারাপ না, আবার আসমু।",
       "en": "Just a taste test. Not bad, I'll be back."
     },
-
     {
       "id": "hero.enterVehicle.1",
       "speaker": "hero",
@@ -187,7 +208,6 @@
       "bn": "পকেট তো ফাঁকা… চাচা, বাকির খাতায় লেখেন।",
       "en": "Pocket's empty… put it on my tab, chacha."
     },
-
     {
       "id": "chacha.greetReply.1",
       "speaker": "teaChacha",
@@ -268,7 +288,6 @@
       "bn": "গরম চা! গরম চা! খাইলে দুঃখ যায়!",
       "en": "Hot tea! Hot tea! Drink it and sorrow goes away!"
     },
-
     {
       "id": "rick.greetReply.1",
       "speaker": "rickshawWala",
@@ -341,7 +360,6 @@
       "bn": "আসাদগেট! শ্যামলী! যাইবেন কেউ?",
       "en": "Asad Gate! Shyamoli! Anyone?"
     },
-
     {
       "id": "shop.greetReply.1",
       "speaker": "shopkeeper",
@@ -406,7 +424,6 @@
       "bn": "ফ্লেক্সিলোড, ফটোকপি, চানাচুর — এক জায়গায় সব!",
       "en": "Recharge, photocopy, chanachur — all in one place!"
     },
-
     {
       "id": "tourist.greetReply.1",
       "speaker": "foreigner",
@@ -462,6 +479,142 @@
       "emotion": "happy",
       "bn": "ফুচকা… ভেরি স্পাইসি… বাট আই লাভ ইট!",
       "en": "Fuchka… very spicy… but I love it!"
+    },
+    {
+      "id": "chacha.recognized.1",
+      "speaker": "teaChacha",
+      "situation": "recognized",
+      "emotion": "scared",
+      "bn": "আরে {heroName} বাবা! পোস্টারে তোমার ছবি! পুলিশ তো তোমারে খুঁজতেছে!",
+      "en": "Son {heroName}! Your face is on the posters! The police are after you!"
+    },
+    {
+      "id": "chacha.recognized.2",
+      "speaker": "teaChacha",
+      "situation": "recognized",
+      "emotion": "happy",
+      "bn": "টিভিতে দেখলাম তোমারে। ছবিতে তুমি বেশি সুন্দর।",
+      "en": "Saw you on TV. You look better in the picture."
+    },
+    {
+      "id": "rick.recognized.1",
+      "speaker": "rickshawWala",
+      "situation": "recognized",
+      "emotion": "scared",
+      "bn": "এইটা তো পোস্টারের {hero}! আমি কিছু দেখি নাই মামা, কিছু দেখি নাই!",
+      "en": "That's {hero} from the poster! I saw nothing, mama, nothing!"
+    },
+    {
+      "id": "rick.recognized.2",
+      "speaker": "rickshawWala",
+      "situation": "recognized",
+      "emotion": "happy",
+      "bn": "মামা, আপনারে নিয়া খবর হইছে! অটোগ্রাফ দিবেন?",
+      "en": "Mama, you're in the news! Can I get an autograph?"
+    },
+    {
+      "id": "shop.recognized.1",
+      "speaker": "shopkeeper",
+      "situation": "recognized",
+      "emotion": "scared",
+      "bn": "ভাই {heroName}, দোকান আপনার… শুধু ক্যাশটা ছাড়েন, প্লিজ!",
+      "en": "Bro {heroName}, the shop is yours… just spare the cash, please!"
+    },
+    {
+      "id": "shop.recognized.2",
+      "speaker": "shopkeeper",
+      "situation": "recognized",
+      "emotion": "surprised",
+      "bn": "বিলবোর্ডে আপনার মুখ! আমার দোকানের বিজ্ঞাপনটাও একটু দিয়েন।",
+      "en": "Your face is on the billboard! Put an ad for my shop up too."
+    },
+    {
+      "id": "tourist.recognized.1",
+      "speaker": "foreigner",
+      "situation": "recognized",
+      "emotion": "surprised",
+      "bn": "ওহ মাই গড! আপনি {hero}? আমি নিউজে দেখেছি! সেলফি প্লিজ?",
+      "en": "Oh my god! Are you {hero}? I saw you on the news! Selfie please?"
+    },
+    {
+      "id": "hero.bribe.1",
+      "speaker": "hero",
+      "situation": "bribe",
+      "emotion": "smug",
+      "bn": "হ্যালো ওসি সাহেব? চা-পানির ব্যবস্থা কইরা দিলাম, একটু চোখ বন্ধ রাখেন।",
+      "en": "Hello OC sir? I've sent tea money — keep your eyes closed for a bit."
+    },
+    {
+      "id": "hero.bribe.2",
+      "speaker": "hero",
+      "situation": "bribe",
+      "emotion": "smug",
+      "bn": "স্যার, ট্রান্সফার না — হাতে হাতে ক্যাশ। ফাইলটা একটু হারায় ফেলেন।",
+      "en": "Sir, no transfer — cash in hand. Please lose my file."
+    },
+    {
+      "id": "oc.bribeOk.1",
+      "speaker": "oc",
+      "situation": "bribeOk",
+      "emotion": "happy",
+      "bn": "টাকা পাইছি। {heroName}? কোন {heroName}? এই নামে তো কেউ নাই!",
+      "en": "Got the money. {heroName}? Which {heroName}? Nobody by that name!"
+    },
+    {
+      "id": "oc.bribeOk.2",
+      "speaker": "oc",
+      "situation": "bribeOk",
+      "emotion": "smug",
+      "bn": "ফাইল? কোন ফাইল? উইপোকা খাইয়া ফেলছে। যাও, মজা করো।",
+      "en": "File? What file? Termites ate it. Go, have fun."
+    },
+    {
+      "id": "oc.bribeOk.3",
+      "speaker": "oc",
+      "situation": "bribeOk",
+      "emotion": "happy",
+      "bn": "আইনের চোখে তুমি এখন নিষ্পাপ… অন্তত আজকের জন্য।",
+      "en": "In the eyes of the law you're innocent now… at least for today."
+    },
+    {
+      "id": "oc.bribeRefuse.1",
+      "speaker": "oc",
+      "situation": "bribeRefuse",
+      "emotion": "angry",
+      "bn": "এত কম টাকায় আমার চা-ও হয় না! আগে টাকা কামাও।",
+      "en": "That's not even enough for my tea! Earn some money first."
+    },
+    {
+      "id": "oc.bribeRefuse.2",
+      "speaker": "oc",
+      "situation": "bribeRefuse",
+      "emotion": "smug",
+      "bn": "বাকিতে ঘুষ? এইটা থানা, মুদির দোকান না!",
+      "en": "Bribe on credit? This is a police station, not a grocery!"
+    },
+    {
+      "id": "oc.clean.1",
+      "speaker": "oc",
+      "situation": "clean",
+      "emotion": "surprised",
+      "bn": "কী ব্যাপার? তোমার নামে তো কোনো মামলাই নাই। টাকা রাখো, পরে লাগবে।",
+      "en": "What's this? There's no case against you. Keep your money, you'll need it."
+    },
+    {
+      "id": "hero.redeem.1",
+      "speaker": "hero",
+      "situation": "redeem",
+      "emotion": "happy",
+      "bn": "ভালো কাজের হিসাব মিলাইলাম। পাপ কাটাকাটি!",
+      "en": "Balanced the books with good deeds. Sins cancelled!"
+    },
+    {
+      "id": "hero.redeem.2",
+      "speaker": "hero",
+      "situation": "redeem",
+      "emotion": "smug",
+      "bn": "দেখলেন? {hero} শুধু রংবাজ না, মাঝে মাঝে ভালো মানুষও।",
+      "en": "See? {hero} isn't just a rascal — sometimes a good guy too."
     }
   ]
 }

@@ -1,8 +1,9 @@
 import * as THREE from 'three/webgpu';
-import { pass } from 'three/tsl';
+import { cdl, float, pass, vec3, vec4 } from 'three/tsl';
+import { vignette } from 'three/addons/tsl/display/CRT.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
-import type { QualityTier } from '@game/shared';
+import type { HeroIdentity, QualityTier } from '@game/shared';
 import type { TalkOption } from './actors/Npc';
 import { AudioEngine } from './audio/AudioEngine';
 import { VoicePlayer, type VoiceMode } from './audio/VoicePlayer';
@@ -25,6 +26,8 @@ export interface GameOptions {
   forceWebGL?: boolean;
   /** Creates the physics Web Worker (app-owned entry). Omit to run physics on the main thread. */
   createPhysicsWorker?: () => Worker;
+  /** Hero title + name (signed-in players can customise; guests get the default). */
+  hero?: HeroIdentity;
   /** CSS font-family of the loaded Bangla web font (for signboards). */
   banglaFont?: string;
   /** Player pressed pause (Esc / Start / HUD). Back-gesture & tab-hide come from GameLock in the app. */
@@ -42,11 +45,19 @@ export interface Game {
   setHour(hour: number): void;
   /** Debug/tests: get into a vehicle by definition id (e.g. 'car-sedan'). */
   debugEnterVehicle(defId: string): boolean;
+  /** Debug/tests: place the player and camera. */
+  debugView(x: number, z: number, yaw: number, pitch?: number): void;
   /** Debug/tests: talk to an NPC by id from anywhere. */
   debugTalk(npcId: string, option: TalkOption): boolean;
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
   setMuted(muted: boolean): void;
+  /** Phone the OC and pay a bribe to clear the wanted level. */
+  bribe(): 'paid' | 'refused' | 'clean';
+  /** Spend good-deed points to wipe crimes off the record. */
+  redeemGoodDeeds(): number;
+  /** Change the hero's title/name (the app only allows this for signed-in players). */
+  setHeroIdentity(id: HeroIdentity): void;
   /** Voice source: auto (generated files → device AI), device AI, or off. */
   setVoiceMode(mode: VoiceMode): void;
   pause(): void;
@@ -114,6 +125,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   });
 
   const world = new SliceScene(preset, (hud) => store.setState(hud), audio, voice);
+  if (opts.hero) world.setIdentity(opts.hero);
   const physics = new PhysicsClient();
   const physicsMode = await physics.init(
     world.bodies,
@@ -129,7 +141,17 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       pipeline = new THREE.RenderPipeline(renderer);
       const scenePass = pass(world.scene, world.camera);
       const color = scenePass.getTextureNode('output');
-      pipeline.outputNode = color.add(bloom(color, 0.35, 0.35, 0.8));
+      const lit = color.add(bloom(color, 0.35, 0.35, 0.8));
+      // "Natural Dhaka" grade: warm highlights, slightly cool shadows, gentle
+      // contrast + saturation, soft vignette — the cinematic open-world look.
+      const graded = cdl(
+        lit.rgb,
+        vec3(1.05, 1.0, 0.93),
+        vec3(-0.004, 0.0, 0.008),
+        vec3(1.06, 1.04, 1.02),
+        float(1.1),
+      );
+      pipeline.outputNode = vec4(vignette(graded.rgb, float(0.32), float(0.55)), float(1));
     } catch (err) {
       console.warn('[render] bloom unavailable:', err);
       pipeline = null;
@@ -222,8 +244,20 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     debugEnterVehicle(defId: string) {
       return world.debugEnterVehicle(defId);
     },
+    debugView(x: number, z: number, yaw: number, pitch?: number) {
+      world.debugView(x, z, yaw, pitch);
+    },
     debugTalk(npcId: string, option: TalkOption) {
       return world.debugTalk(npcId, option);
+    },
+    bribe() {
+      return world.bribe();
+    },
+    redeemGoodDeeds() {
+      return world.redeemGoodDeeds();
+    },
+    setHeroIdentity(id: HeroIdentity) {
+      world.setIdentity(id);
     },
     chooseTalk(option: TalkOption) {
       return world.chooseTalk(option);

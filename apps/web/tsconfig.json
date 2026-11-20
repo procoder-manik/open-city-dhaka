@@ -14,7 +14,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../../brand.config.json"
+    "../../brand.config.json",
+    "../../site.config.json"
   ],
   "exclude": ["node_modules", "playwright.config.ts", "e2e"]
 }

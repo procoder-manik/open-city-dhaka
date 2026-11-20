@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import { QUALITY_TIERS, brand, type QualityTier } from '@game/shared';
+import { QUALITY_TIERS, brand, site, type QualityTier } from '@game/shared';
 import type * as Engine from '@game/engine';
 import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
+import { HeroPanel, loadIdentity } from './HeroPanel';
 import { TouchControls } from './TouchControls';
 import styles from './play.module.css';
 
@@ -106,6 +107,7 @@ export function PlayClient() {
       container,
       ...(t === 'auto' ? {} : { tier: t }),
       ...(banglaFont ? { banglaFont } : {}),
+      ...(isSignedIn() ? { hero: loadIdentity() ?? undefined } : {}),
       onPauseRequest: togglePause,
       createPhysicsWorker: () =>
         new Worker(new URL('../../workers/physics.worker.ts', import.meta.url), {
@@ -263,6 +265,14 @@ function useGame<T>(game: Game, selector: (s: GameState) => T): T {
   return useStore(game.store, selector);
 }
 
+/**
+ * Login arrives with the backend (Phase 6). Until then nobody is signed in, except
+ * `?debug=1` which unlocks the hero editor for testing.
+ */
+function isSignedIn(): boolean {
+  return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug');
+}
+
 function formatHour(h: number): string {
   const hh = Math.floor(h);
   const mm = Math.floor((h - hh) * 60);
@@ -304,6 +314,18 @@ function GameHud({
   const zones = useGame(game, (s) => s.damageZones);
   const engineDead = useGame(game, (s) => s.engineDead);
   const muted = useGame(game, (s) => s.muted);
+  const heroFull = useGame(game, (s) => s.heroFull);
+  const wanted = useGame(game, (s) => s.wanted);
+  const crimes = useGame(game, (s) => s.crimes);
+  const bribe = useGame(game, (s) => s.bribeCost);
+  const headline = useGame(game, (s) => s.headline);
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+  useEffect(() => {
+    if (!headline) return;
+    setToast(headline);
+    const t = setTimeout(() => setToast((cur) => (cur?.id === headline.id ? null : cur)), 6000);
+    return () => clearTimeout(t);
+  }, [headline]);
   const voiceMode = useGame(game, (s) => s.voiceMode);
   const voiceEffective = useGame(game, (s) => s.voiceEffective);
   const [showStats, setShowStats] = useState(
@@ -360,8 +382,31 @@ function GameHud({
       <div className={styles.wallet} data-testid="wallet">
         <span className={styles.taka}>৳{taka.toLocaleString('bn-BD')}</span>
         <span title="কুখ্যাতি">😈 {notoriety}</span>
-        <span title="জনপ্রিয়তা">❤️ {publicLove}</span>
+        <span title="জনপ্রিয়তা / ভালো কাজ">❤️ {publicLove}</span>
       </div>
+
+      {wanted > 0 && (
+        <div className={styles.wanted} data-testid="wanted">
+          <span className={styles.wantedStars} aria-label={`Wanted level ${wanted}`}>
+            {'🚨'.repeat(wanted)}
+            <i>{'·'.repeat(5 - wanted)}</i>
+          </span>
+          <button
+            type="button"
+            className={styles.bribeBtn}
+            onClick={() => game.bribe()}
+            data-testid="bribe-btn"
+          >
+            📞 ওসিকে ঘুষ ৳{bribe.toLocaleString('bn-BD')}
+          </button>
+        </div>
+      )}
+
+      {toast && (
+        <div className={styles.headline} key={toast.id} data-testid="headline">
+          <b>📰 ব্রেকিং</b> {toast.text}
+        </div>
+      )}
 
       {mode === 'vehicle' && (
         <div className={styles.dash} data-testid="speedo">
@@ -515,6 +560,52 @@ function GameHud({
                 <dt>ক্যামেরা</dt>
                 <dd>মাউস / ডান দিকে আঙুল টানো</dd>
               </dl>
+            )}
+            <p className={styles.muted}>
+              হিরো · অপরাধ: {crimes} · ভালো কাজ ❤️ {publicLove}
+            </p>
+            <HeroPanel
+              signedIn={isSignedIn()}
+              current={heroFull}
+              onSave={(id) => game.setHeroIdentity(id)}
+            />
+            <div className={styles.menuRow}>
+              <button
+                className={styles.chip}
+                type="button"
+                disabled={publicLove < 3 || crimes === 0}
+                onClick={() => game.redeemGoodDeeds()}
+                data-testid="redeem-btn"
+              >
+                😇 ভালো কাজ দিয়ে অপরাধ মাফ (৩❤️ = ১টা)
+              </button>
+              <button className={styles.chip} type="button" onClick={() => game.bribe()}>
+                📞 ওসি কামাল পাশাকে ফোন
+              </button>
+            </div>
+            {(site.feedbackFormUrl || site.donateUrl) && (
+              <div className={styles.menuRow}>
+                {site.feedbackFormUrl && (
+                  <a
+                    className={styles.chip}
+                    href={site.feedbackFormUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    📝 মতামত / বাগ রিপোর্ট
+                  </a>
+                )}
+                {site.donateUrl && (
+                  <a
+                    className={styles.chip}
+                    href={site.donateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ❤️ ডোনেট
+                  </a>
+                )}
+              </div>
             )}
             <button className="btn secondary" type="button" onClick={onExit}>
               মেনুতে ফিরে যাও
