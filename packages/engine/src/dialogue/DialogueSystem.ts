@@ -76,6 +76,15 @@ export class DialogueSystem {
     return line;
   }
 
+  /** Queue a specific (scripted) line, e.g. a mission intro. */
+  sayLine(line: DialogueLine, actor: Humanoid | null, delay = 0, interrupt = false) {
+    if (interrupt) {
+      this.queue = [];
+      this.current = null;
+    }
+    this.queue.push({ line, actor, delay });
+  }
+
   /** Interrupt everything and say this now (barks: bumped, crash…). */
   interrupt(speaker: string, situation: string, actor: Humanoid | null): DialogueLine | null {
     this.queue = [];

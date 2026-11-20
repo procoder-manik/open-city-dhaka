@@ -123,6 +123,33 @@ export function Minimap({ game }: { game: Game }) {
         const rz = dx * Math.sin(rot) + dz * Math.cos(rot);
         g.fillText(icon, size / 2 + (rx * size) / 2, size / 2 + (rz * size) / 2);
       }
+      // Mission blips: yellow = mission start, blue = objective (clamped to the rim)
+      const { missionBlips, mission } = game.store.getState();
+      const blip = (x: number, z: number, color: string, label: string) => {
+        let dx = (x - pos[0]) / VIEW_RADIUS_M;
+        let dz = (z - pos[1]) / VIEW_RADIUS_M;
+        const d = Math.hypot(dx, dz);
+        if (d > 0.88) {
+          dx *= 0.88 / d;
+          dz *= 0.88 / d;
+        }
+        const rx = dx * Math.cos(rot) - dz * Math.sin(rot);
+        const rz = dx * Math.sin(rot) + dz * Math.cos(rot);
+        const px = size / 2 + (rx * size) / 2;
+        const py = size / 2 + (rz * size) / 2;
+        g.fillStyle = color;
+        g.strokeStyle = '#000';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(px, py, 6.5, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+        g.fillStyle = '#000';
+        g.font = 'bold 9px sans-serif';
+        g.fillText(label, px, py + 0.5);
+      };
+      for (const [x, z] of missionBlips) blip(x, z, '#ffc21a', 'M');
+      if (mission?.target) blip(mission.target[0], mission.target[1], '#3aa0ff', '★');
       g.restore();
       // Player arrow (always up) + wanted ring
       g.save();

@@ -58,6 +58,7 @@ export interface Game {
   debugAttack(weapon: 'fist' | 'pistol' | 'grenade'): boolean;
   debugExplode(dx: number, dz: number): void;
   debugDamage(n: number): void;
+  debugMission(id: string, pass?: boolean): boolean;
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
   setMuted(muted: boolean): void;
@@ -290,6 +291,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugDamage(n: number) {
       world.debugDamage(n);
+    },
+    debugMission(id: string, pass?: boolean) {
+      return world.debugMission(id, pass);
     },
     debugTalk(npcId: string, option: TalkOption) {
       return world.debugTalk(npcId, option);

@@ -29,6 +29,9 @@ import {
 } from '../gameplay/Combat';
 import { PoliceSystem, type Cop } from '../gameplay/PoliceSystem';
 import { Projectiles } from '../gameplay/Projectiles';
+import { MissionSystem, type MissionEvent } from '../gameplay/Missions';
+import { MissionMarkers } from '../gameplay/MissionMarkers';
+import { ACT1 } from '../gameplay/act1';
 import type { Pedestrian } from '../actors/PedestrianSystem';
 import { seededRandom } from '../world/random';
 import type { AudioEngine } from '../audio/AudioEngine';
@@ -121,6 +124,7 @@ export interface SaveData {
   ammo?: number;
   grenades?: number;
   health?: number;
+  missions?: string[];
 }
 
 export interface HudState {
@@ -161,6 +165,18 @@ export interface HudState {
   arrest: number;
   /** Recently hurt (red flash id). */
   hurtId: number;
+  mission: {
+    title: string;
+    objective: string;
+    time: number | null;
+    target: [number, number] | null;
+  } | null;
+  /** Big centre card: mission started / passed / failed. id changes per card. */
+  missionCard: { id: number; kind: 'start' | 'pass' | 'fail'; title: string; sub: string } | null;
+  /** Mission start locations (minimap). */
+  missionBlips: Array<[number, number]>;
+  missionsDone: number;
+  missionsTotal: number;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -289,6 +305,11 @@ export class SliceScene {
     overlay: null,
     arrest: 0,
     hurtId: 0,
+    mission: null,
+    missionCard: null,
+    missionBlips: [],
+    missionsDone: 0,
+    missionsTotal: ACT1.length,
   };
   private city: CityWorld | null = null;
   private graph: RoadGraph | null = null;
@@ -297,6 +318,10 @@ export class SliceScene {
   private carjackCar: TrafficCar | null = null;
   private police: PoliceSystem;
   private projectiles = new Projectiles();
+  private missions = new MissionSystem(ACT1);
+  private markers = new MissionMarkers();
+  private cardId = 0;
+  private missionHudTimer = 0;
   private health = 100;
   private hurtCalm = 0;
   private arsenal: Arsenal = newArsenal();
@@ -350,6 +375,7 @@ export class SliceScene {
     this.scene.add(this.police.group);
     this.bodies.push(...this.police.physicsBodies());
     this.scene.add(this.projectiles.group);
+    this.scene.add(this.markers.group);
     this.projectiles.onExplode = (at) => this.explosion(at);
     // Hidden stash platform for spare vehicles
     this.bodies.push({
@@ -688,6 +714,7 @@ export class SliceScene {
         this.crimeEvent('grab');
         break;
     }
+    this.missions.notifyTalk(npc.def.id, option);
     this.hudDirty = true;
     return true;
   }
@@ -924,6 +951,7 @@ export class SliceScene {
     if (this.driving) this.carjackCar = null;
     this.updateStreetLife(dt);
     this.updateCombat(dt);
+    this.updateMissions(dt);
 
     // NPC life: face the player, idle calls when the player is around
     const playerPos = this.driving ? this.driving.body.renderPos : this.player.renderPos;
@@ -1161,6 +1189,14 @@ export class SliceScene {
       copsDown: this.police.activeCops.filter((c) => c.state === 'down').length,
       policeCars: this.police.cars.filter((c) => c.active).length,
       overlay: this.overlay?.kind ?? null,
+      mission: this.missions.active
+        ? {
+            id: this.missions.active.def.id,
+            step: this.missions.active.step,
+            objective: this.missions.objective(),
+          }
+        : null,
+      missionsDone: [...this.missions.done],
     };
   }
 
@@ -1630,6 +1666,128 @@ export class SliceScene {
     if (Math.abs(this.police.arrest - this.hud.arrest) > 0.05) this.hudDirty = true;
   }
 
+  // ---------------- Missions ----------------
+
+  private card(kind: 'start' | 'pass' | 'fail', title: string, sub: string) {
+    this.hud.missionCard = { id: ++this.cardId, kind, title, sub };
+    this.hudDirty = true;
+  }
+
+  private updateMissions(dt: number) {
+    const f = this.focusPos;
+    const kind = this.driving?.def.kind;
+    const events = this.missions.update(dt, {
+      x: f.x,
+      z: f.z,
+      vehicle: kind === 'car' || kind === 'cng' || kind === 'bike' ? kind : null,
+      wanted: stars(this.crime),
+      down: !!this.overlay,
+    });
+    for (const e of events) this.onMissionEvent(e);
+    const starts = this.missions.active ? [] : this.missions.available().map((m) => m.start);
+    this.markers.update(dt, starts, this.missions.target());
+    this.missionHudTimer -= dt;
+    if (this.missionHudTimer <= 0 || events.length) {
+      this.missionHudTimer = 0.25;
+      const a = this.missions.active;
+      const t = this.missions.target();
+      const next = a
+        ? {
+            title: a.def.title,
+            objective: this.missions.objective() ?? '',
+            time: a.timeLeft === null ? null : Math.ceil(a.timeLeft),
+            target: t ? ([t.x, t.z] as [number, number]) : null,
+          }
+        : null;
+      const blips = starts.map((s) => [s.x, s.z] as [number, number]);
+      if (
+        JSON.stringify(next) !== JSON.stringify(this.hud.mission) ||
+        blips.length !== this.hud.missionBlips.length
+      ) {
+        this.hud.mission = next;
+        this.hud.missionBlips = blips;
+        this.hud.missionsDone = this.missions.done.size;
+        this.hudDirty = true;
+      }
+    }
+  }
+
+  private onMissionEvent(e: MissionEvent) {
+    switch (e.type) {
+      case 'start': {
+        const m = e.mission;
+        this.card('start', m.title, m.time ? `সময়: ${Math.round(m.time / 60)} মিনিট` : 'মিশন শুরু');
+        const giver =
+          this.npcs.find((n) => n.def.speaker === m.giver)?.humanoid ??
+          (m.giver === 'hero' ? this.hero : null);
+        this.dialogue.sayLine(
+          {
+            id: `mission.${m.id}.intro`,
+            speaker: m.giver,
+            situation: 'missionIntro',
+            emotion: 'smug',
+            bn: m.intro,
+            en: m.introEn ?? '',
+          },
+          giver,
+          0,
+          true,
+        );
+        this.dialogue.say('hero', 'missionStart', this.hero, 0.3);
+        this.audio?.coin();
+        break;
+      }
+      case 'step':
+        this.audio?.coin();
+        break;
+      case 'heat':
+        this.crime.heat = Math.max(this.crime.heat, e.amount);
+        this.crime.calm = 0;
+        this.hud.headline = {
+          id: ++this.headlineId,
+          text: fillHero('থানার সামনে সেলফি! {hero}-কে ধরতে পুলিশের দৌড়', this.identity),
+        };
+        break;
+      case 'pass': {
+        const r = e.mission.reward;
+        this.hud.taka += r.taka;
+        if (r.ammo) this.arsenal.ammo += r.ammo;
+        if (r.grenades) this.arsenal.grenades += r.grenades;
+        if (r.love) this.hud.publicLove += r.love;
+        const extra = [r.ammo ? `+${r.ammo} গুলি` : '', r.grenades ? `+${r.grenades} গ্রেনেড` : '']
+          .filter(Boolean)
+          .join(' · ');
+        this.card(
+          'pass',
+          'মিশন পাস!',
+          `${e.mission.title} · +৳${r.taka}${extra ? ' · ' + extra : ''}`,
+        );
+        this.dialogue.interrupt('hero', 'missionPass', this.hero);
+        this.audio?.coin();
+        break;
+      }
+      case 'fail':
+        this.card('fail', 'মিশন ফেল', e.reason === 'time' ? 'সময় শেষ!' : e.mission.title);
+        if (e.reason === 'time') this.dialogue.interrupt('hero', 'missionFail', this.hero);
+        break;
+    }
+    this.hudDirty = true;
+  }
+
+  /** Testing/debug: start a mission by id (anywhere) or mark it passed. */
+  debugMission(id: string, pass = false): boolean {
+    const def = ACT1.find((m) => m.id === id);
+    if (!def) return false;
+    if (pass) {
+      this.missions.done.add(id);
+      this.hudDirty = true;
+      return true;
+    }
+    if (this.missions.active) this.missions.fail('debug');
+    this.onMissionEvent(this.missions.start(def));
+    return true;
+  }
+
   /** Testing/debug: set the wanted level directly. */
   debugSetWanted(n: number) {
     this.crime.heat = Math.max(0, Math.min(5, n));
@@ -1830,6 +1988,7 @@ export class SliceScene {
       ammo: this.arsenal.ammo,
       grenades: this.arsenal.grenades,
       health: Math.round(this.health),
+      missions: [...this.missions.done],
     };
   }
 
@@ -1844,6 +2003,8 @@ export class SliceScene {
     if (typeof s.grenades === 'number')
       this.arsenal.grenades = Math.max(0, Math.min(20, Math.floor(s.grenades)));
     if (typeof s.health === 'number') this.health = Math.max(20, Math.min(100, s.health));
+    if (Array.isArray(s.missions))
+      for (const id of s.missions) if (ACT1.some((m) => m.id === id)) this.missions.done.add(id);
     if (s.crime) {
       this.crime.heat = Math.min(5, Math.max(0, s.crime.heat ?? 0));
       for (const k of Object.keys(this.crime.record) as Array<keyof typeof this.crime.record>) {
@@ -1904,6 +2065,7 @@ export class SliceScene {
     this.peds?.dispose();
     this.police.dispose();
     this.projectiles.dispose();
+    this.markers.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }

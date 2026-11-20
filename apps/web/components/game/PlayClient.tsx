@@ -8,6 +8,7 @@ import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
 import { useSession } from '@/lib/auth-client';
 import { CombatHud } from './CombatHud';
 import { HeroPanel, loadIdentity } from './HeroPanel';
+import { MissionHud } from './MissionHud';
 import { FullMap, Minimap } from './Minimap';
 import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
 import { TouchControls } from './TouchControls';
@@ -526,6 +527,7 @@ function GameHud({
       )}
 
       {(status === 'running' || status === 'paused') && <CombatHud game={game} touch={showTouch} />}
+      {(status === 'running' || status === 'paused') && <MissionHud game={game} />}
 
       {status === 'paused' && (
         <div className={styles.overlay}>
