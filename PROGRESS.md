@@ -57,7 +57,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 
 Phase 0 task list (tick as you go, see `docs/03-ROADMAP.md`):
 - [ ] pnpm + Turborepo monorepo: `apps/web`, `packages/engine`, `packages/shared`, `packages/content`, `tools/map-builder`, `tools/asset-pipeline`
-- [ ] `packages/shared/brand.ts` reading `brand.config.json`; site title/manifest/menus use it
+- [ ] `packages/shared/brand.ts` reading the **active preset** from `brand.config.json`; site title/manifest/menus use it
 - [ ] Next.js 16 app: landing placeholder, client-only `/play`, security headers, COOP/COEP on `/play`
 - [ ] Engine boot: three.js WebGPU→WebGL2 renderer, fixed-step loop, debug overlay
 - [ ] Action-based input: keyboard/mouse + touch + gamepad
@@ -96,5 +96,6 @@ _None yet._
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-20 | Claude (Opus 5.5) | Brand presets: switch name by changing `"active"` (mvp / gtb "Gaye Tel Beshi" / mwm) | Waiting for repo URL + DB choice |
 | 2026-11-20 | Claude (Opus 5.5) | Set working title MVP: Mostofa Vs Pulish via brand.config.json; rewrote story/missions for crime-career | Waiting for repo URL + DB choice before Phase 0 |
 | 2026-11-20 | Claude (Opus 5.5) | Wrote all planning docs (01–08), mobile/all-device spec, feature checklist, extend guide, handoff system; git init + first commit | Waiting for owner's name/repo/DB answers before Phase 0 |

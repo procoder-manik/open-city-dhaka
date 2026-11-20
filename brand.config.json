@@ -1,24 +1,47 @@
 {
-  "_comment": "SINGLE SOURCE OF TRUTH for the game's name & branding. Change the name here only; code and website must read from this file. See docs/09-BRANDING.md",
-  "status": "working-title",
-  "shortName": "MVP",
-  "fullName": "Mostofa Vs Pulish",
-  "displayName": "MVP: Mostofa Vs Pulish",
-  "nameBn": "এমভিপি: মোস্তফা ভার্সেস পুলিশ",
-  "tagline": "Dhaka's Most Wanted",
-  "taglineBn": "ঢাকার মোস্ট ওয়ান্টেড",
-  "currentEdition": "Mohammadpur",
-  "editionFormat": "{shortName}: {edition}",
-  "hero": {
-    "name": "Mostofa",
-    "nameBn": "মোস্তফা"
+  "_comment": "SINGLE SOURCE OF TRUTH for the game's name & branding. To switch name, change \"active\" to another preset key (e.g. \"gtb\"). Code and website read only the active preset. See docs/09-BRANDING.md",
+  "active": "mvp",
+  "presets": {
+    "mvp": {
+      "status": "working-title",
+      "shortName": "MVP",
+      "fullName": "Mostofa Vs Pulish",
+      "displayName": "MVP: Mostofa Vs Pulish",
+      "nameBn": "এমভিপি: মোস্তফা ভার্সেস পুলিশ",
+      "tagline": "Dhaka's Most Wanted",
+      "taglineBn": "ঢাকার মোস্ট ওয়ান্টেড",
+      "slug": "mvp",
+      "logoDir": "brand/mvp",
+      "domain": null
+    },
+    "gtb": {
+      "status": "ready-alternative",
+      "shortName": "GTB",
+      "fullName": "Gaye Tel Beshi",
+      "displayName": "GTB: Gaye Tel Beshi",
+      "nameBn": "জিটিবি: গায়ে তেল বেশি",
+      "tagline": "Tel beshi? Rasta tomar.",
+      "taglineBn": "তেল বেশি? রাস্তা তোমার।",
+      "slug": "gtb",
+      "logoDir": "brand/gtb",
+      "domain": null
+    },
+    "mwm": {
+      "status": "idea",
+      "shortName": "MWM",
+      "fullName": "Most Wanted Mastan",
+      "displayName": "MWM: Most Wanted Mastan",
+      "nameBn": "মোস্ট ওয়ান্টেড মাস্তান",
+      "tagline": "Dhaka's Most Wanted",
+      "taglineBn": "ঢাকার মোস্ট ওয়ান্টেড",
+      "slug": "mwm",
+      "logoDir": "brand/mwm",
+      "domain": null
+    }
   },
-  "slug": "mvp",
-  "domain": null,
-  "alternatives": [
-    "MWM: Most Wanted Mastan",
-    "MVP: Mastan Vs Pulish",
-    "Ferari: Dhaka's Most Wanted",
-    "Hulia"
-  ]
+  "shared": {
+    "currentEdition": "Mohammadpur",
+    "editionFormat": "{shortName}: {edition}",
+    "hero": { "name": "Mostofa", "nameBn": "মোস্তফা" }
+  }
 }
