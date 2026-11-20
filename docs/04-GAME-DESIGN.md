@@ -6,49 +6,58 @@ Tone: **Dhallywood action movie meets Dhaka street comedy.** Loud, colourful, ab
 
 ## 1. Story premise
 
-**Mokbul Hossain ("Mokbul")**, 27, ex-bus helper on the Mohammadpur–Motijheel route, gets his phone, wallet and his late father's watch snatched at Asad Gate. The police ask for "chaa-pani" before writing a GD. Mokbul decides to get it back himself — and discovers the snatch is run by an organised ring, **"Chhintai Inc."**, protected by a corrupt OC and bankrolled by a fake-charity politician. One stolen watch becomes a war for the streets of Mohammadpur.
+> Working title: **MVP: Mostofa Vs Pulish** (name from `/brand.config.json`, changeable). Like the genre it is inspired by, **you play a criminal on the rise**: steal any vehicle, snatch, extort, rob, loot, smash, fight and shoot your way up, and escape the police.
 
-Second protagonist (unlocked mid-Act 1): **Shirin Akter ("Shiri Apa")**, 29, a no-nonsense CNG driver and the fastest wheel in Mohammadpur, whose CNG was "requisitioned" by the same gang.
+**Mostofa ("Mostu")**, 27, ex-bus helper on the Mohammadpur–Motijheel route. Fired by his owner, cheated by a local *Boro Bhai* who takes his savings as "chanda", and slapped by OC Kamal Pasha for complaining, Mostofa decides: *"Ei shohor-e shot manush-er jayga nai."* He starts small (snatching phones from rickshaw passengers, stealing CNGs), then works for and against rival gangs, extorts shops, robs warehouses and banks, until every thana in Dhaka has his photo on the wall: **Dhaka's Most Wanted**.
+
+Second protagonist (unlocked mid-Act 1): **Shirin Akter ("Shiri Apa")**, 29, getaway driver and CNG queen, the fastest wheel in Mohammadpur.
+
+The comedy comes from how absurd Dhaka's crime world is: bribe-hungry cops, extortion "receipts", gangsters with Facebook pages, fake-charity politicians. All characters, gangs and parties are fictional.
 
 ### Acts (long-term)
 | Act | Area | Theme |
 |---|---|---|
-| 1 | Mohammadpur (+ edges of Lalmatia, Shyamoli, Asad Gate) | Chhintai Inc. & the corrupt Thana |
-| 2 | Dhanmondi, Farmgate, Karwan Bazar | Media, fake news, real-estate mafia |
+| 1 | Mohammadpur (+ edges of Lalmatia, Shyamoli, Asad Gate) | From chhintaibaj to Mohammadpur's top mastan |
+| 2 | Dhanmondi, Farmgate, Karwan Bazar | Media, fake news, real-estate mafia, bigger heists |
 | 3 | Old Dhaka (Puran Dhaka), Sadarghat | Smuggling, river boats, Shakrain festival |
 | 4 | Gulshan / Banani / Uttara | Rich kids, VIP motorcades, airport heist |
-| 5 | Cox's Bazar & St. Martin's | Beach, yaba-smuggling ring, boats |
+| 5 | Cox's Bazar & St. Martin's | Beach, smuggling ring, boats |
 | 6+ | Districts | Expansion packs |
 
 ## 2. Act 1 mission list (Mohammadpur Arc)
 
 | # | Mission | Summary | Teaches |
 |---|---|---|---|
-| 1 | **"Ghori Gelo"** (The Watch Is Gone) | Mugged at Asad Gate; chase the snatcher on foot through Town Hall bazar. He escapes on a motorbike. | Movement, sprint, camera |
-| 2 | **"Thana-e Chaa-Pani"** | Visit Mohammadpur Thana; OC Kamal Pasha wants a bribe. Comedy dialogue choice. Get a tip from tea-stall owner **Chacha Mofiz**. | Dialogue, phone, map |
-| 3 | **"CNG Kidnap"** | Meet Shiri Apa; steal her CNG back from the gang's garage near Bosila. First drive + escape. | Driving, carjacking, Thana Alert 1–2 |
-| 4 | **"Lathi Training"** | Ex-Dhallywood stuntman **Ostad Bulbul** trains you in melee on a rooftop. | Melee combos, block, dodge |
-| 5 | **"Haat-er Goru"** (The Cow Run) | Eid cattle haat at Beribadh: a giant bull ("Raja Babu") escaped carrying stolen goods in its garland. Chase on bike through traffic. | Bike, chase, physics comedy |
-| 6 | **"Ostad's Armoury"** | Unlock the gun shop; shooting range challenge. | Guns, aiming, weapon wheel |
-| 7 | **"Jonosobha Jhamela"** (Rally Ruckus) | Fictional party *Ghorar Dim Party* holds a rally on Tajmahal Road. Hired goons start a fight; protect the stage, chase the instigators, then flee before police arrive. | Crowd combat, grenades (smoke), Thana Alert 3 |
-| 8 | **"Load-shedding Heist"** | During a blackout, raid Chhintai Inc.'s warehouse near Krishi Market for stolen phones. Stealth or loud. | Night play, stealth, choice |
-| 9 | **"Rasta Bondho"** (Roadblock) | Police + gang roadblocks across Ring Road; Shiri drives, you shoot. | Vehicle combat, Thana Alert 4 |
-| 10 | **"Boss Bhai-er Biye"** | Finale: crash Boro Bhai's wedding at a community centre; boss fight; recover the watch. Twist sets up Act 2 (Dhanmondi). | Everything |
+| 1 | **"Prothom Chhintai"** (First Snatch) | Snatch a phone from a rickshaw passenger at Asad Gate, run through Town Hall bazar, lose the crowd shouting "Dhor! Dhor!" | Movement, sprint, camera, Thana Alert 1 |
+| 2 | **"CNG Uthao"** | Steal a CNG from Mohammadpur bus stand for Chacha Mofiz's chop shop; meet Shiri Apa. | Carjacking, driving, escape |
+| 3 | **"Chandar Rashid"** (Extortion Receipt) | Collect "monthly chanda" from shops on Tajmahal Road for Boro Bhai; anyone who refuses gets their shop smashed. | Melee, vandalism, intimidation |
+| 4 | **"Lathi Training"** | Ex-Dhallywood stuntman **Ostad Bulbul** trains you on a rooftop. | Melee combos, block, dodge |
+| 5 | **"Haat-er Goru"** (Cow Heist) | Steal the giant bull "Raja Babu" from the Eid haat at Beribadh and get it across town in a pickup. | Vehicle chase, physics comedy |
+| 6 | **"Ostad's Armoury"** | Unlock the black-market gun shop; shooting range. | Guns, aiming, weapon wheel |
+| 7 | **"Jonosobha Jhamela"** (Rally Ruckus) | Rival fictional party *Ghorar Dim Party* hires you to wreck the *Jhalmuri Jonota Front* rally on Tajmahal Road: firecrackers, smoke bombs, a fight, then escape before police arrive. Police investigation follows. | Crowd combat, throwables, Thana Alert 3 |
+| 8 | **"Load-shedding Dakati"** | During a blackout, rob a rival gang's warehouse near Krishi Market. Stealth or loud. | Night play, stealth, choice |
+| 9 | **"Bank-e Dhishum"** | Rob a fictional bank branch on Ring Road; Shiri drives, you shoot through police roadblocks. | Heist, vehicle combat, Thana Alert 4–5 |
+| 10 | **"Boro Bhai-er Biye"** | Finale: crash Boro Bhai's wedding, take over his turf. Mostofa becomes Mohammadpur's Most Wanted. Sets up Act 2. | Everything |
 
 ## 3. Side activities (repeatable)
 
 | Activity | Description | Reward |
 |---|---|---|
-| **Chhintai Hunter** ⭐ | Random muggings spawn; catch the snatcher before he escapes (on foot / bike), return the item to the victim. Combo bonus for streaks. | Taka, Respect, leaderboard |
-| **Khabar Dao** delivery | Food-delivery parody: deliver biryani before it gets cold across jams. | Taka |
-| **Rickshaw Ride** | Pedal-rickshaw passenger jobs; passengers chat (bargaining minigame "20 taka beshi"). | Taka, comedy |
-| **CNG Meter Na** | Taxi jobs as Shiri; passengers complain the meter isn't used. | Taka |
+| **Chhintai Run** ⭐ | Snatch bags/phones from rickshaw and CNG passengers, escape the crowd and police. Streak bonus. | Taka, Notoriety |
+| **Chanda Collection** | Weekly extortion rounds on your turf; smash shops that refuse. | Passive income |
+| **Dokan Lut** | Rob or loot shops, mobile stores, jewellers. | Taka, Thana Alert |
+| **Gari Chor Order** | Chop shop wants a specific vehicle (rickshaw, CNG, bike, car, bus) delivered undamaged. | Taka |
+| **Turf War** | Take over gang zones street by street. | Territory, income |
+| **ATM / Van Dakati** | Hit cash vans and ATMs. | Big Taka, high heat |
 | **Street Race** | Bike/car races on Ring Road, Satmasjid Road at night. | Taka, leaderboard |
-| **Bounty** | Wanted posters for gang lieutenants. | Taka, weapons |
+| **Bounty** | Take out rival gang lieutenants. | Taka, weapons |
+| **Rickshaw / CNG jobs** | Legit side jobs ("20 taka beshi" bargaining) when you need to lie low. | Taka, heat cool-down |
 | **Pothole Hunter** (collectible) | Find 50 legendary potholes; each has a name. | Achievement |
 | **Fuchka Challenge** | Eat-off minigame at a stall. | Stamina buff |
 | **Cricket in the Gully** | Quick batting minigame with local kids. | Respect |
-| **Traffic Volunteer** | Respectful nod to student volunteers (Aug 2024): direct traffic at an intersection, clear a jam. | Respect, "Joddha" badge |
+| **Traffic Volunteer** | Respectful nod to student volunteers (Aug 2024): direct traffic, clear a jam. Never a target of crime. | Respect, "Joddha" badge |
+
+**Notoriety vs Public Love:** crimes raise Notoriety (unlocks gang jobs, bigger heists); helping people raises Public Love (cheaper prices, people don't call police). Players choose their style.
 
 ## 4. Characters (original parody archetypes)
 
@@ -56,13 +65,13 @@ Second protagonist (unlocked mid-Act 1): **Shirin Akter ("Shiri Apa")**, 29, a n
 
 | Character | Role | Archetype / joke |
 |---|---|---|
-| **Mokbul Hossain** | Protagonist | Ex-bus helper, shouts route names out of habit ("Motijheel! Gulistan! Khali! Khali!") |
+| **Mostofa ("Mostu")** | Protagonist | Ex-bus helper turned rising gangster; shouts route names out of habit ("Motijheel! Gulistan! Khali! Khali!") |
 | **Shirin "Shiri Apa" Akter** | Protagonist 2 | CNG queen, zero patience, best driver in Dhaka |
 | **Chacha Mofiz** | Mentor / info broker | Tea-stall owner who knows every secret; sells "special cha" |
 | **Ostad Bulbul** | Melee trainer | Retired Dhallywood stuntman, speaks only in 90s movie dialogue, slow-motion poses |
 | **Hero Shakil Khan "Dhishum"** | Comic ally | Fictional washed-up action hero shooting a low-budget film in Mohammadpur; every scene he gets hurt |
 | **Villain Kala Kobra** | Film-villain parody | Over-acted Dhallywood-style villain who turns out to be a real gang accountant |
-| **Boro Bhai (Jalal Mia)** | Main antagonist | Head of Chhintai Inc., runs a "charity foundation" |
+| **Boro Bhai (Jalal Mia)** | Main antagonist | Mohammadpur's top mastan, runs a "charity foundation"; Mostofa's first boss and final target |
 | **OC Kamal Pasha** | Corrupt cop | Never without his tea and an envelope; "Ami kichui dekhi nai" |
 | **SI Morshed "Ghush" Ali** | Comic cop | Constantly on the phone with his wife |
 | **Jhontu "Tokai" Rana** | Snatcher lieutenant | Fastest motorbike snatcher, mama's boy |

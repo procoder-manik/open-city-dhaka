@@ -1,4 +1,6 @@
-# Working title: GTB — Goondami Tandob Bangladesh *(name not final)*
+# MVP: Mostofa Vs Pulish — "Dhaka's Most Wanted"
+
+*Working title. The name is set in [brand.config.json](brand.config.json) and can be changed anytime ([how](docs/09-BRANDING.md)).*
 
 > **Continuing this project? Read [PROGRESS.md](PROGRESS.md) first, then [AGENTS.md](AGENTS.md).**
 
@@ -13,5 +15,6 @@ Browser-based open-world action-comedy set in Dhaka, starting with Mohammadpur. 
 6. [Platforms & Mobile](docs/06-PLATFORMS-MOBILE.md): phone/tablet/desktop, Game Lock, touch controls, PWA
 7. [Feature Checklist](docs/07-FEATURE-CHECKLIST.md): everything a full open-world game needs, by phase (living backlog)
 8. [Extending](docs/08-EXTENDING.md): how to add or improve features, maps, missions later
+9. [Branding](docs/09-BRANDING.md): name, renaming checklist, candidates
 
 Status: **planning complete, waiting for Phase 0 go-ahead.**

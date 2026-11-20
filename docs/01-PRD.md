@@ -1,6 +1,6 @@
-# Product Requirements Document — working title *(name being chosen)*
+# Product Requirements Document — MVP: Mostofa Vs Pulish *(working title, changeable)*
 
-> Name style: a funny Bangla 3-letter acronym in the spirit of the genre (see §11 name shortlist).
+> Name is configured in `/brand.config.json` (see §11 and `docs/09-BRANDING.md`).
 > Must NOT be exactly "GTA" or contain "Grand Theft Auto", and the logo must not copy Rockstar's font/style.
 
 | Field | Value |
@@ -188,26 +188,6 @@ Options to evaluate in Phase 8: free with non-intrusive ads on website (not insi
 ## 10. Open questions for the owner
 See `03-ROADMAP.md → "Decisions needed from you"`.
 
-## 11. Name shortlist (pick one)
-Requirement from owner: GTA-style 3-letter name, and the meaning must cover the **whole game** (crime, fights, guns, police, missions, cars), not just cars. Editions are named by area, like *"GTB: Mohammadpur"*, later *"GTB: Cox's Bazar"*.
-
-### A. Keeps the exact letters **G-T-A** (closest to GTA, some legal risk, see note)
-| Name | Meaning | Covers |
-|---|---|---|
-| **GTA: Goonda Thana Adalat** | Gangster, Police station, Court: the full crime cycle | Crime, fights, police, story |
-| **GTA: Guli Tolabaji Andhokar** | Bullets, extortion, underworld | Guns, gangs, missions |
-| **GTA: Gangster Town Asad Gate** | First map is right next to Asad Gate | Gang city |
-
-### B. Same style, one letter changed (recommended, safer)
-| Name | Meaning | Covers |
-|---|---|---|
-| ⭐ **GTB: Goondami Tandob Bangladesh** | "Gangster mayhem, Bangladesh" | Everything (crime, fights, chaos), and grows to all 64 districts |
-| **GTD: Goondami Town Dhaka** | "Gangster Town Dhaka" | Everything, Dhaka-focused |
-| **GTB: Gangster Town Bangladesh** | English version | Everything; easy for diaspora/international |
-| **GBD: Goonda Bhai Dhaka** | "Gangster bro, Dhaka" | Character-driven, funny |
-
-Edition naming: like "GTA V/VI", we use areas instead of numbers. **GTB: Mohammadpur** → **GTB: Dhaka** → **GTB: Cox's Bazar**. Tagline idea: *"Thana-o tomar, rasta-o tomar."*
-
-**Legal note:** "GTA" is a registered trademark of Take-Two/Rockstar, and they enforce it. A free fan-style game with a parody meaning is lower risk, but if the game grows or earns money, a cease-and-desist is possible and the site/domain could be lost. Option B keeps the look and sound but avoids that. Never copy their logo font, cover-art style or "Grand Theft Auto" text either way.
-
-Recommendation: **GTB: Goondami Tandob Bangladesh**. Check the domain before final.
+## 11. Name & branding
+Working title: **MVP: Mostofa Vs Pulish**, tagline *"Dhaka's Most Wanted"*. Hero = **Mostofa**.
+Not final. The name lives only in `/brand.config.json` and can be changed anytime without code changes. Candidates, rules and rename checklist: `docs/09-BRANDING.md`.

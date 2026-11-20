@@ -14,7 +14,7 @@
 | Updated by | Claude (Opus 5.5) |
 | Current phase | **Planning complete → Phase 0 not started** |
 | Overall progress | Planning 100 % · Code 0 % |
-| Game name | **Not final** (shortlist in `docs/01-PRD.md §11`) |
+| Game name | Working title **MVP: Mostofa Vs Pulish** ("Dhaka's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | Owner is creating it. Remote not set yet |
 | Database | Proposed PostgreSQL (Neon) + Drizzle. **Awaiting owner confirmation** |
 | Build status | No code yet |
@@ -24,7 +24,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 
 | Phase | Name | Status | Notes |
 |---|---|---|---|
-| — | Planning docs | ✅ | `docs/01`–`08` |
+| — | Planning docs | ✅ | `docs/01`–`09` |
 | P0 | Foundation (monorepo, Next.js, engine boot, Game Lock, PWA, CI) | ⬜ | Waiting on name + repo + DB decision |
 | P1 | "Feel" vertical slice (character, camera, 3 vehicles, one street, touch controls) | ⬜ | |
 | P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ⬜ | |
@@ -46,16 +46,18 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - [x] Feature checklist: `docs/07-FEATURE-CHECKLIST.md`
 - [x] How to extend the game later: `docs/08-EXTENDING.md`
 - [x] Handoff system: this file + `AGENTS.md` + `CLAUDE.md`
+- [x] Branding: `brand.config.json` (single source for name) + `docs/09-BRANDING.md`
+- [x] Story changed to crime-career (hero Mostofa rises from snatcher to Most Wanted): `docs/04-GAME-DESIGN.md`
 - [x] Local git repo initialised, docs committed
 
 ## ▶ NEXT STEP
 **Start Phase 0 — Foundation** once the owner confirms:
-1. Game name (shortlist in PRD §11)
-2. GitHub repo URL → `git remote add origin <url>` and push `main`
-3. Database: PostgreSQL (Neon) or MongoDB Atlas
+1. GitHub repo URL → `git remote add origin <url>` and push `main`
+2. Database: PostgreSQL (Neon) or MongoDB Atlas
 
 Phase 0 task list (tick as you go, see `docs/03-ROADMAP.md`):
 - [ ] pnpm + Turborepo monorepo: `apps/web`, `packages/engine`, `packages/shared`, `packages/content`, `tools/map-builder`, `tools/asset-pipeline`
+- [ ] `packages/shared/brand.ts` reading `brand.config.json`; site title/manifest/menus use it
 - [ ] Next.js 16 app: landing placeholder, client-only `/play`, security headers, COOP/COEP on `/play`
 - [ ] Engine boot: three.js WebGPU→WebGL2 renderer, fixed-step loop, debug overlay
 - [ ] Action-based input: keyboard/mouse + touch + gamepad
@@ -77,9 +79,11 @@ Phase 0 task list (tick as you go, see `docs/03-ROADMAP.md`):
 | 2026-11-20 | Original parody characters, no real living people/parties (recommended, owner to confirm) | Legal & takedown risk |
 | 2026-11-20 | Everything data-driven & modular so features can be improved anytime | Owner request (see `docs/08-EXTENDING.md`) |
 | 2026-11-20 | Progress handoff via this file, updated + pushed every session | Owner request |
+| 2026-11-20 | Working title MVP: Mostofa Vs Pulish, hero = Mostofa; name only in `brand.config.json` | Owner request; must stay changeable |
+| 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
-- [ ] Final game name
+- [ ] Final game name (working title set, can change)
 - [ ] GitHub repo URL
 - [ ] DB choice (PostgreSQL recommended)
 - [ ] OK with parody characters instead of real people?
@@ -92,4 +96,5 @@ _None yet._
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-20 | Claude (Opus 5.5) | Set working title MVP: Mostofa Vs Pulish via brand.config.json; rewrote story/missions for crime-career | Waiting for repo URL + DB choice before Phase 0 |
 | 2026-11-20 | Claude (Opus 5.5) | Wrote all planning docs (01–08), mobile/all-device spec, feature checklist, extend guide, handoff system; git init + first commit | Waiting for owner's name/repo/DB answers before Phase 0 |

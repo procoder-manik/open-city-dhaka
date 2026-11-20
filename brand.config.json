@@ -1,0 +1,24 @@
+{
+  "_comment": "SINGLE SOURCE OF TRUTH for the game's name & branding. Change the name here only; code and website must read from this file. See docs/09-BRANDING.md",
+  "status": "working-title",
+  "shortName": "MVP",
+  "fullName": "Mostofa Vs Pulish",
+  "displayName": "MVP: Mostofa Vs Pulish",
+  "nameBn": "এমভিপি: মোস্তফা ভার্সেস পুলিশ",
+  "tagline": "Dhaka's Most Wanted",
+  "taglineBn": "ঢাকার মোস্ট ওয়ান্টেড",
+  "currentEdition": "Mohammadpur",
+  "editionFormat": "{shortName}: {edition}",
+  "hero": {
+    "name": "Mostofa",
+    "nameBn": "মোস্তফা"
+  },
+  "slug": "mvp",
+  "domain": null,
+  "alternatives": [
+    "MWM: Most Wanted Mastan",
+    "MVP: Mastan Vs Pulish",
+    "Ferari: Dhaka's Most Wanted",
+    "Hulia"
+  ]
+}

@@ -18,6 +18,7 @@ This project may be worked on by different AIs (Claude, Codex, Gemini, Cursor…
 - Every gameplay feature needs: keyboard/mouse + touch + gamepad input, and a setting in quality presets if it costs performance.
 - Content (missions, vehicles, weapons, dialogue, presets) goes in `packages/content` as data, not hard-coded.
 - No real living people, real political parties, or copied GTA assets/names/logos (PRD §9).
+- Never hard-code the game name: read it from `brand.config.json` (use `{game}` / `{hero}` placeholders in text).
 - Never commit secrets. Use `.env.local` (git-ignored) and update `.env.example`.
 
 ## End of every session (or when your limit/context is running out) — mandatory
