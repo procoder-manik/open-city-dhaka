@@ -25,6 +25,8 @@ import {
   type CrimeKind,
 } from '../gameplay/CrimeSystem';
 import { WantedBoards } from '../world/WantedBoards';
+import type { CityBundle } from '../world/city/CityData';
+import { CityWorld } from '../world/city/CityWorld';
 import { DialogueSystem, type Subtitle } from '../dialogue/DialogueSystem';
 import type { InputManager } from '../input/InputManager';
 import {
@@ -105,6 +107,11 @@ export interface HudState {
   bribeCost: number;
   /** Latest news headline (shown as a toast); id changes per headline. */
   headline: { id: number; text: string } | null;
+  /** Player position + camera heading (minimap). */
+  pos: [number, number];
+  heading: number;
+  /** Real-map area name shown on the HUD. */
+  area: string;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -218,7 +225,12 @@ export class SliceScene {
     crimes: 0,
     bribeCost: 0,
     headline: null,
+    pos: [0, 0],
+    heading: 0,
+    area: 'তাজমহল রোড, মোহাম্মদপুর',
   };
+  private city: CityWorld | null = null;
+  private cityVersion = -1;
   private identity: HeroIdentity = { ...DEFAULT_IDENTITY };
   private crime = newCrimeState();
   private boards: WantedBoards;
@@ -232,13 +244,21 @@ export class SliceScene {
     private readonly onHud: (s: HudState) => void,
     private readonly audio: AudioEngine | null = null,
     private readonly voice: VoicePlayer | null = null,
+    cityBundle: CityBundle | null = null,
   ) {
     this.camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 900);
     this.env = new Environment(this.scene, preset, 17.2);
 
-    this.street = buildStreetBlock(preset);
+    this.street = buildStreetBlock(preset, 7, { cityMode: !!cityBundle });
     this.scene.add(this.street.group);
     this.street.bodies.forEach((b, i) => this.bodies.push({ ...b, id: STATIC_ID_BASE + i }));
+    if (cityBundle) {
+      // The real Mohammadpur around the hand-built Tajmahal Road block
+      this.city = new CityWorld(cityBundle, preset, this.street.materials);
+      this.scene.add(this.city.group);
+      const base = STATIC_ID_BASE + this.street.bodies.length;
+      this.city.physicsBodies().forEach((b, i) => this.bodies.push({ ...b, id: base + i }));
+    }
 
     this.particles = new Particles(preset.npcDensity < 0.5 ? 120 : 220);
     this.scene.add(this.particles.mesh);
@@ -795,6 +815,15 @@ export class SliceScene {
     this.dialogue.update(dt);
 
     const focus = this.driving ? this.driving.body.renderPos : this.player.renderPos;
+    if (this.city) {
+      this.city.update(dt, focus);
+      if (this.city.version !== this.cityVersion) {
+        this.cityVersion = this.city.version;
+        this.rig.setColliders([...this.street.colliders, ...this.city.colliders()]);
+      }
+      for (const nm of this.city.nightMaterials)
+        nm.material.emissiveIntensity = nm.max * this.env.night;
+    }
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials)
       nm.material.emissiveIntensity = nm.max * this.env.night;
@@ -900,11 +929,21 @@ export class SliceScene {
         wanted: stars(this.crime),
         crimes: totalCrimes(this.crime),
         bribeCost: bribeCost(this.crime),
+        pos: [Math.round(this.focusPos.x * 10) / 10, Math.round(this.focusPos.z * 10) / 10],
+        heading: +this.rig.yaw.toFixed(3),
       };
       this.hudTimer = 0.1;
       this.hudDirty = false;
       this.onHud(this.hud);
     }
+  }
+
+  private get focusPos(): THREE.Vector3 {
+    return this.driving ? this.driving.body.renderPos : this.player.renderPos;
+  }
+
+  get cityLoadedChunks(): number {
+    return this.city?.loadedCount ?? 0;
   }
 
   debugInfo() {
@@ -938,6 +977,7 @@ export class SliceScene {
       })),
       npcs: this.npcs.map((n) => ({ id: n.def.id, pos: r(n.position) })),
       hour: +this.env.hour.toFixed(2),
+      cityChunks: this.city?.loadedCount ?? 0,
     };
   }
 
@@ -1000,7 +1040,8 @@ export class SliceScene {
   importSave(s: Partial<SaveData>) {
     if (typeof s.taka === 'number') this.hud.taka = Math.max(0, Math.floor(s.taka));
     if (typeof s.notoriety === 'number') this.hud.notoriety = Math.max(0, Math.floor(s.notoriety));
-    if (typeof s.publicLove === 'number') this.hud.publicLove = Math.max(0, Math.floor(s.publicLove));
+    if (typeof s.publicLove === 'number')
+      this.hud.publicLove = Math.max(0, Math.floor(s.publicLove));
     if (typeof s.hour === 'number') this.setHour(s.hour);
     if (s.crime) {
       this.crime.heat = Math.min(5, Math.max(0, s.crime.heat ?? 0));
@@ -1057,6 +1098,7 @@ export class SliceScene {
     for (const v of this.vehicles) v.visual.dispose();
     this.particles.dispose();
     this.boards.dispose();
+    this.city?.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }

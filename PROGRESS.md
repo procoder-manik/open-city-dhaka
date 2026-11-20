@@ -41,7 +41,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | P0 | Foundation (monorepo, Next.js, engine boot, Game Lock, PWA, CI) | ✅ | See "Phase 0 result" below |
 | P1 | "Feel" vertical slice (character, camera, 3 vehicles, one street, touch controls) | ✅ | See "Phase 1 result"; real-phone test pending |
 | P1.5 | Life, sound & realism upgrade (owner feedback) | 🟨 | Part A done; Part B needs assets/voice decision (`docs/11-ART-REALISM.md`) |
-| P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ⬜ | Next after P1.5-B decision |
+| P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ✅ | Real OSM map (18k buildings) streamed in 256 m chunks around the hand-built Tajmahal Road block; minimap + full map. Hand-made landmark models still TODO |
 | P3 | Vehicles & city life (traffic, peds, carjacking) | ⬜ | |
 | P4 | Combat, weapons & police (Thana Alert) | ⬜ | |
 | P5 | Missions & story Act 1 | ⬜ | |
@@ -183,6 +183,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Phase 2: OSM fetch (Overpass mirrors) + map builder (anchor on Tajmahal Road, chunks, colliders, minimap, POIs), CityWorld streaming (roads, sidewalks, lane dashes, extruded buildings with shops/signs, water tanks, parks, water), 18k building colliders in physics (static bodies no longer sent per frame), GTA-style rotating minimap + full map | Continuing: Phase 3 traffic & pedestrians |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 6 login: Better Auth (email/password, Google when keys set), Drizzle + Postgres (Neon via DATABASE_URL, embedded PGlite locally), /login page, /api/profile (server-validated hero title/name), /api/save (cloud save, size/zod/rate limited), autosave, signed-in hero editor | Continuing autonomously: Phase 2 map next (OSM data downloaded) |
 | 2026-11-21 | Claude (Opus 5.5) | Hero identity (login-gated editor), crime record + Wanted 0–5, bribe OC, good-deed redemption, wanted posters + news billboards with player's name, headline toasts, NPC recognition, donate/feedback links via site.config.json, Dhaka palette + colour grade | Next: login (Phase 6 auth) or Phase 2 map |
 | 2026-11-21 | Claude (Opus 5.5) | Free route: downloaded & verified 6 CC0 Poly Haven texture sets, applied to road/footpath/walls/awnings/poles; device Bangla AI voice per character + voice selector; Azure `voice:gen` tool | Waiting on owner: Azure key, model downloads; Phase 2 can start |

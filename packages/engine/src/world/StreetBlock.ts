@@ -58,6 +58,8 @@ export interface StreetResult {
   nightGlows: Array<{ material: THREE.MeshBasicMaterial; max: number }>;
   /** Named points of interest (spawn, vehicle parking…). */
   points: Record<string, [number, number, number]>;
+  /** Shared surface materials (reused by the city streamer). */
+  materials: { road: THREE.MeshStandardMaterial; walk: THREE.MeshStandardMaterial };
   dispose(): void;
 }
 
@@ -70,6 +72,8 @@ export interface StreetResult {
 export interface StreetOptions {
   /** Where the CC0 PBR textures live (see tools/asset-pipeline/fetch-textures.mjs). */
   textureBase?: string;
+  /** Embedded in the real city map: no end walls / placeholder skyline. */
+  cityMode?: boolean;
 }
 
 export function buildStreetBlock(
@@ -401,7 +405,7 @@ export function buildStreetBlock(
     }
 
     // Background skyline rows (cheap, no detail) so the city feels dense.
-    for (let zz = zMin; zz < zMax; zz += 9 + rand() * 6) {
+    for (let zz = zMin; zz < zMax && !opts.cityMode; zz += 9 + rand() * 6) {
       const h = 10 + rand() * 26;
       const w = 7 + rand() * 7;
       const d = 10 + rand() * 10;
@@ -411,7 +415,7 @@ export function buildStreetBlock(
     }
   }
   // Road ends: buildings across the far ends (keeps the slice enclosed).
-  for (const zEnd of [zMin - 8, zMax + 8]) {
+  for (const zEnd of opts.cityMode ? [] : [zMin - 8, zMax + 8]) {
     skyline.box([60, 30, 14], [0, 15, zEnd], WALL_COLORS[2]);
     addStatic([0, 15, zEnd], [30, 15, 7]);
   }
@@ -461,7 +465,8 @@ export function buildStreetBlock(
   group.add(details.build(detailMat)!);
   const awningMesh = awnings.build(tinMat);
   if (awningMesh) group.add(awningMesh);
-  group.add(skyline.build(wallMat, { castShadow: false })!);
+  const skyMesh = skyline.build(wallMat, { castShadow: false });
+  if (skyMesh) group.add(skyMesh);
 
   // ---------- Electric poles, street lights, wires ----------
   const poles = new MeshBuilder();
@@ -640,6 +645,7 @@ export function buildStreetBlock(
     colliders,
     nightMaterials,
     nightGlows,
+    materials: { road: roadMat, walk: pathMat },
     points: {
       spawn: [roadHalf + footWidth * 0.5, curbHeight + 1.1, 0],
       car: [roadHalf - 2.2, 0.95, 7],

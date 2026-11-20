@@ -40,7 +40,10 @@ for (let attempt = 1; attempt <= 40; attempt++) {
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'game-map-builder' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'game-map-builder',
+      },
       body: 'data=' + encodeURIComponent(query),
       signal: AbortSignal.timeout(180000),
     });
@@ -50,7 +53,9 @@ for (let attempt = 1; attempt <= 40; attempt++) {
       if (Array.isArray(data.elements) && data.elements.length > 1000) {
         mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, text);
-        console.log(`OK ${url}: ${data.elements.length} elements, ${(text.length / 1e6).toFixed(1)} MB`);
+        console.log(
+          `OK ${url}: ${data.elements.length} elements, ${(text.length / 1e6).toFixed(1)} MB`,
+        );
         process.exit(0);
       }
     }

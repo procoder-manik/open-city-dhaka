@@ -15,6 +15,7 @@ import { DynamicResolution } from './platform/DynamicResolution';
 import { pickQualityTier } from './platform/quality';
 import { createRenderer, renderStats } from './render/createRenderer';
 import { SliceScene, type SaveData } from './scenes/SliceScene';
+import { loadCity, type CityBundle } from './world/city/CityData';
 import { createGameStore, type GameStore } from './state/store';
 import { setBanglaFont } from './world/textures';
 
@@ -26,6 +27,8 @@ export interface GameOptions {
   forceWebGL?: boolean;
   /** Creates the physics Web Worker (app-owned entry). Omit to run physics on the main thread. */
   createPhysicsWorker?: () => Worker;
+  /** Base URL of the streamed city map (null = only the hand-built block). */
+  mapBase?: string | null;
   /** Hero title + name (signed-in players can customise; guests get the default). */
   hero?: HeroIdentity;
   /** CSS font-family of the loaded Bangla web font (for signboards). */
@@ -127,7 +130,21 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     deviceBangla: voice.hasDeviceBangla,
   });
 
-  const world = new SliceScene(preset, (hud) => store.setState(hud), audio, voice);
+  // Real Mohammadpur map (OpenStreetMap). Falls back to the hand-built block if it can't load.
+  let city: CityBundle | null = null;
+  const mapBase = opts.mapBase === undefined ? '/assets/map/mohammadpur' : opts.mapBase;
+  if (mapBase) {
+    try {
+      city = await Promise.race([
+        loadCity(mapBase),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error('map timeout')), 15000)),
+      ]);
+    } catch (err) {
+      console.warn('[map] city unavailable, using the street block only:', err);
+    }
+  }
+
+  const world = new SliceScene(preset, (hud) => store.setState(hud), audio, voice, city);
   if (opts.hero) world.setIdentity(opts.hero);
   const physics = new PhysicsClient();
   const physicsMode = await physics.init(

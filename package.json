@@ -19,7 +19,9 @@
     "format:check": "prettier --check .",
     "budget": "node tools/asset-pipeline/check-budget.mjs",
     "voice:gen": "node tools/voice-gen/generate.mjs",
-    "assets:textures": "node tools/asset-pipeline/fetch-textures.mjs"
+    "assets:textures": "node tools/asset-pipeline/fetch-textures.mjs",
+    "map:fetch": "node tools/map-builder/fetch-osm.mjs",
+    "map:build": "node tools/map-builder/build.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

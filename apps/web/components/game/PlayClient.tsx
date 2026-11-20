@@ -7,6 +7,7 @@ import type * as Engine from '@game/engine';
 import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
 import { useSession } from '@/lib/auth-client';
 import { HeroPanel, loadIdentity } from './HeroPanel';
+import { FullMap, Minimap } from './Minimap';
 import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
 import { TouchControls } from './TouchControls';
 import styles from './play.module.css';
@@ -377,6 +378,7 @@ function GameHud({
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
   );
   const [showHelp, setShowHelp] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   // Phones/tablets always; touch laptops once the screen is touched; hidden while using a gamepad.
   const showTouch = (isTouch || lastInput === 'touch') && lastInput !== 'gamepad';
   const interactLabel = prompt ? (mode === 'vehicle' ? 'নামো' : 'উঠো') : null;
@@ -423,6 +425,8 @@ function GameHud({
       <div className={styles.clock} data-testid="clock" data-status={status}>
         {formatHour(hour)}
       </div>
+
+      <Minimap game={game} />
 
       <div className={styles.wallet} data-testid="wallet">
         <span className={styles.taka}>৳{taka.toLocaleString('bn-BD')}</span>
@@ -606,6 +610,15 @@ function GameHud({
                 <dd>মাউস / ডান দিকে আঙুল টানো</dd>
               </dl>
             )}
+            <button
+              className={styles.chip}
+              type="button"
+              onClick={() => setShowMap((v) => !v)}
+              data-testid="map-btn"
+            >
+              🗺️ মোহাম্মদপুরের ম্যাপ {showMap ? '▲' : '▼'}
+            </button>
+            {showMap && <FullMap game={game} />}
             <p className={styles.muted}>
               হিরো · অপরাধ: {crimes} · ভালো কাজ ❤️ {publicLove}
             </p>

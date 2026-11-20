@@ -5,6 +5,7 @@ export type { TalkOption } from './actors/Npc';
 export type { HudState, SaveData } from './scenes/SliceScene';
 export type { Subtitle } from './dialogue/DialogueSystem';
 export type { VoiceMode } from './audio/VoicePlayer';
+export { loadMinimap, type CityIndex, type MinimapData } from './world/city/CityData';
 export { InputManager } from './input/InputManager';
 export { GameLock, type GameLockStatus } from './gamelock/GameLock';
 export { detectDevice, type DeviceInfo, type FormFactor } from './platform/device';

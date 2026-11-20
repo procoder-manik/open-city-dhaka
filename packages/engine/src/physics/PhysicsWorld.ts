@@ -46,6 +46,7 @@ export class PhysicsWorld {
   private byId = new Map<number, Entry>();
   private grounded = new Map<number, boolean>();
   private vehicles: VehicleEntry[] = [];
+  private movingCache: Entry[] | null = null;
 
   async init(bodies: BodyDesc[], gravity: number, vehicles: VehicleBodyDesc[] = []): Promise<void> {
     await initRapier();
@@ -222,10 +223,12 @@ export class PhysicsWorld {
     return { transforms: this.snapshot(), vehicles: this.vehicleSnapshot() };
   }
 
+  /** Only moving bodies are sent each frame (static city colliders never change). */
   private snapshot(): Float32Array {
-    const out = new Float32Array(this.entries.length * FLOATS_PER_BODY);
+    const moving = (this.movingCache ??= this.entries.filter((e) => !e.body.isFixed()));
+    const out = new Float32Array(moving.length * FLOATS_PER_BODY);
     let o = 0;
-    for (const e of this.entries) {
+    for (const e of moving) {
       const t = e.body.translation();
       const r = e.body.rotation();
       const v = e.body.linvel();

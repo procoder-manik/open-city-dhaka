@@ -717,3 +717,35 @@
     animation: none;
   }
 }
+
+/* ---------- Minimap ---------- */
+.minimap {
+  position: absolute;
+  left: calc(14px + var(--safe-left));
+  bottom: calc(14px + var(--safe-bottom));
+  z-index: 6;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.fullMap {
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+}
+
+/* On touch devices the joystick lives bottom-left: minimap goes top-left */
+@media (pointer: coarse) {
+  .minimap {
+    top: calc(62px + var(--safe-top));
+    bottom: auto;
+    width: 110px;
+    height: 110px;
+  }
+}
