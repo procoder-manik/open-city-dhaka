@@ -54,6 +54,10 @@ export interface Game {
   debugTalk(npcId: string, option: TalkOption): boolean;
   debugCarjack(): string | null;
   debugKnockPedestrian(): boolean;
+  debugSetWanted(n: number): void;
+  debugAttack(weapon: 'fist' | 'pistol' | 'grenade'): boolean;
+  debugExplode(dx: number, dz: number): void;
+  debugDamage(n: number): void;
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
   setMuted(muted: boolean): void;
@@ -274,6 +278,18 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugKnockPedestrian() {
       return world.debugKnockPedestrian();
+    },
+    debugSetWanted(n: number) {
+      world.debugSetWanted(n);
+    },
+    debugAttack(weapon: 'fist' | 'pistol' | 'grenade') {
+      return world.debugAttack(weapon);
+    },
+    debugExplode(dx: number, dz: number) {
+      world.debugExplode(dx, dz);
+    },
+    debugDamage(n: number) {
+      world.debugDamage(n);
     },
     debugTalk(npcId: string, option: TalkOption) {
       return world.debugTalk(npcId, option);

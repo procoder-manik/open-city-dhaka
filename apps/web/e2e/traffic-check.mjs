@@ -33,12 +33,31 @@ await page.screenshot({ path: `${out}/traffic-street.png` });
 const jacked = await page.evaluate(() => window.__game.debugCarjack());
 await page.waitForTimeout(2500);
 i = await info();
-console.log('carjacked into', jacked, 'mode', i.mode, 'vehicle', JSON.stringify(i.vehicle), 'wanted', i.wanted);
+console.log(
+  'carjacked into',
+  jacked,
+  'mode',
+  i.mode,
+  'vehicle',
+  JSON.stringify(i.vehicle),
+  'wanted',
+  i.wanted,
+);
 await page.screenshot({ path: `${out}/traffic-carjack.png` });
 const knocked = await page.evaluate(() => window.__game.debugKnockPedestrian());
 await page.waitForTimeout(800);
 i = await info();
-console.log('knock', knocked, 'knocked now', i.knocked, 'traffic', i.traffic, 'peds', i.peds, await stats());
+console.log(
+  'knock',
+  knocked,
+  'knocked now',
+  i.knocked,
+  'traffic',
+  i.traffic,
+  'peds',
+  i.peds,
+  await stats(),
+);
 console.log('subtitle', i.subtitle);
 console.log('errors', JSON.stringify(errors.slice(0, 5)));
 await browser.close();

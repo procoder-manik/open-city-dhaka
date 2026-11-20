@@ -15,7 +15,15 @@ export const TALK_LABELS: Record<TalkOption, string> = {
 export interface NpcDef {
   id: string;
   /** Dialogue speaker key + look key. */
-  speaker: 'teaChacha' | 'rickshawWala' | 'shopkeeper' | 'foreigner' | 'pedestrian' | 'aunty' | 'driver';
+  speaker:
+    | 'teaChacha'
+    | 'rickshawWala'
+    | 'shopkeeper'
+    | 'foreigner'
+    | 'pedestrian'
+    | 'aunty'
+    | 'driver'
+    | 'police';
   /** Custom look (pedestrians); defaults to the speaker's look. */
   look?: HumanoidLook;
   kind: NpcKind;

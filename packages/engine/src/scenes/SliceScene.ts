@@ -10,8 +10,26 @@ import {
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import { PedestrianSystem } from '../actors/PedestrianSystem';
-import { TRAFFIC_KINDS, TrafficSystem, type TrafficCar, type TrafficObstacle } from '../traffic/TrafficSystem';
+import {
+  TRAFFIC_KINDS,
+  TrafficSystem,
+  type TrafficCar,
+  type TrafficObstacle,
+} from '../traffic/TrafficSystem';
 import { RoadGraph } from '../world/city/RoadGraph';
+import { raycastAABBs, type AABB } from '../camera/raycast';
+import {
+  WEAPONS,
+  blastFalloff,
+  newArsenal,
+  nextWeapon,
+  raySphere,
+  type Arsenal,
+  type WeaponId,
+} from '../gameplay/Combat';
+import { PoliceSystem, type Cop } from '../gameplay/PoliceSystem';
+import { Projectiles } from '../gameplay/Projectiles';
+import type { Pedestrian } from '../actors/PedestrianSystem';
 import { seededRandom } from '../world/random';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { VoicePlayer } from '../audio/VoicePlayer';
@@ -38,6 +56,7 @@ import {
   FLOATS_PER_WHEEL,
   type BodyDesc,
   type CharacterInput,
+  type ImpulseInput,
   type KinematicInput,
   type PhysicsFrame,
   type VehicleBodyDesc,
@@ -64,6 +83,7 @@ const BALL_ID = 50;
 const VEHICLE_ID_BASE = 10;
 const NPC_ID_BASE = 100;
 const TRAFFIC_ID_BASE = 400;
+const POLICE_ID_BASE = 450;
 const STASH_ID = 990;
 const STATIC_ID_BASE = 1000;
 /** Hidden platform where spare (carjack) vehicles wait. */
@@ -81,7 +101,11 @@ const ENTER_RANGE = 3.6;
 const TALK_RANGE = 2.6;
 const MAX_EXIT_SPEED = 14;
 
-const CARJACK_NAMES: Record<string, string> = { car: 'প্রাইভেট কার', cng: 'সিএনজি', bike: 'মোটরসাইকেল' };
+const CARJACK_NAMES: Record<string, string> = {
+  car: 'প্রাইভেট কার',
+  cng: 'সিএনজি',
+  bike: 'মোটরসাইকেল',
+};
 
 const damp = (current: number, target: number, rate: number, dt: number) =>
   THREE.MathUtils.lerp(current, target, 1 - Math.exp(-rate * dt));
@@ -94,6 +118,9 @@ export interface SaveData {
   publicLove: number;
   hour: number;
   crime: { heat: number; record: Record<string, number> };
+  ammo?: number;
+  grenades?: number;
+  health?: number;
 }
 
 export interface HudState {
@@ -123,6 +150,17 @@ export interface HudState {
   heading: number;
   /** Real-map area name shown on the HUD. */
   area: string;
+  health: number;
+  weapon: WeaponId;
+  weaponName: string;
+  ammo: number;
+  grenades: number;
+  /** Full-screen state after death / arrest. */
+  overlay: { kind: 'wasted' | 'busted'; title: string; sub: string } | null;
+  /** 0..1 arrest progress (cop has a hand on you). */
+  arrest: number;
+  /** Recently hurt (red flash id). */
+  hurtId: number;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -243,12 +281,32 @@ export class SliceScene {
     pos: [0, 0],
     heading: 0,
     area: 'তাজমহল রোড, মোহাম্মদপুর',
+    health: 100,
+    weapon: 'fist',
+    weaponName: WEAPONS.fist.nameBn,
+    ammo: 0,
+    grenades: 0,
+    overlay: null,
+    arrest: 0,
+    hurtId: 0,
   };
   private city: CityWorld | null = null;
   private graph: RoadGraph | null = null;
   private traffic: TrafficSystem | null = null;
   private peds: PedestrianSystem | null = null;
   private carjackCar: TrafficCar | null = null;
+  private police: PoliceSystem;
+  private projectiles = new Projectiles();
+  private health = 100;
+  private hurtCalm = 0;
+  private arsenal: Arsenal = newArsenal();
+  private fireCd = 0;
+  private shootCrimeCd = 0;
+  private aiming = false;
+  private overlay: { kind: 'wasted' | 'busted'; t: number } | null = null;
+  private deathFall = 0;
+  private cityBoxes: AABB[] = [];
+  private impulses: ImpulseInput[] = [];
   private driverBarkCooldown = 0;
   private cityVersion = -1;
   private identity: HeroIdentity = { ...DEFAULT_IDENTITY };
@@ -288,6 +346,11 @@ export class SliceScene {
         this.scene.add(this.peds.group);
       }
     }
+    this.police = new PoliceSystem(this.graph, preset, seededRandom(31337), POLICE_ID_BASE);
+    this.scene.add(this.police.group);
+    this.bodies.push(...this.police.physicsBodies());
+    this.scene.add(this.projectiles.group);
+    this.projectiles.onExplode = (at) => this.explosion(at);
     // Hidden stash platform for spare vehicles
     this.bodies.push({
       id: STASH_ID,
@@ -329,6 +392,7 @@ export class SliceScene {
     this.facing = Math.PI;
     this.hero.root.rotation.y = this.facing;
     this.hero.onFootstep = (s) => this.audio?.footstep(s);
+    this.hero.root.rotation.order = 'YXZ';
     this.scene.add(this.hero.root);
 
     // NPCs (fixed colliders so you bump into them)
@@ -425,11 +489,20 @@ export class SliceScene {
   preStep(
     dt: number,
     input: InputManager,
-  ): { characters: CharacterInput[]; vehicles: VehicleInput[]; kinematic?: KinematicInput[] } {
-    if (input.pressed('interact')) this.toggleVehicle();
+  ): {
+    characters: CharacterInput[];
+    vehicles: VehicleInput[];
+    kinematic?: KinematicInput[];
+    impulses?: ImpulseInput[];
+  } {
+    const frozen = !!this.overlay;
+    if (!frozen && input.pressed('interact')) this.toggleVehicle();
+    if (!frozen && !this.driving) this.combatInput(input);
+    else this.aiming = false;
 
     const vehicles: VehicleInput[] = this.vehicles.map((v) => {
-      const teleport = v.tp && !v.tp.sent ? { x: v.tp.x, y: v.tp.y, z: v.tp.z, yaw: v.tp.yaw } : null;
+      const teleport =
+        v.tp && !v.tp.sent ? { x: v.tp.x, y: v.tp.y, z: v.tp.z, yaw: v.tp.yaw } : null;
       if (v.tp) v.tp.sent = true;
       const withTp = (c: Omit<VehicleInput, 'bodyId'>): VehicleInput =>
         teleport ? { bodyId: v.id, ...c, teleport } : { bodyId: v.id, ...c };
@@ -468,8 +541,10 @@ export class SliceScene {
     let vx = 0;
     let vz = 0;
     if (!this.driving) {
-      const sprint = input.isDown('sprint');
-      const mag = Math.min(1, Math.hypot(input.move.x, input.move.y));
+      const sprint = input.isDown('sprint') && !this.aiming;
+      const mag = frozen
+        ? 0
+        : Math.min(1, Math.hypot(input.move.x, input.move.y)) * (this.aiming ? 0.55 : 1);
       // Joystick: small push = walk, full = jog; sprint button/key = sprint.
       const base =
         mag < 0.55
@@ -491,19 +566,21 @@ export class SliceScene {
       bodyId: PLAYER_ID,
       vx,
       vz,
-      jump: !this.driving && input.pressed('jump'),
+      jump: !this.driving && !frozen && input.pressed('jump'),
       enabled: !this.driving,
       ...(this.pendingTeleport ? { teleport: this.pendingTeleport } : {}),
     };
     this.pendingTeleport = null;
-    const kinematic = this.traffic?.kinematic();
-    return kinematic ? { characters: [character], vehicles, kinematic } : { characters: [character], vehicles };
+    const kinematic = [...(this.traffic?.kinematic() ?? []), ...this.police.kinematic()];
+    const impulses = this.impulses;
+    this.impulses = [];
+    return { characters: [character], vehicles, kinematic, impulses };
   }
 
-  private toggleVehicle() {
+  private toggleVehicle(force = false) {
     if (this.driving) {
       const v = this.driving;
-      if (Math.abs(v.speed) > MAX_EXIT_SPEED) return;
+      if (!force && Math.abs(v.speed) > MAX_EXIT_SPEED) return;
       const left = new THREE.Vector3(1, 0, 0).applyQuaternion(v.body.renderQuat);
       left.y = 0;
       left.normalize();
@@ -592,6 +669,7 @@ export class SliceScene {
         }
         this.hud.taka -= price;
         this.hud.publicLove += 1;
+        this.health = Math.min(100, this.health + 25);
         this.dialogue.interrupt('hero', 'order', this.hero);
         this.dialogue.say(
           sp,
@@ -764,11 +842,16 @@ export class SliceScene {
       const p = this.player.renderPos;
       this.hero.root.position.set(p.x, p.y - CAPSULE_CENTER, p.z);
       const hSpeed = Math.hypot(this.player.vel.x, this.player.vel.z);
-      if (this.moveVel.lengthSq() > 0.04) {
+      if (this.aiming) {
+        const [fx, fz] = this.rig.forward;
+        this.facing += wrapAngle(Math.atan2(fx, fz) - this.facing) * (1 - Math.exp(-20 * dt));
+      } else if (this.moveVel.lengthSq() > 0.04) {
         const target = Math.atan2(this.moveVel.x, this.moveVel.y);
         this.facing += wrapAngle(target - this.facing) * (1 - Math.exp(-12 * dt));
       }
       this.hero.root.rotation.y = this.facing;
+      this.hero.root.rotation.x = -this.deathFall * (Math.PI / 2 - 0.08);
+      this.hero.root.position.y += this.deathFall * 0.12;
       const turnRate = wrapAngle(this.facing - this.prevFacing) / Math.max(dt, 1e-3);
       this.prevFacing = this.facing;
       this.accel = damp(this.accel, (hSpeed - this.prevSpeed) / Math.max(dt, 1e-3), 8, dt);
@@ -794,9 +877,9 @@ export class SliceScene {
       pivot.set(p.x, p.y - CAPSULE_CENTER + 1.55, p.z);
       this.rig.update(dt, {
         pivot,
-        distance: sprinting ? 4.1 : 3.6,
-        shoulder: 0.45,
-        fov: sprinting ? 68 : 60,
+        distance: this.aiming ? 2.3 : sprinting ? 4.1 : 3.6,
+        shoulder: this.aiming ? 0.75 : 0.45,
+        fov: this.aiming ? 48 : sprinting ? 68 : 60,
         autoAlignYaw: null,
         lookInput: input.look,
       });
@@ -840,6 +923,7 @@ export class SliceScene {
     }
     if (this.driving) this.carjackCar = null;
     this.updateStreetLife(dt);
+    this.updateCombat(dt);
 
     // NPC life: face the player, idle calls when the player is around
     const playerPos = this.driving ? this.driving.body.renderPos : this.player.renderPos;
@@ -852,7 +936,8 @@ export class SliceScene {
         }
       }
     }
-    // Wanted level cools down; NPCs recognise a wanted hero
+    // Wanted level cools down (only while no cop can see you); NPCs recognise a wanted hero
+    if (this.police.copNear(this.focusPos, 40)) this.crime.calm = 0;
     tickCrime(this.crime, dt);
     this.recognizeCooldown = Math.max(0, this.recognizeCooldown - dt);
     if (stars(this.crime) >= 1 && this.recognizeCooldown <= 0 && !this.dialogue.busy) {
@@ -884,7 +969,8 @@ export class SliceScene {
       this.city.update(dt, focus);
       if (this.city.version !== this.cityVersion) {
         this.cityVersion = this.city.version;
-        this.rig.setColliders([...this.street.colliders, ...this.city.colliders()]);
+        this.cityBoxes = [...this.street.colliders, ...this.city.colliders()];
+        this.rig.setColliders(this.cityBoxes);
       }
       for (const nm of this.city.nightMaterials)
         nm.material.emissiveIntensity = nm.max * this.env.night;
@@ -949,15 +1035,17 @@ export class SliceScene {
   }
 
   private publishHud(dt: number) {
-    const prompt = this.driving
-      ? Math.abs(this.driving.speed) <= MAX_EXIT_SPEED
-        ? `নামো: ${this.driving.def.nameBn}`
-        : null
-      : this.nearest
-        ? `ওঠো: ${this.nearest.def.nameBn}`
-        : this.carjackCar
-          ? `ছিনিয়ে নাও: ${CARJACK_NAMES[this.carjackCar.kind] ?? 'গাড়ি'}`
-          : null;
+    const prompt = this.overlay
+      ? null
+      : this.driving
+        ? Math.abs(this.driving.speed) <= MAX_EXIT_SPEED
+          ? `নামো: ${this.driving.def.nameBn}`
+          : null
+        : this.nearest
+          ? `ওঠো: ${this.nearest.def.nameBn}`
+          : this.carjackCar
+            ? `ছিনিয়ে নাও: ${CARJACK_NAMES[this.carjackCar.kind] ?? 'গাড়ি'}`
+            : null;
     const mode = this.driving ? 'vehicle' : 'foot';
     const talk =
       !this.driving && this.talkTarget
@@ -997,6 +1085,17 @@ export class SliceScene {
         crimes: totalCrimes(this.crime),
         bribeCost: bribeCost(this.crime),
         pos: [Math.round(this.focusPos.x * 10) / 10, Math.round(this.focusPos.z * 10) / 10],
+        health: Math.round(this.health),
+        weapon: this.arsenal.weapon,
+        weaponName: WEAPONS[this.arsenal.weapon].nameBn,
+        ammo: this.arsenal.ammo,
+        grenades: this.arsenal.grenades,
+        arrest: +this.police.arrest.toFixed(2),
+        overlay: this.overlay
+          ? this.overlay.kind === 'wasted'
+            ? { kind: 'wasted', title: 'খতম!', sub: 'হাসপাতালের বিল কাটা গেল' }
+            : { kind: 'busted', title: 'ধরা খাইলা!', sub: 'থানায় "চা-পানি" দিয়া ছাড়া পাইলা' }
+          : null,
         heading: +this.rig.yaw.toFixed(3),
       };
       this.hudTimer = 0.1;
@@ -1049,6 +1148,19 @@ export class SliceScene {
       peds: this.peds?.active.length ?? 0,
       knocked: this.peds?.peds.filter((x) => x.active && x.state === 'knocked').length ?? 0,
       carjack: this.carjackCar?.kind ?? null,
+      health: Math.round(this.health),
+      weapon: this.arsenal.weapon,
+      ammo: this.arsenal.ammo,
+      grenades: this.arsenal.grenades,
+      cops: this.police.activeCops.length,
+      copPos: this.police.activeCops.map((c) => [
+        +c.npc.position.x.toFixed(1),
+        +c.npc.position.z.toFixed(1),
+        c.state,
+      ]),
+      copsDown: this.police.activeCops.filter((c) => c.state === 'down').length,
+      policeCars: this.police.cars.filter((c) => c.active).length,
+      overlay: this.overlay?.kind ?? null,
     };
   }
 
@@ -1082,6 +1194,470 @@ export class SliceScene {
   }
 
   // ---------------- Crime, bribe, good deeds, identity ----------------
+
+  // ---------------- Combat: fists, pistol, grenades; police; wasted / busted ----------------
+
+  private combatInput(input: InputManager) {
+    if (input.pressed('weapon')) {
+      this.arsenal.weapon = nextWeapon(this.arsenal);
+      this.hudDirty = true;
+    }
+    const w = this.arsenal.weapon;
+    this.aiming = w === 'pistol' && input.isDown('aim');
+    if (input.pressed('melee')) this.punch();
+    else if (input.pressed('fire')) {
+      if (w === 'fist') this.punch();
+      else if (w === 'pistol') this.shoot();
+      else this.throwGrenade();
+    }
+    if (input.pressed('throw') && this.arsenal.grenades > 0) this.throwGrenade();
+  }
+
+  private get chest(): THREE.Vector3 {
+    const p = this.player.renderPos;
+    return new THREE.Vector3(p.x, p.y - CAPSULE_CENTER + 1.4, p.z);
+  }
+
+  /** Everything a bullet or fist can hit. */
+  private targets(): Array<{ pos: THREE.Vector3; cop?: Cop; ped?: Pedestrian; npc?: Npc }> {
+    const out: Array<{ pos: THREE.Vector3; cop?: Cop; ped?: Pedestrian; npc?: Npc }> = [];
+    for (const c of this.police.cops)
+      if (c.active && c.state !== 'down')
+        out.push({ pos: c.npc.position.clone().setY(1.1), cop: c });
+    for (const p of this.peds?.peds ?? [])
+      if (p.active && p.state !== 'knocked' && p.state !== 'getup')
+        out.push({ pos: p.npc.position.clone().setY(1.1), ped: p });
+    for (const n of this.npcs)
+      out.push({ pos: n.position.clone().setY(n.position.y + 1.1), npc: n });
+    return out;
+  }
+
+  private punch() {
+    if (this.fireCd > 0) return;
+    this.fireCd = WEAPONS.fist.cooldown;
+    this.hero.punch();
+    const fwd = new THREE.Vector3(Math.sin(this.facing), 0, Math.cos(this.facing));
+    const me = this.player.renderPos;
+    let hit = false;
+    for (const t of this.targets()) {
+      const to = t.pos.clone().sub(me).setY(0);
+      const d = to.length();
+      if (d > WEAPONS.fist.range || (d > 0.3 && to.normalize().dot(fwd) < 0.5)) continue;
+      hit = true;
+      this.hitTarget(t, WEAPONS.fist.damage, this.facing, 'punch');
+      break;
+    }
+    this.audio?.punch(hit);
+    if (hit) {
+      this.rig.addShake(0.12);
+      if (Math.random() < 0.3 && !this.dialogue.busy) this.dialogue.say('hero', 'punch', this.hero);
+    }
+  }
+
+  private hitTarget(
+    t: { pos: THREE.Vector3; cop?: Cop; ped?: Pedestrian; npc?: Npc },
+    damage: number,
+    yaw: number,
+    how: 'punch' | 'bullet',
+  ) {
+    if (t.cop) {
+      const down = this.police.hurt(t.cop, damage, yaw);
+      this.crimeEvent('copAssault');
+      if (!this.dialogue.busy || down)
+        this.dialogue.interrupt('police', down ? 'hurt' : 'hit', t.cop.npc.humanoid);
+    } else if (t.ped && this.peds) {
+      this.peds.knock(t.ped, yaw, how === 'bullet' ? 30 : 3.5);
+      t.ped.npc.position.add(
+        new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(0.5),
+      );
+      this.crimeEvent('assault');
+      if (how === 'punch')
+        this.dialogue.interrupt(t.ped.npc.def.speaker, 'punched', t.ped.npc.humanoid);
+      this.peds.scareAll(t.pos, 12, 6);
+    } else if (t.npc) {
+      t.npc.fear = 1;
+      t.npc.humanoid.setEmotion('scared', 6);
+      this.crimeEvent('assault');
+      this.dialogue.interrupt(t.npc.def.speaker, 'threatenReply', t.npc.humanoid);
+    }
+  }
+
+  /** Auto-aim: the most central threat in front of the camera (cops first). */
+  private pickAimTarget(): THREE.Vector3 | null {
+    const [fx, fz] = this.rig.forward;
+    const me = this.chest;
+    let best: THREE.Vector3 | null = null;
+    let bestScore = -Infinity;
+    for (const t of this.targets()) {
+      const to = t.pos.clone().sub(me);
+      const d = to.length();
+      if (d > 28 || d < 0.5) continue;
+      const cos = (to.x * fx + to.z * fz) / Math.hypot(to.x, to.z);
+      if (cos < 0.82) continue;
+      if (raycastAABBs(me.x, me.y, me.z, to.x / d, to.y / d, to.z / d, d, this.cityBoxes) < d)
+        continue;
+      const score = cos * 2 - d * 0.03 + (t.cop ? 1 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = t.pos;
+      }
+    }
+    return best;
+  }
+
+  private shoot() {
+    if (this.fireCd > 0) return;
+    if (this.arsenal.ammo <= 0) {
+      this.audio?.click();
+      this.arsenal.weapon = nextWeapon(this.arsenal);
+      this.hudDirty = true;
+      return;
+    }
+    this.fireCd = WEAPONS.pistol.cooldown;
+    this.arsenal.ammo -= 1;
+    this.hudDirty = true;
+    const o = this.chest;
+    let dir: THREE.Vector3;
+    if (this.aiming) {
+      // Through the crosshair: camera ray → first thing hit → direction from the gun
+      const cd = new THREE.Vector3();
+      this.camera.getWorldDirection(cd);
+      const cp = this.camera.position;
+      const far = Math.min(
+        80,
+        raycastAABBs(cp.x, cp.y, cp.z, cd.x, cd.y, cd.z, 80, this.cityBoxes),
+      );
+      dir = cp.clone().addScaledVector(cd, far).sub(o).normalize();
+    } else {
+      const t = this.pickAimTarget();
+      if (t) dir = t.clone().sub(o).normalize();
+      else {
+        const [fx, fz] = this.rig.forward;
+        dir = new THREE.Vector3(fx, -0.02, fz).normalize();
+      }
+    }
+    // A little spread when firing from the hip
+    if (!this.aiming)
+      dir
+        .add(
+          new THREE.Vector3(
+            (Math.random() - 0.5) * 0.03,
+            (Math.random() - 0.5) * 0.02,
+            (Math.random() - 0.5) * 0.03,
+          ),
+        )
+        .normalize();
+    this.facing = Math.atan2(dir.x, dir.z);
+    this.hero.aiming = true;
+    this.aimHold = 0.6;
+    const range = WEAPONS.pistol.range;
+    let best = Math.min(
+      range,
+      raycastAABBs(o.x, o.y, o.z, dir.x, dir.y, dir.z, range, this.cityBoxes),
+    );
+    let hit: ReturnType<SliceScene['targets']>[number] | null = null;
+    for (const t of this.targets()) {
+      const d = raySphere(o, dir, t.pos, 0.45);
+      if (d !== null && d < best) {
+        best = d;
+        hit = t;
+      }
+    }
+    let car: TrafficCar | null = null;
+    for (const c of this.traffic?.cars ?? []) {
+      if (!c.active) continue;
+      const d = raySphere(o, dir, new THREE.Vector3(c.pos.x, 0.9, c.pos.z), 1.4);
+      if (d !== null && d < best) {
+        best = d;
+        car = c;
+        hit = null;
+      }
+    }
+    const end = o.clone().addScaledVector(dir, best);
+    const muzzle = o
+      .clone()
+      .addScaledVector(dir, 0.55)
+      .add(
+        new THREE.Vector3(Math.cos(this.facing), 0, -Math.sin(this.facing)).multiplyScalar(-0.2),
+      );
+    this.projectiles.shot(muzzle, end);
+    this.audio?.gunshot(0);
+    this.rig.addShake(0.18);
+    this.rig.pitch = Math.max(-0.6, this.rig.pitch - 0.015); // recoil kick
+    if (hit) this.hitTarget(hit, WEAPONS.pistol.damage, Math.atan2(dir.x, dir.z), 'bullet');
+    else if (car) {
+      this.traffic?.stunNear(car.pos.x, car.pos.z, 4, 6);
+      this.particles.emit('debris', end, undefined, 5);
+    } else if (best < range) this.particles.emit('dust', end, undefined, 3);
+    // Gunfire terrifies the street
+    this.peds?.scareAll(o, 45, 8);
+    this.traffic?.stunNear(o.x, o.z, 25, 2.5);
+    if (this.shootCrimeCd <= 0) {
+      this.shootCrimeCd = 6;
+      this.crimeEvent('shooting');
+      const ped = this.peds?.active.find((p) => p.npc.position.distanceTo(o) < 25);
+      if (ped) this.dialogue.interrupt(ped.npc.def.speaker, 'gunfire', ped.npc.humanoid);
+      else if (Math.random() < 0.4) this.dialogue.say('hero', 'shoot', this.hero);
+    }
+  }
+
+  private aimHold = 0;
+
+  private throwGrenade() {
+    if (this.fireCd > 0 || this.arsenal.grenades <= 0) return;
+    this.fireCd = WEAPONS.grenade.cooldown;
+    this.arsenal.grenades -= 1;
+    if (this.arsenal.grenades <= 0 && this.arsenal.weapon === 'grenade')
+      this.arsenal.weapon = nextWeapon(this.arsenal);
+    this.hudDirty = true;
+    const [fx, fz] = this.rig.forward;
+    this.facing = Math.atan2(fx, fz);
+    this.hero.throwArm();
+    const from = this.chest.add(new THREE.Vector3(fx * 0.4, 0.4, fz * 0.4));
+    // Throw harder when the camera looks up
+    const up = 4.5 + Math.max(0, -this.rig.pitch) * 6;
+    this.projectiles.throwGrenade(
+      from,
+      new THREE.Vector3(fx * 11, up, fz * 11).add(this.player.vel.clone().setY(0)),
+    );
+    if (Math.random() < 0.5) this.dialogue.say('hero', 'grenade', this.hero);
+  }
+
+  private explosion(at: THREE.Vector3) {
+    const R = WEAPONS.grenade.range;
+    const focus = this.focusPos;
+    const dist = at.distanceTo(focus);
+    this.audio?.explosion(dist);
+    this.rig.addShake(Math.min(1.2, 14 / (dist + 4)));
+    this.particles.emit('debris', at.clone().setY(0.3), undefined, 22);
+    this.particles.emit('blackSmoke', at.clone().setY(0.6), undefined, 10);
+    this.particles.emit('dust', at, undefined, 12);
+    this.crimeEvent('shooting');
+    // People
+    for (const p of this.peds?.peds ?? []) {
+      if (!p.active) continue;
+      const d = p.npc.position.distanceTo(at);
+      if (d < R) {
+        this.peds?.knock(p, Math.atan2(p.npc.position.x - at.x, p.npc.position.z - at.z), 20);
+        p.npc.position.add(
+          p.npc.position
+            .clone()
+            .sub(at)
+            .setY(0)
+            .normalize()
+            .multiplyScalar(blastFalloff(d, R) * 3),
+        );
+      }
+    }
+    this.peds?.scareAll(at, 50, 10);
+    for (const c of this.police.cops) {
+      if (!c.active) continue;
+      const d = c.npc.position.distanceTo(at);
+      if (d < R)
+        this.police.hurt(
+          c,
+          WEAPONS.grenade.damage * blastFalloff(d, R) + 20,
+          Math.atan2(c.npc.position.x - at.x, c.npc.position.z - at.z),
+        );
+    }
+    for (const n of this.npcs) {
+      if (n.position.distanceTo(at) < R * 2) {
+        n.fear = 1;
+        n.humanoid.setEmotion('scared', 8);
+      }
+    }
+    this.traffic?.stunNear(at.x, at.z, 35, 6);
+    // Vehicles get thrown and damaged
+    for (const v of this.vehicles) {
+      const d = v.body.renderPos.distanceTo(at);
+      if (d > R * 1.3 || v.body.renderPos.y < STASH_Y + 20) continue;
+      const k = blastFalloff(d, R * 1.3);
+      const away = v.body.renderPos.clone().sub(at).setY(0).normalize();
+      const mass = v.def.mass;
+      this.impulses.push({
+        bodyId: v.id,
+        x: away.x * mass * 9 * k,
+        y: mass * 7 * k,
+        z: away.z * mass * 9 * k,
+        torque: [away.z * mass * 3 * k, 0, -away.x * mass * 3 * k],
+      });
+      const local = at.clone().sub(v.body.renderPos).applyQuaternion(v.body.quat.clone().invert());
+      applyImpact(v.cond, impactZone(local.x, local.z), 30 * k + 5, 1.5);
+      this.hudDirty = true;
+    }
+    // The player
+    const pd = this.driving ? dist : this.player.renderPos.distanceTo(at);
+    if (pd < R) this.damagePlayer((this.driving ? 45 : 110) * blastFalloff(pd, R), at);
+  }
+
+  private damagePlayer(amount: number, from?: THREE.Vector3) {
+    if (this.overlay || amount <= 0) return;
+    this.health = Math.max(0, this.health - amount);
+    this.hurtCalm = 0;
+    this.hud.hurtId += 1;
+    this.rig.addShake(Math.min(0.5, amount / 40));
+    if (!this.driving && amount > 5) this.hero.setEmotion('angry', 2);
+    if (from && !this.driving) this.particles.emit('dust', this.player.renderPos, undefined, 2);
+    this.hudDirty = true;
+    if (this.health <= 0) this.wasted();
+  }
+
+  private wasted() {
+    if (this.overlay) return;
+    if (this.driving) this.toggleVehicle(true);
+    this.overlay = { kind: 'wasted', t: 5 };
+    this.aiming = false;
+    this.hero.aiming = false;
+    this.dialogue.interrupt('hero', 'wasted', this.hero);
+    this.audio?.setSiren(0);
+    this.hudDirty = true;
+  }
+
+  private busted() {
+    if (this.overlay) return;
+    if (this.driving) this.toggleVehicle(true);
+    this.overlay = { kind: 'busted', t: 5 };
+    this.aiming = false;
+    this.hero.aiming = false;
+    this.hero.handsUp = true;
+    this.dialogue.interrupt('police', 'arrest', null);
+    this.dialogue.say('hero', 'arrested', this.hero, 0.4);
+    this.hudDirty = true;
+  }
+
+  /** Back on the street after death (hospital) or arrest (thana). */
+  private respawn() {
+    const kind = this.overlay?.kind;
+    this.overlay = null;
+    this.deathFall = 0;
+    this.hero.handsUp = false;
+    this.health = 100;
+    this.crime.heat = 0;
+    this.crime.calm = 0;
+    this.police.clearAll();
+    if (kind === 'wasted')
+      this.hud.taka = Math.max(0, this.hud.taka - Math.min(this.hud.taka, 200));
+    else {
+      this.hud.taka = Math.max(0, this.hud.taka - Math.min(this.hud.taka, 300));
+      this.arsenal.ammo = 0; // police keep the gun's bullets
+      if (this.arsenal.weapon === 'pistol') this.arsenal.weapon = 'fist';
+    }
+    const spawn = this.street.points.spawn!;
+    const p = new THREE.Vector3(...spawn);
+    this.pendingTeleport = [p.x, p.y, p.z];
+    this.player.snap(p);
+    this.moveVel.set(0, 0);
+    this.hero.root.rotation.set(0, this.facing, 0, 'YXZ');
+    this.dialogue.say('hero', 'respawn', this.hero, 0.8);
+    this.hudDirty = true;
+  }
+
+  private updateCombat(dt: number) {
+    this.fireCd = Math.max(0, this.fireCd - dt);
+    this.shootCrimeCd = Math.max(0, this.shootCrimeCd - dt);
+    this.aimHold = Math.max(0, this.aimHold - dt);
+    this.hero.aiming = !this.driving && !this.overlay && (this.aiming || this.aimHold > 0);
+    this.hero.setGun(!this.driving && this.arsenal.weapon === 'pistol');
+    this.projectiles.update(dt, this.cityBoxes);
+
+    // Health: slow regeneration up to 50 after a quiet spell (GTA-style)
+    this.hurtCalm += dt;
+    if (!this.overlay && this.hurtCalm > 8 && this.health < 50) {
+      this.health = Math.min(50, this.health + dt * 2);
+      this.hudDirty = true;
+    }
+
+    // Overlay (wasted / busted) countdown
+    if (this.overlay) {
+      this.overlay.t -= dt;
+      if (this.overlay.kind === 'wasted') this.deathFall = Math.min(1, this.deathFall + dt * 3);
+      if (this.overlay.t <= 0) this.respawn();
+    }
+
+    const focus = this.focusPos;
+    const boxes = this.cityBoxes;
+    const events = this.police.update(dt, {
+      stars: stars(this.crime),
+      player: focus,
+      inVehicle: !!this.driving,
+      playerSpeed: this.driving
+        ? Math.abs(this.driving.speed)
+        : Math.hypot(this.player.vel.x, this.player.vel.z),
+      frozen: !!this.overlay,
+      blocked: (x, z) => {
+        for (const b of boxes)
+          if (x > b[0] - 0.3 && x < b[3] + 0.3 && z > b[2] - 0.3 && z < b[5] + 0.3 && b[4] > 0.5)
+            return true;
+        return false;
+      },
+    });
+    for (const e of events) {
+      if (e.type === 'shot') {
+        const d = e.from.distanceTo(focus);
+        this.audio?.gunshot(d);
+        const target = focus.clone().setY(focus.y + (this.driving ? 0.3 : 0));
+        if (!e.hit)
+          target.add(
+            new THREE.Vector3(
+              (Math.random() - 0.5) * 3,
+              Math.random() * 1.5,
+              (Math.random() - 0.5) * 3,
+            ),
+          );
+        this.projectiles.shot(
+          e.from.clone().add(target.clone().sub(e.from).normalize().multiplyScalar(0.6)),
+          target,
+        );
+        this.peds?.scareAll(e.from, 35, 6);
+        if (e.hit) {
+          if (this.driving) {
+            applyImpact(this.driving.cond, 'front', 4, 1);
+            this.damagePlayer(3 + Math.random() * 3, e.from);
+          } else this.damagePlayer(7 + Math.random() * 6, e.from);
+        }
+      } else if (e.type === 'arrest') {
+        this.busted();
+      } else if (e.type === 'bark' && !this.dialogue.busy) {
+        this.dialogue.say('police', e.situation, e.cop?.npc.humanoid ?? null);
+      }
+    }
+    // Siren: nearest patrol car
+    let dCar = Infinity;
+    for (const c of this.police.cars)
+      if (c.active) dCar = Math.min(dCar, Math.hypot(c.pos.x - focus.x, c.pos.z - focus.z));
+    const s = stars(this.crime);
+    this.audio?.setSiren(this.overlay || s === 0 ? 0 : Math.max(s >= 2 ? 0.2 : 0, 1 - dCar / 140));
+    if (Math.abs(this.police.arrest - this.hud.arrest) > 0.05) this.hudDirty = true;
+  }
+
+  /** Testing/debug: set the wanted level directly. */
+  debugSetWanted(n: number) {
+    this.crime.heat = Math.max(0, Math.min(5, n));
+    this.crime.calm = 0;
+    this.hudDirty = true;
+  }
+
+  /** Testing/debug: fire / punch / throw once with a given weapon. */
+  debugAttack(weapon: WeaponId): boolean {
+    if (this.driving || this.overlay) return false;
+    this.arsenal.weapon = weapon;
+    this.fireCd = 0;
+    if (weapon === 'fist') this.punch();
+    else if (weapon === 'pistol') this.shoot();
+    else this.throwGrenade();
+    return true;
+  }
+
+  /** Testing/debug: explode a grenade at an offset from the player. */
+  debugExplode(dx: number, dz: number) {
+    const p = this.focusPos;
+    this.projectiles.explode(new THREE.Vector3(p.x + dx, 0.2, p.z + dz));
+  }
+
+  /** Testing/debug: take damage. */
+  debugDamage(n: number) {
+    this.damagePlayer(n);
+  }
 
   // ---------------- Street life: traffic, pedestrians, carjacking ----------------
 
@@ -1164,7 +1740,11 @@ export class SliceScene {
     const obstacles: TrafficObstacle[] = [];
     if (this.driving) {
       const v = this.driving;
-      obstacles.push({ x: v.body.renderPos.x, z: v.body.renderPos.z, radius: v.def.chassisHalfExtents[0] + 0.6 });
+      obstacles.push({
+        x: v.body.renderPos.x,
+        z: v.body.renderPos.z,
+        radius: v.def.chassisHalfExtents[0] + 0.6,
+      });
     } else {
       obstacles.push({ x: this.player.renderPos.x, z: this.player.renderPos.z, radius: 0.5 });
     }
@@ -1215,6 +1795,7 @@ export class SliceScene {
     this.dialogue.interrupt('hero', 'bribe', this.hero);
     const paid = payBribe(this.crime, this.hud.taka);
     if (paid > 0) {
+      this.police.standDown();
       this.hud.taka -= paid;
       this.dialogue.say('oc', 'bribeOk', null, 0.3);
       this.audio?.coin();
@@ -1246,6 +1827,9 @@ export class SliceScene {
       publicLove: this.hud.publicLove,
       hour: +this.env.hour.toFixed(2),
       crime: { heat: this.crime.heat, record: { ...this.crime.record } },
+      ammo: this.arsenal.ammo,
+      grenades: this.arsenal.grenades,
+      health: Math.round(this.health),
     };
   }
 
@@ -1255,6 +1839,11 @@ export class SliceScene {
     if (typeof s.publicLove === 'number')
       this.hud.publicLove = Math.max(0, Math.floor(s.publicLove));
     if (typeof s.hour === 'number') this.setHour(s.hour);
+    if (typeof s.ammo === 'number')
+      this.arsenal.ammo = Math.max(0, Math.min(999, Math.floor(s.ammo)));
+    if (typeof s.grenades === 'number')
+      this.arsenal.grenades = Math.max(0, Math.min(20, Math.floor(s.grenades)));
+    if (typeof s.health === 'number') this.health = Math.max(20, Math.min(100, s.health));
     if (s.crime) {
       this.crime.heat = Math.min(5, Math.max(0, s.crime.heat ?? 0));
       for (const k of Object.keys(this.crime.record) as Array<keyof typeof this.crime.record>) {
@@ -1313,6 +1902,8 @@ export class SliceScene {
     this.city?.dispose();
     this.traffic?.dispose();
     this.peds?.dispose();
+    this.police.dispose();
+    this.projectiles.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }

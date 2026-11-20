@@ -315,6 +315,18 @@ export class Humanoid {
   /** Called on each footstep (for sounds). */
   onFootstep: ((strength: number) => void) | null = null;
 
+  // Combat poses
+  private punchT = 0;
+  private punchSide = 1;
+  private aimBlend = 0;
+  /** Hold the right arm out aiming a pistol. */
+  aiming = false;
+  /** Hands up (arrested). */
+  handsUp = false;
+  private handsUpBlend = 0;
+  private throwT = 0;
+  private gunMesh: THREE.Mesh | null = null;
+
   constructor(look: HumanoidLook = MOSTOFA_LOOK) {
     this.look = look;
     const mat = (
@@ -900,6 +912,7 @@ export class Humanoid {
     this.head.rotation.x =
       -spineLean * 0.5 + (this.talkTimer > 0 ? Math.sin(this.time * 7) * 0.05 : 0);
     this.head.rotation.y = -this.chest.rotation.y * 0.6;
+    this.combatPose(dt);
   }
 
   /** Turn head towards a world point (NPCs looking at the player). */
@@ -911,6 +924,72 @@ export class Humanoid {
 
   setVisible(v: boolean) {
     this.root.visible = v;
+  }
+
+  /** Quick jab (alternating hands). */
+  punch() {
+    this.punchT = 0.32;
+    this.punchSide = 1 - this.punchSide;
+  }
+
+  /** Overarm throw (grenade). */
+  throwArm() {
+    this.throwT = 0.45;
+  }
+
+  /** Show/hide a pistol in the right hand. */
+  setGun(on: boolean) {
+    if (on && !this.gunMesh) {
+      const g = new THREE.BoxGeometry(0.035, 0.11, 0.16);
+      g.translate(0, -0.03, 0.05);
+      const m = new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: 0.4, metalness: 0.7 });
+      this.materials.push(m);
+      this.gunMesh = new THREE.Mesh(g, m);
+      this.gunMesh.position.set(0, -0.27, 0.02);
+      this.foreArm[1].add(this.gunMesh);
+    }
+    if (this.gunMesh) this.gunMesh.visible = on;
+  }
+
+  private combatPose(dt: number) {
+    const R = 1 as const;
+    // Aiming: right arm straight out in front
+    this.aimBlend = damp(this.aimBlend, this.aiming ? 1 : 0, 14, dt);
+    const a = this.aimBlend;
+    if (a > 0.01) {
+      this.upperArm[R].rotation.x = lerp(this.upperArm[R].rotation.x, -1.5, a);
+      this.upperArm[R].rotation.z = lerp(this.upperArm[R].rotation.z, 0.05, a);
+      this.foreArm[R].rotation.x = lerp(this.foreArm[R].rotation.x, -0.05, a);
+    }
+    if (this.punchT > 0) {
+      this.punchT = Math.max(0, this.punchT - dt);
+      const k = Math.sin((1 - this.punchT / 0.32) * Math.PI);
+      const i = this.punchSide;
+      const ua = this.upperArm[i === 0 ? 0 : 1];
+      const fa = this.foreArm[i === 0 ? 0 : 1];
+      ua.rotation.x = lerp(ua.rotation.x, -1.55, k);
+      ua.rotation.z = lerp(ua.rotation.z, i === 0 ? -0.15 : 0.15, k);
+      fa.rotation.x = lerp(fa.rotation.x, -0.1, k);
+      this.chest.rotation.y += (i === 0 ? 0.4 : -0.4) * k;
+    }
+    if (this.throwT > 0) {
+      this.throwT = Math.max(0, this.throwT - dt);
+      const t = 1 - this.throwT / 0.45;
+      // Wind up behind the head, then whip forward
+      const x = t < 0.45 ? lerp(0, -2.7, t / 0.45) : lerp(-2.7, -0.9, (t - 0.45) / 0.55);
+      this.upperArm[R].rotation.x = x;
+      this.foreArm[R].rotation.x = t < 0.45 ? -1.2 : -0.2;
+    }
+    this.handsUpBlend = damp(this.handsUpBlend, this.handsUp ? 1 : 0, 8, dt);
+    const h = this.handsUpBlend;
+    if (h > 0.01) {
+      for (const i of [0, 1] as const) {
+        const ua = this.upperArm[i];
+        ua.rotation.x = lerp(ua.rotation.x, -2.9, h);
+        ua.rotation.z = lerp(ua.rotation.z, i === 0 ? 0.35 : -0.35, h);
+        this.foreArm[i].rotation.x = lerp(this.foreArm[i].rotation.x, -0.5, h);
+      }
+    }
   }
 
   dispose() {

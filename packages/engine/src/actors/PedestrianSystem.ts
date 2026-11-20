@@ -12,7 +12,7 @@ const KAMEEZ = [0xc8306a, 0x2a8aa0, 0xe0a030, 0x8a3ab0, 0x2a9a5a, 0xd04a3a, 0xf0
 
 /** Random Dhaka street look: office men, students, uncles in panjabi, women in salwar-kameez. */
 export function randomLook(rand: () => number): { look: HumanoidLook; female: boolean } {
-  const pick = <T,>(a: T[]) => a[Math.floor(rand() * a.length)]!;
+  const pick = <T>(a: T[]) => a[Math.floor(rand() * a.length)]!;
   const female = rand() < 0.4;
   if (female) {
     return {
@@ -38,15 +38,21 @@ export function randomLook(rand: () => number): { look: HumanoidLook; female: bo
       skin: pick(SKINS),
       hair: uncle ? pick(HAIR) : pick(HAIR.slice(0, 3)),
       hairStyle: rand() < 0.15 ? 'bald' : 'short',
-      beard: uncle ? pick(['full', 'grey', 'stubble'] as const) : pick(['none', 'stubble'] as const),
+      beard: uncle
+        ? pick(['full', 'grey', 'stubble'] as const)
+        : pick(['none', 'stubble'] as const),
       mustache: rand() < 0.5,
       top: uncle
         ? { kind: 'panjabi', color: pick([0xf3efe4, 0xe8e0c8, 0xd0d8e0]) }
         : { kind: rand() < 0.5 ? 'shirt' : 'tshirt', color: pick(SHIRTS) },
-      bottom: uncle && rand() < 0.4
-        ? { kind: 'lungi', color: pick([0x2a5c3a, 0x2b4a7a, 0x7a2b2b]), check: 0xd9c46a }
-        : { kind: rand() < 0.5 ? 'jeans' : 'trousers', color: pick(PANTS) },
-      shoes: { kind: rand() < 0.5 ? 'sandals' : 'sneakers', color: pick([0x2a221a, 0xf2f2ee, 0x3a3a3a]) },
+      bottom:
+        uncle && rand() < 0.4
+          ? { kind: 'lungi', color: pick([0x2a5c3a, 0x2b4a7a, 0x7a2b2b]), check: 0xd9c46a }
+          : { kind: rand() < 0.5 ? 'jeans' : 'trousers', color: pick(PANTS) },
+      shoes: {
+        kind: rand() < 0.5 ? 'sandals' : 'sneakers',
+        color: pick([0x2a221a, 0xf2f2ee, 0x3a3a3a]),
+      },
       cap: uncle && rand() < 0.4 ? 0xf6f4ee : null,
       belly: uncle ? 0.3 + rand() * 0.5 : 0,
       height: 0.95 + rand() * 0.08,
@@ -209,7 +215,8 @@ export class PedestrianSystem {
       this.spawnTimer = 0.3;
       const free = this.peds.find((p) => !p.active);
       const count = this.peds.length - this.peds.filter((p) => !p.active).length;
-      if (free && count < this.target) this.spawn(free, focus, count < this.target / 2 ? 12 : 45, 75);
+      if (free && count < this.target)
+        this.spawn(free, focus, count < this.target / 2 ? 12 : 45, 75);
     }
     for (const p of this.peds) {
       if (!p.active) continue;
@@ -250,7 +257,8 @@ export class PedestrianSystem {
           npc.position.x = nx;
           npc.position.z = nz;
         }
-        root.rotation.y += wrap(Math.atan2(away.x, away.z) - root.rotation.y) * (1 - Math.exp(-10 * dt));
+        root.rotation.y +=
+          wrap(Math.atan2(away.x, away.z) - root.rotation.y) * (1 - Math.exp(-10 * dt));
         speed = run;
         if (p.timer <= 0) {
           p.state = 'walk';
@@ -263,7 +271,14 @@ export class PedestrianSystem {
         if (p.timer <= 0) p.state = 'getup';
       } else if (p.state === 'getup') {
         p.fall = Math.max(0, p.fall - dt * 1.5);
-        if (p.fall <= 0) this.scare(p, p.fleeFrom.copy(npc.position).add(new THREE.Vector3(Math.sin(p.fallYaw), 0, Math.cos(p.fallYaw))), 5);
+        if (p.fall <= 0)
+          this.scare(
+            p,
+            p.fleeFrom
+              .copy(npc.position)
+              .add(new THREE.Vector3(Math.sin(p.fallYaw), 0, Math.cos(p.fallYaw))),
+            5,
+          );
       }
       root.position.copy(npc.position);
       // Falling over: pitch the whole body backwards around the feet

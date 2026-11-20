@@ -11,6 +11,9 @@ const KEY_BINDINGS: Record<string, Action> = {
   Escape: 'pause',
   KeyP: 'pause',
   KeyH: 'horn',
+  KeyX: 'weapon',
+  Tab: 'weapon',
+  KeyG: 'throw',
 };
 
 const MOVE_KEYS: Record<string, [number, number]> = {
@@ -36,6 +39,8 @@ const GAMEPAD_BINDINGS: Array<[number, Action]> = [
   [10, 'sprint'],
   [9, 'pause'],
   [4, 'horn'],
+  [12, 'weapon'],
+  [13, 'throw'],
 ];
 
 const DEADZONE = 0.15;
@@ -128,7 +133,7 @@ export class InputManager {
     } else {
       this.keys.delete(e.code);
     }
-    if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+    if (e.code === 'Space' || e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
     this.setDevice('keyboard');
   }
 

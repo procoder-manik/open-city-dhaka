@@ -25,7 +25,10 @@ export class RoadGraph {
   private keyToNode = new Map<string, number>();
 
   /** segments: [rank, ax, az, bx, bz] in metres. */
-  constructor(segments: ReadonlyArray<readonly [number, number, number, number, number]>, minRank = 1) {
+  constructor(
+    segments: ReadonlyArray<readonly [number, number, number, number, number]>,
+    minRank = 1,
+  ) {
     for (const [rank, ax, az, bx, bz] of segments) {
       if (rank < minRank) continue;
       const a = this.node(ax, az);
@@ -48,6 +51,20 @@ export class RoadGraph {
       this.keyToNode.set(k, id);
     }
     return id;
+  }
+
+  /** Closest node to (x, z) (linear scan — call occasionally). */
+  nearestNode(x: number, z: number): number {
+    let best = 0;
+    let bestD = Infinity;
+    for (const n of this.nodes) {
+      const d = (n.x - x) ** 2 + (n.z - z) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = n.id;
+      }
+    }
+    return best;
   }
 
   other(edge: GraphEdge, node: number): number {
@@ -86,7 +103,14 @@ export class RoadGraph {
   }
 
   /** Random edge whose midpoint lies in the ring minR..maxR around (x, z) (for spawning). */
-  edgeNear(x: number, z: number, minR: number, maxR: number, rand: () => number, minRank = 1): GraphEdge | null {
+  edgeNear(
+    x: number,
+    z: number,
+    minR: number,
+    maxR: number,
+    rand: () => number,
+    minRank = 1,
+  ): GraphEdge | null {
     const picks: GraphEdge[] = [];
     const min2 = minR * minR;
     const max2 = maxR * maxR;

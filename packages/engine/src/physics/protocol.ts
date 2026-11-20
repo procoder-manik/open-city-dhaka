@@ -68,6 +68,17 @@ export interface StepInput {
   characters: CharacterInput[];
   vehicles: VehicleInput[];
   kinematic?: KinematicInput[];
+  /** One-off impulses (explosions, bullets) on dynamic bodies. */
+  impulses?: ImpulseInput[];
+}
+
+export interface ImpulseInput {
+  bodyId: number;
+  x: number;
+  y: number;
+  z: number;
+  /** Optional spin impulse (tumbling cars). */
+  torque?: [number, number, number];
 }
 
 /** Per body: id, px, py, pz, qx, qy, qz, qw, grounded(0/1), vx, vy, vz */

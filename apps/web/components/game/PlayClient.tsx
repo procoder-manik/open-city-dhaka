@@ -6,6 +6,7 @@ import { QUALITY_TIERS, brand, site, type QualityTier } from '@game/shared';
 import type * as Engine from '@game/engine';
 import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
 import { useSession } from '@/lib/auth-client';
+import { CombatHud } from './CombatHud';
 import { HeroPanel, loadIdentity } from './HeroPanel';
 import { FullMap, Minimap } from './Minimap';
 import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
@@ -523,6 +524,8 @@ function GameHud({
       {showTouch && status === 'running' && (
         <TouchControls input={game.input} mode={mode} interactLabel={interactLabel} />
       )}
+
+      {(status === 'running' || status === 'paused') && <CombatHud game={game} touch={showTouch} />}
 
       {status === 'paused' && (
         <div className={styles.overlay}>

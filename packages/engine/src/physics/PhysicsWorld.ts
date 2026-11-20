@@ -199,6 +199,13 @@ export class PhysicsWorld {
       e.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
       e.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
+    for (const im of input.impulses ?? []) {
+      const e = this.byId.get(im.bodyId);
+      if (!e || !e.body.isDynamic()) continue;
+      e.body.applyImpulse({ x: im.x, y: im.y, z: im.z }, true);
+      if (im.torque)
+        e.body.applyTorqueImpulse({ x: im.torque[0], y: im.torque[1], z: im.torque[2] }, true);
+    }
     for (const k of input.kinematic ?? []) {
       const e = this.byId.get(k.bodyId);
       if (!e) continue;

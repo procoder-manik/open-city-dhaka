@@ -154,6 +154,130 @@ export class AudioEngine {
     };
   }
 
+  // ---------------- Combat ----------------
+
+  /** Noise burst through a filter with an exponential decay (shots, blasts, hits). */
+  private burst(opts: {
+    gain: number;
+    decay: number;
+    freq: number;
+    type: BiquadFilterType;
+    q?: number;
+    thump?: number;
+    thumpFreq?: number;
+    pan?: number;
+  }) {
+    const t = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    src.playbackRate.value = 0.8 + Math.random() * 0.4;
+    const f = this.ctx.createBiquadFilter();
+    f.type = opts.type;
+    f.frequency.value = opts.freq;
+    f.Q.value = opts.q ?? 0.7;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(opts.gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + opts.decay);
+    const pan = this.ctx.createStereoPanner();
+    pan.pan.value = opts.pan ?? 0;
+    src.connect(f).connect(g).connect(pan).connect(this.sfx);
+    src.start(t, Math.random() * 1.5);
+    src.stop(t + opts.decay + 0.05);
+    if (opts.thump) {
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(opts.thumpFreq ?? 90, t);
+      o.frequency.exponentialRampToValueAtTime(30, t + opts.decay * 0.8);
+      const og = this.ctx.createGain();
+      og.gain.setValueAtTime(opts.thump, t);
+      og.gain.exponentialRampToValueAtTime(0.0008, t + opts.decay);
+      o.connect(og).connect(pan);
+      o.start(t);
+      o.stop(t + opts.decay + 0.05);
+    }
+  }
+
+  /** Pistol shot; `distance` in metres attenuates and dulls it. */
+  gunshot(distance = 0, pan = 0) {
+    const d = Math.max(1, distance);
+    const v = Math.min(1, 12 / (d + 8));
+    this.burst({
+      gain: 0.9 * v,
+      decay: 0.18 + d * 0.004,
+      freq: Math.max(700, 4200 - d * 40),
+      type: 'lowpass',
+      thump: 0.6 * v,
+      thumpFreq: 140,
+      pan,
+    });
+  }
+
+  explosion(distance = 0, pan = 0) {
+    const v = Math.min(1, 30 / (Math.max(1, distance) + 15));
+    this.burst({
+      gain: 1.4 * v,
+      decay: 1.6,
+      freq: 900,
+      type: 'lowpass',
+      thump: 1.2 * v,
+      thumpFreq: 70,
+      pan,
+    });
+    this.burst({ gain: 0.5 * v, decay: 0.9, freq: 2500, type: 'bandpass', q: 0.4, pan });
+  }
+
+  punch(hit = true) {
+    this.burst({
+      gain: hit ? 0.7 : 0.2,
+      decay: hit ? 0.12 : 0.08,
+      freq: hit ? 500 : 2000,
+      type: hit ? 'lowpass' : 'highpass',
+      thump: hit ? 0.5 : 0,
+      thumpFreq: 120,
+    });
+  }
+
+  /** Empty-chamber click. */
+  click() {
+    this.burst({ gain: 0.25, decay: 0.03, freq: 3500, type: 'highpass' });
+  }
+
+  private siren: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null;
+
+  /** Police siren wail; volume 0 stops it. */
+  setSiren(volume: number) {
+    if (volume <= 0.01) {
+      if (this.siren) {
+        const now = this.ctx.currentTime;
+        this.siren.gain.gain.setTargetAtTime(0, now, 0.2);
+        this.siren.osc.stop(now + 1);
+        this.siren.lfo.stop(now + 1);
+        this.siren = null;
+      }
+      return;
+    }
+    if (!this.siren) {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 900;
+      const lfo = this.ctx.createOscillator();
+      lfo.frequency.value = 0.45; // slow wail
+      const depth = this.ctx.createGain();
+      depth.gain.value = 320;
+      lfo.connect(depth).connect(osc.frequency);
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 2200;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      osc.connect(f).connect(gain).connect(this.sfx);
+      osc.start();
+      lfo.start();
+      this.siren = { osc, lfo, gain };
+    }
+    this.siren.gain.gain.setTargetAtTime(Math.min(0.12, volume * 0.12), this.ctx.currentTime, 0.15);
+  }
+
   /** Honk from a traffic vehicle at a distance (m) and stereo pan (-1..1). */
   honkAt(distance: number, pan: number) {
     if (distance > 120) return;

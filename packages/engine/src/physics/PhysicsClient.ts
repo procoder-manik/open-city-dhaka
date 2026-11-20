@@ -23,7 +23,11 @@ export class PhysicsClient {
   /** Jumps/teleports issued while the worker was busy — never dropped. */
   private pendingJumps = new Set<number>();
   private pendingTeleports = new Map<number, [number, number, number]>();
-  private pendingVehicleTeleports = new Map<number, { x: number; y: number; z: number; yaw: number }>();
+  private pendingVehicleTeleports = new Map<
+    number,
+    { x: number; y: number; z: number; yaw: number }
+  >();
+  private pendingImpulses: NonNullable<StepInput['impulses']> = [];
   private latest: PhysicsFrame | null = null;
   mode: PhysicsMode = 'worker';
 
@@ -109,14 +113,18 @@ export class PhysicsClient {
     // While the worker is busy, bank steps and one-off commands and send them together
     // next time, so simulation time and commands are never lost.
     this.pendingSteps = Math.min(this.pendingSteps + input.steps, 8);
-    for (const v of input.vehicles) if (v.teleport) this.pendingVehicleTeleports.set(v.bodyId, v.teleport);
+    for (const v of input.vehicles)
+      if (v.teleport) this.pendingVehicleTeleports.set(v.bodyId, v.teleport);
+    if (input.impulses?.length) this.pendingImpulses.push(...input.impulses);
     for (const c of input.characters) {
       if (c.jump) this.pendingJumps.add(c.bodyId);
       if (c.teleport) this.pendingTeleports.set(c.bodyId, c.teleport);
     }
     if (
       this.busy ||
-      (this.pendingSteps === 0 && this.pendingTeleports.size === 0 && this.pendingVehicleTeleports.size === 0)
+      (this.pendingSteps === 0 &&
+        this.pendingTeleports.size === 0 &&
+        this.pendingVehicleTeleports.size === 0)
     )
       return;
     this.busy = true;
@@ -132,7 +140,12 @@ export class PhysicsClient {
       const tp = this.pendingVehicleTeleports.get(v.bodyId);
       return tp ? { ...v, teleport: tp } : v;
     });
-    this.post({ type: 'step', input: { ...input, steps: this.pendingSteps, characters, vehicles } });
+    const impulses = this.pendingImpulses;
+    this.pendingImpulses = [];
+    this.post({
+      type: 'step',
+      input: { ...input, steps: this.pendingSteps, characters, vehicles, impulses },
+    });
     this.pendingVehicleTeleports.clear();
     this.pendingSteps = 0;
     this.pendingJumps.clear();

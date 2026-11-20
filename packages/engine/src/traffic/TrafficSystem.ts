@@ -112,7 +112,11 @@ export class TrafficSystem {
   ) {
     const pool = Math.round(6 + preset.trafficDensity * 18); // 10 lite … 24 high
     this.target = pool;
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2 });
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.5,
+      metalness: 0.2,
+    });
     this.materials.push(mat);
     const perKind = Math.ceil(pool * 0.6);
     for (const kind of KINDS) {
@@ -255,7 +259,8 @@ export class TrafficSystem {
   /** Everything within `radius` of a point gets a scare (stops, honks). */
   stunNear(x: number, z: number, radius: number, seconds: number) {
     for (const c of this.cars)
-      if (c.active && Math.hypot(c.pos.x - x, c.pos.z - z) < radius) c.stun = Math.max(c.stun, seconds);
+      if (c.active && Math.hypot(c.pos.x - x, c.pos.z - z) < radius)
+        c.stun = Math.max(c.stun, seconds);
   }
 
   update(dt: number, focus: THREE.Vector3, obstacles: TrafficObstacle[]) {
@@ -377,7 +382,12 @@ function buildGeometry(kind: TrafficKind): THREE.BufferGeometry {
       b.box([1.7, 0.55, 4.1], [0, 0.6, 0], PAINT);
       b.box([1.5, 0.48, 2.1], [0, 1.1, -0.25], GLASS);
       b.box([1.52, 0.06, 2.0], [0, 1.36, -0.25], PAINT);
-      for (const [x, z] of [[0.78, 1.35], [-0.78, 1.35], [0.78, -1.35], [-0.78, -1.35]] as const)
+      for (const [x, z] of [
+        [0.78, 1.35],
+        [-0.78, 1.35],
+        [0.78, -1.35],
+        [-0.78, -1.35],
+      ] as const)
         wheel(x, z, 0.32);
       b.box([1.5, 0.12, 0.05], [0, 0.72, 2.06], 0xfff1c0);
       b.box([1.5, 0.1, 0.05], [0, 0.72, -2.06], 0xb01818);
@@ -398,7 +408,12 @@ function buildGeometry(kind: TrafficKind): THREE.BufferGeometry {
       b.box([2.52, 0.75, 9.6], [0, 2.3, -0.2], GLASS);
       b.box([2.2, 0.9, 0.06], [0, 2.1, 5.41], GLASS);
       b.box([2.52, 0.25, 10.82], [0, 0.6, 0], 0xe8e2d0);
-      for (const [x, z] of [[1.1, 3.6], [-1.1, 3.6], [1.1, -3.4], [-1.1, -3.4]] as const)
+      for (const [x, z] of [
+        [1.1, 3.6],
+        [-1.1, 3.6],
+        [1.1, -3.4],
+        [-1.1, -3.4],
+      ] as const)
         wheel(x, z, 0.5, 0.35);
       break;
     case 'rickshaw':
