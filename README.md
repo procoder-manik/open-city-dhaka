@@ -19,4 +19,18 @@ Browser-based open-world action-comedy set in Dhaka, starting with Mohammadpur. 
 8. [Extending](docs/08-EXTENDING.md): how to add or improve features, maps, missions later
 9. [Branding](docs/09-BRANDING.md): name, renaming checklist, candidates
 
-Status: **planning complete, waiting for Phase 0 go-ahead.**
+## Run it
+```bash
+pnpm install
+pnpm dev        # open http://localhost:3000 → Play
+```
+Other commands: `pnpm build`, `pnpm start`, `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm e2e`, `pnpm budget`.
+
+## Repo layout
+- `apps/web`: Next.js site + game page (`/play`) + API
+- `packages/engine`: the game engine (three.js + Rapier)
+- `packages/shared`: brand config loader, shared schemas
+- `packages/content`: game data (quality presets; later missions, vehicles, weapons)
+- `tools/asset-pipeline`, `tools/map-builder`: build tools
+
+Status: **Phase 0 (foundation) done. Next: Phase 1 "feel" vertical slice.** Details in [PROGRESS.md](PROGRESS.md).

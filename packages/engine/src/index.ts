@@ -1,0 +1,9 @@
+export { createGame, type Game, type GameOptions } from './Game';
+export type { GameState, GameStatus, GameStore } from './state/store';
+export type { Action, InputDevice } from './input/actions';
+export { InputManager } from './input/InputManager';
+export { GameLock, type GameLockStatus } from './gamelock/GameLock';
+export { detectDevice, type DeviceInfo, type FormFactor } from './platform/device';
+export { pickQualityTier } from './platform/quality';
+export { DynamicResolution } from './platform/DynamicResolution';
+export { FixedStepLoop } from './core/FixedStepLoop';

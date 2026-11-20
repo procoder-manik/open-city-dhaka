@@ -1,0 +1,125 @@
+.main {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(48px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(255, 159, 28, 0.28), transparent 60%),
+    linear-gradient(180deg, #2a1a10 0%, var(--bg) 70%);
+}
+
+.glow {
+  position: absolute;
+  inset: auto -20% -40% -20%;
+  height: 60%;
+  background: radial-gradient(closest-side, rgba(230, 57, 70, 0.25), transparent);
+  pointer-events: none;
+}
+
+.hero {
+  position: relative;
+  text-align: center;
+  max-width: 760px;
+}
+
+.edition {
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin: 0 0 8px;
+}
+
+.logo {
+  margin: 0;
+  font-size: clamp(5rem, 22vw, 11rem);
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #fff3e0 0%, var(--accent) 55%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 8px 30px rgba(255, 120, 40, 0.35));
+}
+
+.fullName {
+  margin: 12px 0 0;
+  font-size: clamp(1.2rem, 4vw, 1.8rem);
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nameBn {
+  font-size: 0.75em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.tagline {
+  color: var(--muted);
+  margin: 12px 0 28px;
+}
+
+.ctaRow {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ctaRow :global(.btn) {
+  text-decoration: none;
+  font-size: 1.2rem;
+  padding: 16px 36px;
+}
+
+.hint {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.features {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 960px;
+  margin-top: 56px;
+}
+
+.card {
+  padding: 18px;
+}
+
+.card h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+
+.card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.footer {
+  position: relative;
+  margin-top: auto;
+  padding-top: 40px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: rgba(201, 180, 160, 0.6);
+}

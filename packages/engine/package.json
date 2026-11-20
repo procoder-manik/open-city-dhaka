@@ -1,0 +1,24 @@
+{
+  "name": "@game/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./physics-worker": "./src/physics/workerMain.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.21.0",
+    "@game/content": "workspace:*",
+    "@game/shared": "workspace:*",
+    "three": "^0.187.0",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0"
+  }
+}

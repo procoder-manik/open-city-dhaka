@@ -1,0 +1,11 @@
+{
+  "_comment": "Max file sizes in KB, matched by glob-like prefix/suffix. See docs/02-ARCHITECTURE.md §8.",
+  "rules": [
+    { "match": "characters/", "ext": ".glb", "maxKb": 2048 },
+    { "match": "vehicles/", "ext": ".glb", "maxKb": 600 },
+    { "match": "chunks/", "ext": ".glb", "maxKb": 1536 },
+    { "match": "", "ext": ".ktx2", "maxKb": 2048 },
+    { "match": "", "ext": ".glb", "maxKb": 3072 }
+  ],
+  "totalFirstPlayableMb": 25
+}
