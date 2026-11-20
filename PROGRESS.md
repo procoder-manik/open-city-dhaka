@@ -12,12 +12,12 @@
 |---|---|
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
-| Current phase | **Phase 1.5 Part B (free route) in progress → then Phase 2** |
-| Overall progress | Planning 100 % · P0 100 % · P1 100 % · P1.5-A 100 % · P1.5-B ~35 % (textures + AI voice done; models need owner downloads) · P2 0 % |
+| Current phase | **Act 1 playable: P0–P6 done, P7–P8 launch prep done → owner deploys (docs/12-DEPLOY.md)** |
+| Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~50 % (legal/SEO/icons done; weather, HUD editor, real-phone perf left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
-| Database | **PostgreSQL (Neon) + Drizzle**, confirmed by owner. Not wired yet (Phase 6) |
-| Build status | `pnpm typecheck`, `lint`, `test` (45 unit), `build`, `e2e` (12 Playwright, desktop + phone) all pass locally. CI run on GitHub not yet checked |
+| Database | **PostgreSQL (Neon) + Drizzle** via `DATABASE_URL`; embedded PGlite in `.data/` when unset (dev) |
+| Build status | `pnpm typecheck`, `lint`, `test` (57 unit), `build`, `e2e` (18 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
 
 ## How to run
 ```bash
@@ -30,7 +30,10 @@ pnpm build && pnpm e2e
 # manual checks with screenshots (server on :3100): node apps/web/e2e/phase1-check.mjs <outDir> [tier]
 #                                                   node apps/web/e2e/drive-check.mjs <outDir>
 #                                                   node apps/web/e2e/life-check.mjs <outDir> [tier]
+#   city-check / traffic-check / combat-check / busted-check / mission-check .mjs (same usage)
+pnpm assets:icons   # regenerate PNG icons + share card after changing brand logos
 ```
+Deploy: see `docs/12-DEPLOY.md` (Vercel + Neon, env vars in `apps/web/.env.example`).
 
 ## Phase tracker
 Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
@@ -42,12 +45,12 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | P1 | "Feel" vertical slice (character, camera, 3 vehicles, one street, touch controls) | ✅ | See "Phase 1 result"; real-phone test pending |
 | P1.5 | Life, sound & realism upgrade (owner feedback) | 🟨 | Part A done; Part B needs assets/voice decision (`docs/11-ART-REALISM.md`) |
 | P2 | Mohammadpur map (OSM pipeline, streaming, landmarks) | ✅ | Real OSM map (18k buildings) streamed in 256 m chunks around the hand-built Tajmahal Road block; minimap + full map. Hand-made landmark models still TODO |
-| P3 | Vehicles & city life (traffic, peds, carjacking) | ⬜ | |
-| P4 | Combat, weapons & police (Thana Alert) | ⬜ | |
-| P5 | Missions & story Act 1 | ⬜ | |
-| P6 | Backend, accounts, cloud saves, leaderboards | 🟨 | Login (email + optional Google), profile hero name, cloud save done; leaderboards later |
-| P7 | Polish (audio, weather, phone, HUD editor, perf) | ⬜ | |
-| P8 | Launch | ⬜ | |
+| P3 | Vehicles & city life (traffic, peds, carjacking) | ✅ | Road graph from OSM, instanced traffic (car/CNG/bus/rickshaw/bike), pedestrians, carjacking |
+| P4 | Combat, weapons & police (Thana Alert) | ✅ | Fists, pistol, grenades, health, police foot + patrol cars, wasted/busted |
+| P5 | Missions & story Act 1 | ✅ | Mission framework + 5 Act 1 missions (`gameplay/act1.ts`) |
+| P6 | Backend, accounts, cloud saves, leaderboards | ✅ | Login (email + optional Google), account page (change password, delete), hero name, cloud save, leaderboard |
+| P7 | Polish (audio, weather, phone, HUD editor, perf) | 🟨 | Legal pages, PNG icons, SEO done; weather, HUD editor, real-phone perf pass left |
+| P8 | Launch | 🟨 | Ready: deploy guide, env template, robots/sitemap/OG. Owner: create Neon DB + Vercel project |
 | P9+ | Expansion (Dhaka areas, Cox's Bazar, multiplayer) | ⬜ | |
 
 ## ✅ Done so far
@@ -102,7 +105,33 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] `site.config.json` + landing/pause links: **Donate**, **feedback Google Form**, Facebook/YouTube (hidden until URLs are set)
   - [x] Dhaka wall palette + "natural Dhaka" colour grade (CDL + vignette) on Medium+
 
+- [x] **Phase 2 — Mohammadpur map** (see Session log)
+- [x] **Phase 3 — City life**
+  - [x] `world/city/RoadGraph.ts`: graph from the minimap road segments (metres), junction choice prefers straight + bigger roads, `edgeNear` ring spawn, `nearestNode`
+  - [x] `traffic/TrafficSystem.ts`: pooled traffic (10 lite … 24 high), 5 kinds as InstancedMesh (1 draw call each), left-lane following, gap keeping, corner slowdown, honking (`AudioEngine.honkAt`) + driver barks; each car is a **kinematic** Rapier body (protocol `kinematic` list) so you crash into it
+  - [x] `actors/PedestrianSystem.ts`: pooled walkers (salwar-kameez aunties, uncles in panjabi/lungi, office/students) on sidewalks; flee, knocked down (pose), get up; talkable/snatchable like other NPCs (`Npc.tick`)
+  - [x] Carjacking: F near a slow carjackable car → a hidden **spare** physics vehicle (stash platform at y = −200) is teleported into its pose (`VehicleInput.teleport`, stale-frame guard), driver flees, crime + headline
+- [x] **Phase 4 — Combat & police**
+  - [x] `gameplay/Combat.ts` (pure, tested): weapons, ray/sphere/box tests, blast falloff, cop accuracy, police per star
+  - [x] Fists (Q), pistol (click; right-click aims over the shoulder; auto-aim from the hip), grenades (G; bounce, fuse, fireball, light flash, impulses throw cars — protocol `impulses`), X/Tab switch; tracers, muzzle flash, recoil; Humanoid punch/aim/throw/hands-up poses + pistol mesh
+  - [x] `gameplay/PoliceSystem.ts`: foot cops chase (steer around obstacles, road-graph waypoints far away), shoot at 2+ stars, arrest when close and slow; patrol pickups with flashing lightbars route on the graph and drop cops; siren; wanted only cools when no cop within 40 m; bribe stands them down
+  - [x] Health (regen to 50), hurt flash, **খতম!** (wasted → hospital bill ৳200) / **ধরা খাইলা!** (busted → ৳300 + bullets confiscated) overlays, respawn on Tajmahal Road; tea heals +25
+  - [x] Crimes added: carjack, hitPedestrian, assault, shooting, copAssault (+ headlines); 61 new Bangla lines (pedestrian, aunty, driver, police, hero)
+- [x] **Phase 5 — Missions**: `gameplay/Missions.ts` (pure, tested: goto / enter / talk / wanted / lose / stay+heat, timers, fail on wasted/busted), `gameplay/act1.ts` (5 missions at real places), `MissionMarkers` (yellow start / blue objective cylinders), minimap blips, objective panel + timer, pass/fail cards, rewards, progress saved (`missions` in SaveData)
+- [x] **Phase 6 — rest**: leaderboard (`server/leaderboard.ts`, `/api/leaderboard`, `/leaderboard`), account page (`components/AccountPanel.tsx`: cloud save summary, change password, delete account, sign out), auth secret + DB shared via `globalThis` (fixes sessions across route bundles)
+- [x] **Phase 7–8 (launch prep)**: `/privacy`, `/terms`, `/credits`; PNG + maskable + apple icons and 1200×630 share card per brand (`pnpm assets:icons`); OG/Twitter metadata, `metadataBase`, `robots.txt`, `sitemap.xml`, `siteUrl` in `site.config.json`; `docs/12-DEPLOY.md`; `apps/web/.env.example`
+
 ## ▶ NEXT STEP
+**Owner (to go live):** follow `docs/12-DEPLOY.md` — create a free Neon database and a Vercel project (root `apps/web`), set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`; optional Google OAuth. Fill `site.config.json` (donate, Google Form, socials, siteUrl). Then test on a real phone.
+
+**Next coding steps (recommended order):**
+1. Real-phone performance pass (draw calls rose with traffic/peds/cops: mobile ≈ 150–220 in headless; consider shadows off for peds, fewer pool slots on Lite)
+2. Act 2 missions (new file next to `gameplay/act1.ts`), more step kinds (destroy vehicle, follow, deliver person)
+3. Drive-by shooting, cop cars that ram/chase as physics vehicles, helicopter at 5 stars
+4. Weather (rain + waterlogged roads), refuelling at petrol pumps, garage repair/respray to lose wanted
+5. Server-side scoring for leaderboards (currently from client saves, clamped)
+
+**Older notes (still valid):**
 **Owner to fill in:** `site.config.json` → `donateUrl` (bKash/Nagad merchant page, Buy Me a Coffee, etc.), `feedbackFormUrl` (Google Form link), socials.
 
 **Next coding step (recommended): login (Phase 6 auth pulled forward)** so players can save their own hero name: Better Auth (Google + email) + PostgreSQL (Neon free) + profile table (title, name) + server-side `checkHeroText` validation. Owner needs: free Neon database URL + Google OAuth client (steps will be in `.env.example`).
@@ -118,6 +147,13 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 3. Streaming + skyline impostors + IndexedDB cache; lane graph + navmesh
 4. Landmarks, minimap/full map, water physics at Beribadh
 5. Keep Lite ≤ 150 draw calls, 30 FPS on phones
+
+## Phase 3–5 result — notes for whoever continues
+- Physics ids: player 1, vehicles 10+ (3 parked + 3 spares), ball 50, NPC colliders 100+, traffic 400+, police cars 450+, stash 990, statics 1000+.
+- Traffic and police cars are kinematic boxes; when inactive they are parked at y ≈ −80/−90. Spare carjack vehicles live on a hidden platform at y = −200 (`STASH_Y`).
+- Headless Chromium runs at ~3 FPS with dt clamped to 0.1 s → game time runs ~0.3× real time in tests; use long waits (see `busted-check.mjs`).
+- Mission coordinates are metres from Tajmahal Road (map anchor). POIs in `index.json` are metres too (chunk files are decimetres).
+- New CrimeKinds must be added to `CRIME_KINDS` (save/load iterates it).
 
 ## Phase 1 result — notes for whoever continues
 - Character is **procedural** on purpose (tiny, no licences, no foot sliding). `Humanoid.update(dt, LocomotionState)` is the contract — a skinned glTF model can replace it later without touching `SliceScene`.
@@ -157,6 +193,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | 2026-11-21 | Free route: CC0 textures (Poly Haven), device TTS + Azure free-tier generated voices; models via MakeHuman/Mixamo/CC0 once owner downloads | Owner choice |
 | 2026-11-21 | Hero stays Mostofa by default; signed-in players may set title + name (moderated) | Owner request; login-gated to limit abuse |
 | 2026-11-21 | Wanted level is shared by posters, billboards, headlines and (Phase 4) police | One system, many funny surfaces |
+| 2026-11-21 | Traffic/police as kinematic bodies on the OSM road graph; carjack via spare physics vehicles | Cheap (instanced, no AI physics) yet you can crash into them |
+| 2026-11-21 | Leaderboard reads client cloud saves (clamped), hero names only | Fun first; move scoring server-side before competitive play |
 | 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
@@ -167,7 +205,6 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 
 ## Known issues / tech debt
 - CSP uses `script-src 'unsafe-inline'` → switch to nonces (Phase 6)
-- PWA icons are SVG only; iOS home-screen icon needs PNG (Phase 7)
 - Turbopack can't build the physics worker (see notes above)
 - Medium/Mobile with shadows ≈ 155 draw calls (shadow pass doubles them); fine on desktop, watch on phones
 - Parked vehicles can be pushed by walking into them (light parked brake) — OK for now
@@ -177,12 +214,16 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - Software GPU (CI/headless) can run out of memory if several game sessions run in one browser back-to-back; e2e runs serially and passes
 - Vehicle damage is HUD/smoke only, no visible dents yet (needs real car models)
 - Refuelling not implemented yet (fuel only goes down; tank starts 85%)
-- NPCs stand in place (walking pedestrians come in Phase 3)
+- Pedestrians walk sidewalks but never cross roads; cops/peds can clip small objects (no navmesh)
+- Police cars are kinematic (drive the graph and park), no drive-by shooting yet
+- Leaderboard values come from client saves (clamped) — cheatable
+- Draw calls rose with traffic/peds/police (mobile headless ≈ 150–220) — needs a real-phone check
 - Character has no hands-on-wheel pose in cars/CNG (player is hidden inside); only the bike shows the rider
 
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Autonomous run (owner asleep): Phase 3 traffic/pedestrians/carjacking, Phase 4 combat + police + wasted/busted, Phase 5 mission framework + Act 1 (5 missions), Phase 6 leaderboard + account page (change password, delete) + auth-secret/DB sharing fix, Phase 7–8 legal pages, icons, SEO, deploy guide; 57 unit + 18 e2e passing | Ready for owner to deploy (docs/12-DEPLOY.md) and real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 2: OSM fetch (Overpass mirrors) + map builder (anchor on Tajmahal Road, chunks, colliders, minimap, POIs), CityWorld streaming (roads, sidewalks, lane dashes, extruded buildings with shops/signs, water tanks, parks, water), 18k building colliders in physics (static bodies no longer sent per frame), GTA-style rotating minimap + full map | Continuing: Phase 3 traffic & pedestrians |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 6 login: Better Auth (email/password, Google when keys set), Drizzle + Postgres (Neon via DATABASE_URL, embedded PGlite locally), /login page, /api/profile (server-validated hero title/name), /api/save (cloud save, size/zod/rate limited), autosave, signed-in hero editor | Continuing autonomously: Phase 2 map next (OSM data downloaded) |
 | 2026-11-21 | Claude (Opus 5.5) | Hero identity (login-gated editor), crime record + Wanted 0–5, bribe OC, good-deed redemption, wanted posters + news billboards with player's name, headline toasts, NPC recognition, donate/feedback links via site.config.json, Dhaka palette + colour grade | Next: login (Phase 6 auth) or Phase 2 map |
