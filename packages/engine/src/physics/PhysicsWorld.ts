@@ -68,7 +68,13 @@ export class PhysicsWorld {
 
   private addBody(b: BodyDesc) {
     const dynamic = b.type === 'dynamic';
-    const rbDesc = (dynamic ? RAPIER.RigidBodyDesc.dynamic() : RAPIER.RigidBodyDesc.fixed())
+    const rbDesc = (
+      dynamic
+        ? RAPIER.RigidBodyDesc.dynamic()
+        : b.type === 'kinematic'
+          ? RAPIER.RigidBodyDesc.kinematicPositionBased()
+          : RAPIER.RigidBodyDesc.fixed()
+    )
       .setTranslation(...b.position)
       .setRotation(yawQuat(b.yaw ?? 0));
     if (b.lockRotations) rbDesc.lockRotations();
@@ -183,6 +189,22 @@ export class PhysicsWorld {
     }
 
     const vehicleInputs = new Map(input.vehicles.map((v) => [v.bodyId, v]));
+    for (const v of input.vehicles) {
+      if (!v.teleport) continue;
+      const e = this.byId.get(v.bodyId);
+      if (!e) continue;
+      const t = v.teleport;
+      e.body.setTranslation({ x: t.x, y: t.y, z: t.z }, true);
+      e.body.setRotation(yawQuat(t.yaw), true);
+      e.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      e.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
+    for (const k of input.kinematic ?? []) {
+      const e = this.byId.get(k.bodyId);
+      if (!e) continue;
+      e.body.setNextKinematicTranslation({ x: k.x, y: k.y, z: k.z });
+      e.body.setNextKinematicRotation(yawQuat(k.yaw));
+    }
 
     for (let i = 0; i < input.steps; i++) {
       for (const c of input.characters) {
@@ -225,7 +247,7 @@ export class PhysicsWorld {
 
   /** Only moving bodies are sent each frame (static city colliders never change). */
   private snapshot(): Float32Array {
-    const moving = (this.movingCache ??= this.entries.filter((e) => !e.body.isFixed()));
+    const moving = (this.movingCache ??= this.entries.filter((e) => e.body.isDynamic()));
     const out = new Float32Array(moving.length * FLOATS_PER_BODY);
     let o = 0;
     for (const e of moving) {

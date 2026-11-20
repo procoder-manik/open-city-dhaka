@@ -29,6 +29,26 @@
       "name": "ওসি কামাল পাশা",
       "nameEn": "OC Kamal Pasha",
       "color": "#90caf9"
+    },
+    "pedestrian": {
+      "name": "পথচারী",
+      "nameEn": "Passer-by",
+      "color": "#b0bec5"
+    },
+    "aunty": {
+      "name": "খালাম্মা",
+      "nameEn": "Aunty",
+      "color": "#f48fb1"
+    },
+    "driver": {
+      "name": "ড্রাইভার",
+      "nameEn": "Driver",
+      "color": "#ffcc80"
+    },
+    "police": {
+      "name": "পুলিশ",
+      "nameEn": "Police",
+      "color": "#64b5f6"
     }
   },
   "lines": [
@@ -615,6 +635,494 @@
       "emotion": "smug",
       "bn": "দেখলেন? {hero} শুধু রংবাজ না, মাঝে মাঝে ভালো মানুষও।",
       "en": "See? {hero} isn't just a rascal — sometimes a good guy too."
+    },
+    {
+      "id": "pedestrian.greetReply.1",
+      "speaker": "pedestrian",
+      "situation": "greetReply",
+      "emotion": "neutral",
+      "bn": "ওয়ালাইকুম সালাম ভাই। কিন্তু চিনলাম না তো!",
+      "en": "Walaikum salam bro. But I don't know you!"
+    },
+    {
+      "id": "pedestrian.greetReply.2",
+      "speaker": "pedestrian",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "আরে মোস্তফা ভাই! এক সেলফি হইব?",
+      "en": "Hey Mostofa bhai! One selfie?"
+    },
+    {
+      "id": "pedestrian.greetReply.3",
+      "speaker": "pedestrian",
+      "situation": "greetReply",
+      "emotion": "neutral",
+      "bn": "সালাম। অফিসে লেট হইতেছে ভাই, পরে কথা কই।",
+      "en": "Salam. I'm late for office bro, talk later."
+    },
+    {
+      "id": "pedestrian.threatenReply.1",
+      "speaker": "pedestrian",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "ভাই ভাই ভাই! আমি তো খালি বাজার করতে আসছিলাম!",
+      "en": "Bro bro bro! I just came to buy groceries!"
+    },
+    {
+      "id": "pedestrian.threatenReply.2",
+      "speaker": "pedestrian",
+      "situation": "threatenReply",
+      "emotion": "scared",
+      "bn": "আমার কাছে খালি ৫০ টাকা আর একটা পুরান নোকিয়া!",
+      "en": "All I have is 50 taka and an old Nokia!"
+    },
+    {
+      "id": "pedestrian.snatched.1",
+      "speaker": "pedestrian",
+      "situation": "snatched",
+      "emotion": "angry",
+      "bn": "চোর! চোর! ধর ধর ধর!",
+      "en": "Thief! Thief! Catch him!"
+    },
+    {
+      "id": "pedestrian.snatched.2",
+      "speaker": "pedestrian",
+      "situation": "snatched",
+      "emotion": "scared",
+      "bn": "আমার বেতনের টাকা! মাসের সাত তারিখ মাত্র!",
+      "en": "My salary! It's only the 7th of the month!"
+    },
+    {
+      "id": "pedestrian.bumped.1",
+      "speaker": "pedestrian",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "চোখ কি পকেটে রাখছেন নাকি?",
+      "en": "Do you keep your eyes in your pocket?"
+    },
+    {
+      "id": "pedestrian.bumped.2",
+      "speaker": "pedestrian",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "আস্তে ভাই, ফুটপাত তো আপনার একার না!",
+      "en": "Easy bro, the footpath isn't yours alone!"
+    },
+    {
+      "id": "pedestrian.honked.1",
+      "speaker": "pedestrian",
+      "situation": "honked",
+      "emotion": "angry",
+      "bn": "হর্ন বাজায় কেন? উইড়া যামু নাকি?",
+      "en": "Why honk? Should I fly?"
+    },
+    {
+      "id": "pedestrian.nearMiss.1",
+      "speaker": "pedestrian",
+      "situation": "nearMiss",
+      "emotion": "scared",
+      "bn": "আল্লাহ বাঁচাইছে! পাগল নাকি?",
+      "en": "God saved me! Are you crazy?"
+    },
+    {
+      "id": "pedestrian.recognized.1",
+      "speaker": "pedestrian",
+      "situation": "recognized",
+      "emotion": "surprised",
+      "bn": "এইটা তো পোস্টারের সেই লোক! পালাও!",
+      "en": "That's the guy from the poster! Run!"
+    },
+    {
+      "id": "pedestrian.recognized.2",
+      "speaker": "pedestrian",
+      "situation": "recognized",
+      "emotion": "scared",
+      "bn": "ভাই ছবি তুইলেন না, এইটা {hero}!",
+      "en": "Don't take a photo, that's {hero}!"
+    },
+    {
+      "id": "pedestrian.knocked.1",
+      "speaker": "pedestrian",
+      "situation": "knocked",
+      "emotion": "scared",
+      "bn": "ও মাগো! কোমরটা গেল!",
+      "en": "Oh mother! My back is gone!"
+    },
+    {
+      "id": "pedestrian.knocked.2",
+      "speaker": "pedestrian",
+      "situation": "knocked",
+      "emotion": "angry",
+      "bn": "লাইসেন্স কি কুরবানির হাট থেকে কিনছেন?",
+      "en": "Did you buy your licence at the cattle market?"
+    },
+    {
+      "id": "pedestrian.punched.1",
+      "speaker": "pedestrian",
+      "situation": "punched",
+      "emotion": "scared",
+      "bn": "মারেন ক্যান? আমি তো খালি রাস্তা পার হইতেছিলাম!",
+      "en": "Why hit me? I was just crossing!"
+    },
+    {
+      "id": "pedestrian.punched.2",
+      "speaker": "pedestrian",
+      "situation": "punched",
+      "emotion": "angry",
+      "bn": "দাঁড়া, আমার মামা কাউন্সিলরের ড্রাইভার!",
+      "en": "Wait, my uncle is the councillor's driver!"
+    },
+    {
+      "id": "pedestrian.gunfire.1",
+      "speaker": "pedestrian",
+      "situation": "gunfire",
+      "emotion": "scared",
+      "bn": "গুলি! গুলি! সবাই শুইয়া পড়েন!",
+      "en": "Gunshots! Everybody get down!"
+    },
+    {
+      "id": "pedestrian.gunfire.2",
+      "speaker": "pedestrian",
+      "situation": "gunfire",
+      "emotion": "scared",
+      "bn": "এইটা কি শুটিং নাকি আসল? দৌড়াও!",
+      "en": "Is this a film shoot or real? Run!"
+    },
+    {
+      "id": "aunty.greetReply.1",
+      "speaker": "aunty",
+      "situation": "greetReply",
+      "emotion": "happy",
+      "bn": "ভালো আছি বাবা। তুমি কার ছেলে? মুখটা চেনা চেনা লাগে।",
+      "en": "Fine, son. Whose son are you? You look familiar."
+    },
+    {
+      "id": "aunty.greetReply.2",
+      "speaker": "aunty",
+      "situation": "greetReply",
+      "emotion": "neutral",
+      "bn": "সালাম। এই রোদে সানগ্লাস পইরা ঘোরো, ছাতা নাও না কেন?",
+      "en": "Salam. Wearing sunglasses in this sun — why no umbrella?"
+    },
+    {
+      "id": "aunty.threatenReply.1",
+      "speaker": "aunty",
+      "situation": "threatenReply",
+      "emotion": "angry",
+      "bn": "এই ছেলে! তোমার মা জানে তুমি রাস্তায় এইসব করো?",
+      "en": "Hey boy! Does your mother know you do this on the street?"
+    },
+    {
+      "id": "aunty.threatenReply.2",
+      "speaker": "aunty",
+      "situation": "threatenReply",
+      "emotion": "angry",
+      "bn": "আমার ছেলে এএসপি, বুঝছো? একটা ফোন দিলে খবর আছে!",
+      "en": "My son is an ASP, understand? One call and you're done!"
+    },
+    {
+      "id": "aunty.snatched.1",
+      "speaker": "aunty",
+      "situation": "snatched",
+      "emotion": "angry",
+      "bn": "আমার ব্যাগ! ঐ ব্যাগে আমার ডায়াবেটিসের ওষুধ!",
+      "en": "My bag! My diabetes medicine is in there!"
+    },
+    {
+      "id": "aunty.snatched.2",
+      "speaker": "aunty",
+      "situation": "snatched",
+      "emotion": "scared",
+      "bn": "হায় হায়, বাজারের টাকা নিয়া গেল!",
+      "en": "Oh no, he took the grocery money!"
+    },
+    {
+      "id": "aunty.bumped.1",
+      "speaker": "aunty",
+      "situation": "bumped",
+      "emotion": "angry",
+      "bn": "দেইখা হাঁটো! বেয়াদব ছেলে!",
+      "en": "Watch where you walk! Rude boy!"
+    },
+    {
+      "id": "aunty.honked.1",
+      "speaker": "aunty",
+      "situation": "honked",
+      "emotion": "angry",
+      "bn": "হর্ন দিয়া কী হইব? জ্যাম কি আমি বানাইছি?",
+      "en": "What will honking do? Did I make the traffic jam?"
+    },
+    {
+      "id": "aunty.nearMiss.1",
+      "speaker": "aunty",
+      "situation": "nearMiss",
+      "emotion": "scared",
+      "bn": "ইয়া মাবুদ! আরেকটু হইলে গেছিলাম!",
+      "en": "Oh Lord! I almost went!"
+    },
+    {
+      "id": "aunty.recognized.1",
+      "speaker": "aunty",
+      "situation": "recognized",
+      "emotion": "angry",
+      "bn": "এই তো সেই {heroName}! টিভিতে দেখছি তোমারে!",
+      "en": "That's {heroName}! I saw you on TV!"
+    },
+    {
+      "id": "aunty.knocked.1",
+      "speaker": "aunty",
+      "situation": "knocked",
+      "emotion": "scared",
+      "bn": "আল্লাহগো! আমার হাঁটুটা!",
+      "en": "Oh God! My knee!"
+    },
+    {
+      "id": "aunty.punched.1",
+      "speaker": "aunty",
+      "situation": "punched",
+      "emotion": "angry",
+      "bn": "বেয়াদব! মায়ের বয়সী মানুষের গায়ে হাত?",
+      "en": "Rude! Hitting someone your mother's age?"
+    },
+    {
+      "id": "aunty.gunfire.1",
+      "speaker": "aunty",
+      "situation": "gunfire",
+      "emotion": "scared",
+      "bn": "ও আল্লাহ! কেউ পুলিশ ডাকো!",
+      "en": "Oh God! Someone call the police!"
+    },
+    {
+      "id": "driver.blocked.1",
+      "speaker": "driver",
+      "situation": "blocked",
+      "emotion": "angry",
+      "bn": "ঐ মিয়া, রাস্তা কি তোর বাপের? সর!",
+      "en": "Hey, is this road your father's? Move!"
+    },
+    {
+      "id": "driver.blocked.2",
+      "speaker": "driver",
+      "situation": "blocked",
+      "emotion": "angry",
+      "bn": "জ্যামে বইসা থাকতে থাকতে দাড়ি পাইকা গেল!",
+      "en": "Sitting in this jam my beard turned grey!"
+    },
+    {
+      "id": "driver.blocked.3",
+      "speaker": "driver",
+      "situation": "blocked",
+      "emotion": "angry",
+      "bn": "সাইড দেন ভাই, পেছনে প্যাসেঞ্জার রাগ করতেছে!",
+      "en": "Give way bro, my passenger is getting angry!"
+    },
+    {
+      "id": "driver.carjacked.1",
+      "speaker": "driver",
+      "situation": "carjacked",
+      "emotion": "scared",
+      "bn": "নেন ভাই নেন! খালি কিস্তির কাগজটা দিয়েন!",
+      "en": "Take it bro! Just give me back the instalment papers!"
+    },
+    {
+      "id": "driver.carjacked.2",
+      "speaker": "driver",
+      "situation": "carjacked",
+      "emotion": "angry",
+      "bn": "এইটা মালিকের গাড়ি! আমার চাকরি যাইব!",
+      "en": "This is the owner's car! I'll lose my job!"
+    },
+    {
+      "id": "driver.carjacked.3",
+      "speaker": "driver",
+      "situation": "carjacked",
+      "emotion": "scared",
+      "bn": "আমারে মাইরেন না, গাড়ির তেল এমনিতেই শেষ!",
+      "en": "Don't hurt me, the fuel's almost out anyway!"
+    },
+    {
+      "id": "hero.carjack.1",
+      "speaker": "hero",
+      "situation": "carjack",
+      "emotion": "smug",
+      "bn": "নামেন ভাই, আজকে আমি ড্রাইভ করমু।",
+      "en": "Get out bro, I'm driving today."
+    },
+    {
+      "id": "hero.carjack.2",
+      "speaker": "hero",
+      "situation": "carjack",
+      "emotion": "smug",
+      "bn": "ধন্যবাদ! আপনার গাড়ি আমার ভালো লাগছে।",
+      "en": "Thanks! I like your car."
+    },
+    {
+      "id": "hero.carjack.3",
+      "speaker": "hero",
+      "situation": "carjack",
+      "emotion": "angry",
+      "bn": "দরজা খোলো! দেরি করলে খবর আছে!",
+      "en": "Open the door! Delay and you're done!"
+    },
+    {
+      "id": "hero.punch.1",
+      "speaker": "hero",
+      "situation": "punch",
+      "emotion": "angry",
+      "bn": "এক ঘুষিতে ফাস্ট ফরোয়ার্ড!",
+      "en": "One punch, fast-forward!"
+    },
+    {
+      "id": "hero.punch.2",
+      "speaker": "hero",
+      "situation": "punch",
+      "emotion": "smug",
+      "bn": "এইটা ট্রেলার ছিল, পুরা মুভি বাকি!",
+      "en": "That was the trailer, the full movie is coming!"
+    },
+    {
+      "id": "hero.shoot.1",
+      "speaker": "hero",
+      "situation": "shoot",
+      "emotion": "angry",
+      "bn": "সবাই সাইড! মোস্তফা আসছে!",
+      "en": "Everyone aside! Mostofa is here!"
+    },
+    {
+      "id": "hero.grenade.1",
+      "speaker": "hero",
+      "situation": "grenade",
+      "emotion": "smug",
+      "bn": "নেন, বোনাস!",
+      "en": "Here, a bonus!"
+    },
+    {
+      "id": "hero.arrested.1",
+      "speaker": "hero",
+      "situation": "arrested",
+      "emotion": "scared",
+      "bn": "স্যার স্যার, আমি তো খালি হাঁটতে বাইর হইছিলাম!",
+      "en": "Sir sir, I just came out for a walk!"
+    },
+    {
+      "id": "hero.arrested.2",
+      "speaker": "hero",
+      "situation": "arrested",
+      "emotion": "smug",
+      "bn": "ঠিক আছে, থানায় চা-বিস্কুট আছে তো?",
+      "en": "Fine, is there tea and biscuits at the station?"
+    },
+    {
+      "id": "hero.wasted.1",
+      "speaker": "hero",
+      "situation": "wasted",
+      "emotion": "scared",
+      "bn": "আম্মা… আজকে আর বাসায় ফিরমু না…",
+      "en": "Mom… I won't make it home today…"
+    },
+    {
+      "id": "hero.respawn.1",
+      "speaker": "hero",
+      "situation": "respawn",
+      "emotion": "smug",
+      "bn": "মোস্তফা মরে না, খালি রিস্টার্ট দেয়!",
+      "en": "Mostofa doesn't die, he just restarts!"
+    },
+    {
+      "id": "hero.missionStart.1",
+      "speaker": "hero",
+      "situation": "missionStart",
+      "emotion": "smug",
+      "bn": "চলো, কাজে নামি। টাকা তো আর গাছে ধরে না।",
+      "en": "Let's get to work. Money doesn't grow on trees."
+    },
+    {
+      "id": "hero.missionPass.1",
+      "speaker": "hero",
+      "situation": "missionPass",
+      "emotion": "happy",
+      "bn": "হইছে! মোস্তফা কখনো ফেল করে না!",
+      "en": "Done! Mostofa never fails!"
+    },
+    {
+      "id": "hero.missionFail.1",
+      "speaker": "hero",
+      "situation": "missionFail",
+      "emotion": "angry",
+      "bn": "ধুর! আবার প্রথম থেকে!",
+      "en": "Damn! From the start again!"
+    },
+    {
+      "id": "police.chase.1",
+      "speaker": "police",
+      "situation": "chase",
+      "emotion": "angry",
+      "bn": "থামো! পুলিশ! হাত উপরে!",
+      "en": "Stop! Police! Hands up!"
+    },
+    {
+      "id": "police.chase.2",
+      "speaker": "police",
+      "situation": "chase",
+      "emotion": "angry",
+      "bn": "ঐ {heroName}! আজকে তোর খেলা শেষ!",
+      "en": "Hey {heroName}! Your game is over today!"
+    },
+    {
+      "id": "police.chase.3",
+      "speaker": "police",
+      "situation": "chase",
+      "emotion": "angry",
+      "bn": "ওয়্যারলেসে বলো, আসামি তাজমহল রোডের দিকে!",
+      "en": "Radio it in, suspect heading to Tajmahal Road!"
+    },
+    {
+      "id": "police.chase.4",
+      "speaker": "police",
+      "situation": "chase",
+      "emotion": "angry",
+      "bn": "দৌড়াইয়া লাভ নাই, মোহাম্মদপুর আমাদের এলাকা!",
+      "en": "No use running, Mohammadpur is our turf!"
+    },
+    {
+      "id": "police.arrest.1",
+      "speaker": "police",
+      "situation": "arrest",
+      "emotion": "smug",
+      "bn": "চলো থানায়। ওসি স্যার তোমার জন্য চা রেডি রাখছে।",
+      "en": "To the station. OC sir has tea ready for you."
+    },
+    {
+      "id": "police.arrest.2",
+      "speaker": "police",
+      "situation": "arrest",
+      "emotion": "smug",
+      "bn": "হাতকড়াটা নতুন, তোমার জন্যই কিনছি।",
+      "en": "The handcuffs are new, bought just for you."
+    },
+    {
+      "id": "police.hit.1",
+      "speaker": "police",
+      "situation": "hit",
+      "emotion": "angry",
+      "bn": "পুলিশের গায়ে হাত? এইবার বুঝবা!",
+      "en": "Hit the police? Now you'll see!"
+    },
+    {
+      "id": "police.hurt.1",
+      "speaker": "police",
+      "situation": "hurt",
+      "emotion": "scared",
+      "bn": "আহ! ব্যাকআপ পাঠাও! ব্যাকআপ!",
+      "en": "Ah! Send backup! Backup!"
+    },
+    {
+      "id": "police.lost.1",
+      "speaker": "police",
+      "situation": "lost",
+      "emotion": "neutral",
+      "bn": "গেল কই? হাওয়া হইয়া গেল নাকি?",
+      "en": "Where did he go? Vanished into thin air?"
     }
   ]
 }

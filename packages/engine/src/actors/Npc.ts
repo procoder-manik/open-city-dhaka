@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { Humanoid, NPC_LOOKS } from './Humanoid';
+import { Humanoid, NPC_LOOKS, type HumanoidLook } from './Humanoid';
 
 export type NpcKind = 'person' | 'stall' | 'shop';
 export type TalkOption = 'greet' | 'threaten' | 'snatch' | 'order' | 'grab';
@@ -15,7 +15,9 @@ export const TALK_LABELS: Record<TalkOption, string> = {
 export interface NpcDef {
   id: string;
   /** Dialogue speaker key + look key. */
-  speaker: 'teaChacha' | 'rickshawWala' | 'shopkeeper' | 'foreigner';
+  speaker: 'teaChacha' | 'rickshawWala' | 'shopkeeper' | 'foreigner' | 'pedestrian' | 'aunty' | 'driver';
+  /** Custom look (pedestrians); defaults to the speaker's look. */
+  look?: HumanoidLook;
   kind: NpcKind;
   position: [number, number, number];
   facing: number;
@@ -36,7 +38,7 @@ export class Npc {
   fear = 0;
 
   constructor(readonly def: NpcDef) {
-    this.humanoid = new Humanoid(NPC_LOOKS[def.speaker]);
+    this.humanoid = new Humanoid(def.look ?? NPC_LOOKS[def.speaker]);
     this.position = new THREE.Vector3(...def.position);
     this.humanoid.root.position.copy(this.position);
     this.humanoid.root.rotation.y = def.facing;
@@ -51,11 +53,16 @@ export class Npc {
     return base;
   }
 
-  update(dt: number, player: THREE.Vector3 | null) {
+  /** Cooldowns & fear decay (pedestrians call this instead of update()). */
+  tick(dt: number) {
     this.snatchCooldown = Math.max(0, this.snatchCooldown - dt);
     this.barkCooldown = Math.max(0, this.barkCooldown - dt);
     this.idleTimer -= dt;
     this.fear = Math.max(0, this.fear - dt * 0.1);
+  }
+
+  update(dt: number, player: THREE.Vector3 | null) {
+    this.tick(dt);
     // Turn to face the player when close, otherwise back to their post.
     let targetYaw = this.def.facing;
     if (player && player.distanceTo(this.position) < 5) {

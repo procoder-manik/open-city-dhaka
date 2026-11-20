@@ -32,6 +32,8 @@ export interface CityBundle {
   base: string;
   index: CityIndex;
   colliders: ColliderRow[];
+  /** Road segments [rank, ax, az, bx, bz] in metres (traffic & pedestrian graph). */
+  roads: MinimapData['roads'];
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -42,11 +44,12 @@ async function getJson<T>(url: string): Promise<T> {
 
 /** Load the index + all colliders (needed before physics starts). */
 export async function loadCity(base: string): Promise<CityBundle> {
-  const [index, colliders] = await Promise.all([
+  const [index, colliders, minimap] = await Promise.all([
     getJson<CityIndex>(`${base}/index.json`),
     getJson<ColliderRow[]>(`${base}/colliders.json`),
+    getJson<MinimapData>(`${base}/minimap.json`).catch(() => ({ roads: [] })),
   ]);
-  return { base, index, colliders };
+  return { base, index, colliders, roads: minimap.roads };
 }
 
 export function loadChunk(base: string, key: string): Promise<CityChunk> {

@@ -52,6 +52,8 @@ export interface Game {
   debugView(x: number, z: number, yaw: number, pitch?: number): void;
   /** Debug/tests: talk to an NPC by id from anywhere. */
   debugTalk(npcId: string, option: TalkOption): boolean;
+  debugCarjack(): string | null;
+  debugKnockPedestrian(): boolean;
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
   setMuted(muted: boolean): void;
@@ -266,6 +268,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugView(x: number, z: number, yaw: number, pitch?: number) {
       world.debugView(x, z, yaw, pitch);
+    },
+    debugCarjack() {
+      return world.debugCarjack();
+    },
+    debugKnockPedestrian() {
+      return world.debugKnockPedestrian();
     },
     debugTalk(npcId: string, option: TalkOption) {
       return world.debugTalk(npcId, option);

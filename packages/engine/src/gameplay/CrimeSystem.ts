@@ -1,5 +1,28 @@
 /** Crime record, Wanted level (0–5), bribes and good-deed redemption. Pure logic. */
-export type CrimeKind = 'snatch' | 'grab' | 'threaten' | 'vehicleTheft' | 'crash';
+export type CrimeKind =
+  | 'snatch'
+  | 'grab'
+  | 'threaten'
+  | 'vehicleTheft'
+  | 'crash'
+  | 'carjack'
+  | 'hitPedestrian'
+  | 'assault'
+  | 'shooting'
+  | 'copAssault';
+
+export const CRIME_KINDS: CrimeKind[] = [
+  'snatch',
+  'grab',
+  'threaten',
+  'vehicleTheft',
+  'crash',
+  'carjack',
+  'hitPedestrian',
+  'assault',
+  'shooting',
+  'copAssault',
+];
 
 const STAR_WEIGHT: Record<CrimeKind, number> = {
   snatch: 1,
@@ -7,6 +30,11 @@ const STAR_WEIGHT: Record<CrimeKind, number> = {
   threaten: 0.3,
   vehicleTheft: 0.5,
   crash: 0.2,
+  carjack: 0.9,
+  hitPedestrian: 0.7,
+  assault: 0.6,
+  shooting: 1.2,
+  copAssault: 1.6,
 };
 
 /** Seconds without new crimes before one star cools off. */
@@ -25,7 +53,7 @@ export interface CrimeState {
 export function newCrimeState(): CrimeState {
   return {
     heat: 0,
-    record: { snatch: 0, grab: 0, threaten: 0, vehicleTheft: 0, crash: 0 },
+    record: Object.fromEntries(CRIME_KINDS.map((k) => [k, 0])) as Record<CrimeKind, number>,
     calm: 0,
   };
 }
@@ -69,7 +97,18 @@ export function payBribe(s: CrimeState, money: number): number {
 /** Spend good-deed points to remove crimes from the record. Returns points spent. */
 export function redeemGoodDeeds(s: CrimeState, points: number): number {
   let spent = 0;
-  const order: CrimeKind[] = ['snatch', 'vehicleTheft', 'grab', 'threaten', 'crash'];
+  const order: CrimeKind[] = [
+    'copAssault',
+    'shooting',
+    'snatch',
+    'carjack',
+    'hitPedestrian',
+    'assault',
+    'vehicleTheft',
+    'grab',
+    'threaten',
+    'crash',
+  ];
   while (points - spent >= GOOD_POINTS_PER_CRIME) {
     const k = order.find((c) => s.record[c] > 0);
     if (!k) break;
@@ -95,6 +134,23 @@ const HEADLINES: Partial<Record<CrimeKind, string[]>> = {
   ],
   threaten: ['{hero}-এর হুমকিতে দোকান বন্ধ', 'রিকশাওয়ালাকে হুমকি, ভাইরাল ভিডিওতে {heroName}'],
   crash: ['বেপরোয়া ড্রাইভিং: দেয়ালের সাথে গাড়ির "প্রেম", চালক {hero}'],
+  carjack: [
+    'সিগন্যালে দাঁড়ানো গাড়ি থেকে চালককে নামিয়ে উধাও {hero}!',
+    'ড্রাইভার বলছেন: "সালাম দিল, তারপর গাড়িটাই নিয়ে গেল" — অভিযুক্ত {heroName}',
+  ],
+  hitPedestrian: [
+    'ফুটপাতেও নিরাপদ নন পথচারী: বেপরোয়া {hero}',
+    'পথচারীকে ধাক্কা দিয়ে পালাল {heroName}, প্রত্যক্ষদর্শীরা হতবাক',
+  ],
+  assault: ['রাস্তায় মারামারি: ঘুষি মেরে ভাব নিল {hero}', 'চা খেতে গিয়ে কিল খেলেন পথচারী, অভিযুক্ত {heroName}'],
+  shooting: [
+    'মোহাম্মদপুরে গুলির শব্দ! এলাকা ফাঁকা, সন্দেহে {hero}',
+    'আকাশে গুলি ছুড়ে "ভাইরাল" হতে চাইল {heroName}',
+  ],
+  copAssault: [
+    'পুলিশের ওপর হামলা! {hero}-কে ধরতে বিশেষ অভিযান',
+    'ওসি কামাল পাশা: "{heroName}-রে এবার ছাড়মু না"',
+  ],
 };
 
 export function headlineFor(kind: CrimeKind, pick: number): string | null {

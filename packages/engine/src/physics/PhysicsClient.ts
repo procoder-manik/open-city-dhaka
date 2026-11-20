@@ -23,6 +23,7 @@ export class PhysicsClient {
   /** Jumps/teleports issued while the worker was busy — never dropped. */
   private pendingJumps = new Set<number>();
   private pendingTeleports = new Map<number, [number, number, number]>();
+  private pendingVehicleTeleports = new Map<number, { x: number; y: number; z: number; yaw: number }>();
   private latest: PhysicsFrame | null = null;
   mode: PhysicsMode = 'worker';
 
@@ -108,11 +109,16 @@ export class PhysicsClient {
     // While the worker is busy, bank steps and one-off commands and send them together
     // next time, so simulation time and commands are never lost.
     this.pendingSteps = Math.min(this.pendingSteps + input.steps, 8);
+    for (const v of input.vehicles) if (v.teleport) this.pendingVehicleTeleports.set(v.bodyId, v.teleport);
     for (const c of input.characters) {
       if (c.jump) this.pendingJumps.add(c.bodyId);
       if (c.teleport) this.pendingTeleports.set(c.bodyId, c.teleport);
     }
-    if (this.busy || (this.pendingSteps === 0 && this.pendingTeleports.size === 0)) return;
+    if (
+      this.busy ||
+      (this.pendingSteps === 0 && this.pendingTeleports.size === 0 && this.pendingVehicleTeleports.size === 0)
+    )
+      return;
     this.busy = true;
     const characters: CharacterInput[] = input.characters.map((c) => {
       const teleport = this.pendingTeleports.get(c.bodyId);
@@ -122,7 +128,12 @@ export class PhysicsClient {
         ...(teleport ? { teleport } : {}),
       };
     });
-    this.post({ type: 'step', input: { ...input, steps: this.pendingSteps, characters } });
+    const vehicles = input.vehicles.map((v) => {
+      const tp = this.pendingVehicleTeleports.get(v.bodyId);
+      return tp ? { ...v, teleport: tp } : v;
+    });
+    this.post({ type: 'step', input: { ...input, steps: this.pendingSteps, characters, vehicles } });
+    this.pendingVehicleTeleports.clear();
     this.pendingSteps = 0;
     this.pendingJumps.clear();
     this.pendingTeleports.clear();

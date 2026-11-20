@@ -13,7 +13,8 @@ export interface BodyDesc {
   position: [number, number, number];
   /** Rotation around Y (radians). */
   yaw?: number;
-  type: 'fixed' | 'dynamic';
+  /** kinematic = moved by game code each step (traffic). */
+  type: 'fixed' | 'dynamic' | 'kinematic';
   mass?: number;
   friction?: number;
   restitution?: number;
@@ -48,6 +49,17 @@ export interface VehicleInput {
   /** Front wheel angle (rad), positive = left. */
   steer: number;
   handbrake: boolean;
+  /** Move the vehicle instantly (carjack swap / respawn). */
+  teleport?: { x: number; y: number; z: number; yaw: number };
+}
+
+/** Target pose for a kinematic body this step. */
+export interface KinematicInput {
+  bodyId: number;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
 }
 
 export interface StepInput {
@@ -55,6 +67,7 @@ export interface StepInput {
   dt: number;
   characters: CharacterInput[];
   vehicles: VehicleInput[];
+  kinematic?: KinematicInput[];
 }
 
 /** Per body: id, px, py, pz, qx, qy, qz, qw, grounded(0/1), vx, vy, vz */

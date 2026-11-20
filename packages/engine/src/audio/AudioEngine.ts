@@ -154,19 +154,25 @@ export class AudioEngine {
     };
   }
 
+  /** Honk from a traffic vehicle at a distance (m) and stereo pan (-1..1). */
+  honkAt(distance: number, pan: number) {
+    if (distance > 120) return;
+    this.distantHorn(Math.min(4, 40 / Math.max(distance, 8)), pan);
+  }
+
   /** Short honk from a world NPC vehicle (ambience). */
-  private distantHorn() {
+  private distantHorn(gain = 1, panTo?: number) {
     const t = this.ctx.currentTime;
     const g = this.ctx.createGain();
     const pan = this.ctx.createStereoPanner();
-    pan.pan.value = Math.random() * 2 - 1;
+    pan.pan.value = panTo ?? Math.random() * 2 - 1;
     g.gain.setValueAtTime(0, t);
     const dur = 0.15 + Math.random() * 0.5;
     const repeats = Math.random() < 0.4 ? 2 : 1;
     const base = [380, 450, 520, 700, 900][Math.floor(Math.random() * 5)]!;
     for (let r = 0; r < repeats; r++) {
       const s = t + r * (dur + 0.12);
-      g.gain.setTargetAtTime(0.05 + Math.random() * 0.05, s, 0.01);
+      g.gain.setTargetAtTime((0.05 + Math.random() * 0.05) * gain, s, 0.01);
       g.gain.setTargetAtTime(0, s + dur, 0.02);
     }
     const o = this.ctx.createOscillator();

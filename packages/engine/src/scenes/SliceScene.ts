@@ -9,6 +9,10 @@ import {
 } from '@game/shared';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
+import { PedestrianSystem } from '../actors/PedestrianSystem';
+import { TRAFFIC_KINDS, TrafficSystem, type TrafficCar, type TrafficObstacle } from '../traffic/TrafficSystem';
+import { RoadGraph } from '../world/city/RoadGraph';
+import { seededRandom } from '../world/random';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { VoicePlayer } from '../audio/VoicePlayer';
 import { CameraRig } from '../camera/CameraRig';
@@ -34,6 +38,7 @@ import {
   FLOATS_PER_WHEEL,
   type BodyDesc,
   type CharacterInput,
+  type KinematicInput,
   type PhysicsFrame,
   type VehicleBodyDesc,
   type VehicleInput,
@@ -58,7 +63,11 @@ const PLAYER_ID = 1;
 const BALL_ID = 50;
 const VEHICLE_ID_BASE = 10;
 const NPC_ID_BASE = 100;
+const TRAFFIC_ID_BASE = 400;
+const STASH_ID = 990;
 const STATIC_ID_BASE = 1000;
+/** Hidden platform where spare (carjack) vehicles wait. */
+const STASH_Y = -200;
 
 const CAPSULE_HALF = 0.5;
 const CAPSULE_RADIUS = 0.32;
@@ -71,6 +80,8 @@ const GROUND_ACCEL = 10;
 const ENTER_RANGE = 3.6;
 const TALK_RANGE = 2.6;
 const MAX_EXIT_SPEED = 14;
+
+const CARJACK_NAMES: Record<string, string> = { car: 'প্রাইভেট কার', cng: 'সিএনজি', bike: 'মোটরসাইকেল' };
 
 const damp = (current: number, target: number, rate: number, dt: number) =>
   THREE.MathUtils.lerp(current, target, 1 - Math.exp(-rate * dt));
@@ -170,6 +181,10 @@ interface VehicleEntity {
   prevVel: THREE.Vector3;
   hasPrev: boolean;
   fxTimer: number;
+  /** Spare vehicle used for carjacks (lives on the hidden stash until needed). */
+  spare: boolean;
+  /** Pending teleport: ignore stale physics frames until the body arrives. */
+  tp: { x: number; y: number; z: number; yaw: number; sent: boolean; frames: number } | null;
 }
 
 /**
@@ -230,6 +245,11 @@ export class SliceScene {
     area: 'তাজমহল রোড, মোহাম্মদপুর',
   };
   private city: CityWorld | null = null;
+  private graph: RoadGraph | null = null;
+  private traffic: TrafficSystem | null = null;
+  private peds: PedestrianSystem | null = null;
+  private carjackCar: TrafficCar | null = null;
+  private driverBarkCooldown = 0;
   private cityVersion = -1;
   private identity: HeroIdentity = { ...DEFAULT_IDENTITY };
   private crime = newCrimeState();
@@ -258,7 +278,23 @@ export class SliceScene {
       this.scene.add(this.city.group);
       const base = STATIC_ID_BASE + this.street.bodies.length;
       this.city.physicsBodies().forEach((b, i) => this.bodies.push({ ...b, id: base + i }));
+      if (cityBundle.roads?.length) {
+        this.graph = new RoadGraph(cityBundle.roads, 1);
+        this.traffic = new TrafficSystem(this.graph, preset, seededRandom(4242), TRAFFIC_ID_BASE);
+        this.scene.add(this.traffic.group);
+        this.bodies.push(...this.traffic.physicsBodies());
+        this.traffic.onHonk = (c) => this.onTrafficHonk(c);
+        this.peds = new PedestrianSystem(this.graph, preset, seededRandom(777));
+        this.scene.add(this.peds.group);
+      }
     }
+    // Hidden stash platform for spare vehicles
+    this.bodies.push({
+      id: STASH_ID,
+      shape: { kind: 'box', halfExtents: [30, 0.5, 10] },
+      position: [0, STASH_Y - 0.5, 0],
+      type: 'fixed',
+    });
 
     this.particles = new Particles(preset.npcDensity < 0.5 ? 120 : 220);
     this.scene.add(this.particles.mesh);
@@ -328,18 +364,22 @@ export class SliceScene {
     this.ball.snap(new THREE.Vector3(...ballPos));
 
     // Vehicles (parked on the left-hand carriageway, facing +Z)
-    const parked: Array<[string, string]> = [
-      ['car-sedan', 'car'],
-      ['cng-auto', 'cng'],
-      ['bike-150', 'bike'],
+    const parked: Array<[string, [number, number, number], boolean]> = [
+      ['car-sedan', this.street.points.car!, false],
+      ['cng-auto', this.street.points.cng!, false],
+      ['bike-150', this.street.points.bike!, false],
+      // Spares for carjacking traffic (one per drivable kind)
+      ['car-sedan', [-12, STASH_Y + 0.95, 0], true],
+      ['cng-auto', [0, STASH_Y + 0.95, 0], true],
+      ['bike-150', [12, STASH_Y + 0.85, 0], true],
     ];
-    parked.forEach(([defId, point], i) => {
+    parked.forEach(([defId, pos, spare], i) => {
       const def = getVehicleDef(defId);
-      const pos = this.street.points[point]!;
       const id = VEHICLE_ID_BASE + i;
       this.vehicleBodies.push({ id, def, position: pos, yaw: 0 });
       const visual = new VehicleVisual(def);
       visual.root.position.set(...pos);
+      visual.root.visible = !spare;
       this.scene.add(visual.root);
       const body = new SmoothedBody();
       body.snap(new THREE.Vector3(...pos));
@@ -358,6 +398,8 @@ export class SliceScene {
         prevVel: new THREE.Vector3(),
         hasPrev: false,
         fxTimer: 0,
+        spare,
+        tp: null,
         wheels: def.wheels.map(() => ({
           suspension: def.suspension.restLength,
           rotation: 0,
@@ -383,10 +425,14 @@ export class SliceScene {
   preStep(
     dt: number,
     input: InputManager,
-  ): { characters: CharacterInput[]; vehicles: VehicleInput[] } {
+  ): { characters: CharacterInput[]; vehicles: VehicleInput[]; kinematic?: KinematicInput[] } {
     if (input.pressed('interact')) this.toggleVehicle();
 
     const vehicles: VehicleInput[] = this.vehicles.map((v) => {
+      const teleport = v.tp && !v.tp.sent ? { x: v.tp.x, y: v.tp.y, z: v.tp.z, yaw: v.tp.yaw } : null;
+      if (v.tp) v.tp.sent = true;
+      const withTp = (c: Omit<VehicleInput, 'bodyId'>): VehicleInput =>
+        teleport ? { bodyId: v.id, ...c, teleport } : { bodyId: v.id, ...c };
       if (v === this.driving) {
         const c = computeVehicleControls(
           v.def,
@@ -402,13 +448,13 @@ export class SliceScene {
         v.handbrake = c.handbrake;
         v.steer = c.steer;
         burnFuel(v.cond, v.def.kind, input.move.y, dt);
-        return { bodyId: v.id, ...c };
+        return withTp(c);
       }
       v.throttle = 0;
       v.handbrake = false;
       const c = parkedControls(v.def);
       v.steer = c.steer;
-      return { bodyId: v.id, ...c };
+      return withTp(c);
     });
 
     // Horn
@@ -450,7 +496,8 @@ export class SliceScene {
       ...(this.pendingTeleport ? { teleport: this.pendingTeleport } : {}),
     };
     this.pendingTeleport = null;
-    return { characters: [character], vehicles };
+    const kinematic = this.traffic?.kinematic();
+    return kinematic ? { characters: [character], vehicles, kinematic } : { characters: [character], vehicles };
   }
 
   private toggleVehicle() {
@@ -479,6 +526,8 @@ export class SliceScene {
         this.hornOn = false;
       }
       this.hudDirty = true;
+    } else if (!this.nearest && this.carjackCar) {
+      this.carjack(this.carjackCar);
     } else if (this.nearest) {
       const v = this.nearest;
       this.driving = v;
@@ -568,7 +617,7 @@ export class SliceScene {
   /** Nearby NPCs bark at a situation (honk, near miss…), with per-NPC cooldown. */
   private npcReact(situation: string, radius: number, from?: THREE.Vector3) {
     const at = from ?? (this.driving ? this.driving.body.renderPos : this.player.renderPos);
-    for (const npc of this.npcs) {
+    for (const npc of this.allNpcs()) {
       if (npc.barkCooldown > 0 || npc.position.distanceTo(at) > radius) continue;
       if (!this.dialogue.has(npc.def.speaker, situation)) continue;
       if (this.dialogue.busy && situation !== 'nearMiss' && situation !== 'bumped') continue;
@@ -590,6 +639,13 @@ export class SliceScene {
         this.ball.set(t, o);
       } else if (id >= VEHICLE_ID_BASE && id < VEHICLE_ID_BASE + this.vehicles.length) {
         const v = this.vehicles[id - VEHICLE_ID_BASE]!;
+        if (v.tp) {
+          // Skip stale frames from before the teleport landed
+          const d = Math.hypot(t[o + 1]! - v.tp.x, t[o + 3]! - v.tp.z);
+          if (d > 4 && ++v.tp.frames < 60) continue;
+          v.tp = null;
+          v.hasPrev = false;
+        }
         v.body.set(t, o);
         this.detectImpact(v);
       }
@@ -758,7 +814,7 @@ export class SliceScene {
       this.nearest = best;
       let bestNpc: Npc | null = null;
       let bestNpcD = TALK_RANGE;
-      for (const npc of this.npcs) {
+      for (const npc of this.allNpcs()) {
         const d = Math.hypot(npc.position.x - p.x, npc.position.z - p.z);
         if (d < bestNpcD) {
           bestNpcD = d;
@@ -774,7 +830,16 @@ export class SliceScene {
         this.talkTarget = bestNpc;
         this.hudDirty = true;
       }
+      // Carjack: a stopped/slow traffic vehicle within reach (no parked one closer)
+      const cj = !best && this.traffic ? this.traffic.carjackTarget(p.x, p.z, 4.2) : null;
+      const usable = cj && this.spareFor(cj) ? cj : null;
+      if (usable !== this.carjackCar) {
+        this.carjackCar = usable;
+        this.hudDirty = true;
+      }
     }
+    if (this.driving) this.carjackCar = null;
+    this.updateStreetLife(dt);
 
     // NPC life: face the player, idle calls when the player is around
     const playerPos = this.driving ? this.driving.body.renderPos : this.player.renderPos;
@@ -791,7 +856,7 @@ export class SliceScene {
     tickCrime(this.crime, dt);
     this.recognizeCooldown = Math.max(0, this.recognizeCooldown - dt);
     if (stars(this.crime) >= 1 && this.recognizeCooldown <= 0 && !this.dialogue.busy) {
-      for (const npc of this.npcs) {
+      for (const npc of this.allNpcs()) {
         if (
           npc.position.distanceTo(playerPos) < 6 &&
           this.dialogue.has(npc.def.speaker, 'recognized')
@@ -890,7 +955,9 @@ export class SliceScene {
         : null
       : this.nearest
         ? `ওঠো: ${this.nearest.def.nameBn}`
-        : null;
+        : this.carjackCar
+          ? `ছিনিয়ে নাও: ${CARJACK_NAMES[this.carjackCar.kind] ?? 'গাড়ি'}`
+          : null;
     const mode = this.driving ? 'vehicle' : 'foot';
     const talk =
       !this.driving && this.talkTarget
@@ -978,10 +1045,155 @@ export class SliceScene {
       npcs: this.npcs.map((n) => ({ id: n.def.id, pos: r(n.position) })),
       hour: +this.env.hour.toFixed(2),
       cityChunks: this.city?.loadedCount ?? 0,
+      traffic: this.traffic?.activeCount ?? 0,
+      peds: this.peds?.active.length ?? 0,
+      knocked: this.peds?.peds.filter((x) => x.active && x.state === 'knocked').length ?? 0,
+      carjack: this.carjackCar?.kind ?? null,
     };
   }
 
+  /** Testing/debug: carjack the nearest carjackable traffic vehicle (stops it first). */
+  debugCarjack(): string | null {
+    if (!this.traffic) return null;
+    if (this.driving) this.toggleVehicle();
+    const p = this.player.renderPos;
+    let best: TrafficCar | null = null;
+    let bestD = Infinity;
+    for (const c of this.traffic.cars) {
+      if (!c.active || !TRAFFIC_KINDS[c.kind].def || !this.spareFor(c)) continue;
+      const d = Math.hypot(c.pos.x - p.x, c.pos.z - p.z);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    if (!best) return null;
+    best.speed = 0;
+    this.carjack(best);
+    return this.driving?.def.id ?? null;
+  }
+
+  /** Testing/debug: knock down the nearest pedestrian as if hit by a car. */
+  debugKnockPedestrian(): boolean {
+    const p = this.peds?.active[0];
+    if (!p || !this.peds) return false;
+    this.peds.knock(p, 0);
+    return true;
+  }
+
   // ---------------- Crime, bribe, good deeds, identity ----------------
+
+  // ---------------- Street life: traffic, pedestrians, carjacking ----------------
+
+  /** Talkable people: fixed NPCs + pedestrians currently walking around. */
+  private allNpcs(): Npc[] {
+    if (!this.peds) return this.npcs;
+    const out = this.npcs.slice();
+    for (const p of this.peds.peds)
+      if (p.active && p.state !== 'knocked' && p.state !== 'getup') out.push(p.npc);
+    return out;
+  }
+
+  /** A spare vehicle that can become this traffic car (not driven, not right next to the player). */
+  private spareFor(c: TrafficCar): VehicleEntity | null {
+    const defId = TRAFFIC_KINDS[c.kind].def;
+    if (!defId) return null;
+    const focus = this.focusPos;
+    return (
+      this.vehicles.find(
+        (v) =>
+          v.spare &&
+          v.def.id === defId &&
+          v !== this.driving &&
+          (v.body.renderPos.y < STASH_Y + 20 || v.body.renderPos.distanceTo(focus) > 45),
+      ) ?? null
+    );
+  }
+
+  private carjack(c: TrafficCar) {
+    const spare = this.spareFor(c);
+    if (!spare || !this.traffic) return;
+    const y = spare.def.kind === 'bike' ? 0.85 : 0.95;
+    spare.tp = { x: c.pos.x, y, z: c.pos.z, yaw: c.yaw, sent: false, frames: 0 };
+    const at = new THREE.Vector3(c.pos.x, y, c.pos.z);
+    spare.body.snap(at);
+    spare.body.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), c.yaw);
+    spare.body.renderQuat.copy(spare.body.quat);
+    spare.visual.root.position.copy(at);
+    spare.visual.root.quaternion.copy(spare.body.quat);
+    spare.visual.root.visible = true;
+    spare.cond = newCondition();
+    spare.cond.fuel = 0.35 + Math.random() * 0.6;
+    spare.speed = 0;
+    spare.stolen = true;
+    // The driver is dragged out and runs off screaming
+    const left = new THREE.Vector3(Math.cos(c.yaw), 0, -Math.sin(c.yaw));
+    const out = at.clone().addScaledVector(left, TRAFFIC_KINDS[c.kind].half[0] + 0.9);
+    const driver = this.peds?.spawnFleeing(out, this.player.renderPos) ?? null;
+    this.traffic.stunNear(c.pos.x, c.pos.z, 25, 3);
+    this.traffic.despawn(c);
+    this.carjackCar = null;
+    this.crimeEvent('carjack');
+    this.dialogue.interrupt('hero', 'carjack', this.hero);
+    this.dialogue.say('driver', 'carjacked', driver?.npc.humanoid ?? null, 0.5);
+    this.peds?.scareAll(at, 10, 5);
+    this.nearest = spare;
+    this.toggleVehicle();
+  }
+
+  private onTrafficHonk(c: TrafficCar) {
+    const focus = this.focusPos;
+    const dx = c.pos.x - focus.x;
+    const dz = c.pos.z - focus.z;
+    const d = Math.hypot(dx, dz);
+    // Pan: project onto the camera's right vector
+    const [fx, fz] = this.rig.forward;
+    const pan = Math.max(-1, Math.min(1, (dx * -fz + dz * fx) / Math.max(d, 1)));
+    this.audio?.honkAt(d, -pan);
+    if (d < 12 && this.driverBarkCooldown <= 0 && !this.dialogue.busy) {
+      this.driverBarkCooldown = 10;
+      this.dialogue.say('driver', 'blocked', null);
+    }
+  }
+
+  /** Traffic + pedestrians tick; cars hitting people. */
+  private updateStreetLife(dt: number) {
+    this.driverBarkCooldown = Math.max(0, this.driverBarkCooldown - dt);
+    if (!this.traffic || !this.peds) return;
+    const focus = this.focusPos;
+    const obstacles: TrafficObstacle[] = [];
+    if (this.driving) {
+      const v = this.driving;
+      obstacles.push({ x: v.body.renderPos.x, z: v.body.renderPos.z, radius: v.def.chassisHalfExtents[0] + 0.6 });
+    } else {
+      obstacles.push({ x: this.player.renderPos.x, z: this.player.renderPos.z, radius: 0.5 });
+    }
+    for (const p of this.peds.peds)
+      if (p.active && (p.state === 'knocked' || p.state === 'getup'))
+        obstacles.push({ x: p.npc.position.x, z: p.npc.position.z, radius: 0.9 });
+    this.traffic.update(dt, focus, obstacles);
+    this.peds.update(dt, focus);
+
+    // Player's vehicle knocking pedestrians down
+    if (this.driving && Math.abs(this.driving.speed) > 3.5) {
+      const v = this.driving;
+      const inv = v.body.renderQuat.clone().invert();
+      const [hx, , hz] = v.def.chassisHalfExtents;
+      for (const p of this.peds.peds) {
+        if (!p.active || p.state === 'knocked' || p.state === 'getup') continue;
+        const local = p.npc.position.clone().sub(v.body.renderPos).applyQuaternion(inv);
+        if (Math.abs(local.x) > hx + 0.35 || Math.abs(local.z) > hz + 0.35) continue;
+        const vel = v.body.vel;
+        this.peds.knock(p, Math.atan2(vel.x, vel.z), 4 + Math.abs(v.speed) * 0.2);
+        p.npc.position.addScaledVector(vel.clone().setY(0).normalize(), 1.2);
+        this.audio?.crash(0.25);
+        this.rig.addShake(0.2);
+        this.crimeEvent('hitPedestrian');
+        this.dialogue.interrupt(p.npc.def.speaker, 'knocked', p.npc.humanoid);
+        this.peds.scareAll(p.npc.position, 14, 6);
+      }
+    }
+  }
 
   private crimeEvent(kind: CrimeKind) {
     const before = stars(this.crime);
@@ -1099,6 +1311,8 @@ export class SliceScene {
     this.particles.dispose();
     this.boards.dispose();
     this.city?.dispose();
+    this.traffic?.dispose();
+    this.peds?.dispose();
     this.ballMesh.geometry.dispose();
     (this.ballMesh.material as THREE.Material).dispose();
   }
