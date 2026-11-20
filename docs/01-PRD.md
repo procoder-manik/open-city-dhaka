@@ -1,4 +1,4 @@
-# Product Requirements Document — MVP: Mostofa Vs Pulish *(working title, changeable)*
+# Product Requirements Document — GTM: Great Thief Mostofa *(working title, changeable)*
 
 > Name is configured in `/brand.config.json` (see §11 and `docs/09-BRANDING.md`).
 > Must NOT be exactly "GTA" or contain "Grand Theft Auto", and the logo must not copy Rockstar's font/style.
@@ -189,5 +189,5 @@ Options to evaluate in Phase 8: free with non-intrusive ads on website (not insi
 See `03-ROADMAP.md → "Decisions needed from you"`.
 
 ## 11. Name & branding
-Working title: **MVP: Mostofa Vs Pulish**, tagline *"Dhaka's Most Wanted"*. Hero = **Mostofa**.
+Working title: **GTM: Great Thief Mostofa**, tagline *"Bangladesh's Most Wanted"*. Hero = **Mostofa**. The name follows the hero, so it fits every area of Bangladesh (editions: GTM: Mohammadpur → GTM: Dhaka → GTM: Cox's Bazar).
 Not final. The name lives only in `/brand.config.json` and can be changed anytime without code changes. Candidates, rules and rename checklist: `docs/09-BRANDING.md`.

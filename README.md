@@ -1,4 +1,6 @@
-# MVP: Mostofa Vs Pulish — "Dhaka's Most Wanted"
+# GTM: Great Thief Mostofa — "Bangladesh's Most Wanted"
+
+Repo: [procoder-manik/open-city-dhaka](https://github.com/procoder-manik/open-city-dhaka)
 
 *Working title. The name is set in [brand.config.json](brand.config.json) and can be changed anytime ([how](docs/09-BRANDING.md)).*
 

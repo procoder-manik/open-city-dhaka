@@ -1,9 +1,21 @@
 {
   "_comment": "SINGLE SOURCE OF TRUTH for the game's name & branding. To switch name, change \"active\" to another preset key (e.g. \"gtb\"). Code and website read only the active preset. See docs/09-BRANDING.md",
-  "active": "mvp",
+  "active": "gtm",
   "presets": {
-    "mvp": {
+    "gtm": {
       "status": "working-title",
+      "shortName": "GTM",
+      "fullName": "Great Thief Mostofa",
+      "displayName": "GTM: Great Thief Mostofa",
+      "nameBn": "জিটিএম: গ্রেট থিফ মোস্তফা",
+      "tagline": "Bangladesh's Most Wanted",
+      "taglineBn": "বাংলাদেশের মোস্ট ওয়ান্টেড",
+      "slug": "gtm",
+      "logoDir": "brand/gtm",
+      "domain": null
+    },
+    "mvp": {
+      "status": "ready-alternative",
       "shortName": "MVP",
       "fullName": "Mostofa Vs Pulish",
       "displayName": "MVP: Mostofa Vs Pulish",
@@ -42,6 +54,9 @@
   "shared": {
     "currentEdition": "Mohammadpur",
     "editionFormat": "{shortName}: {edition}",
-    "hero": { "name": "Mostofa", "nameBn": "মোস্তফা" }
+    "hero": {
+      "name": "Mostofa",
+      "nameBn": "মোস্তফা"
+    }
   }
 }

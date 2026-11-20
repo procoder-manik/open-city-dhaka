@@ -1,10 +1,10 @@
 # Branding & Renaming
 
-Current working title: **MVP: Mostofa Vs Pulish** (tagline *"Dhaka's Most Wanted"*). The name **is not final** and can be changed at any time.
+Current working title: **GTM: Great Thief Mostofa** (tagline *"Bangladesh's Most Wanted"*). The name **is not final** and can be changed at any time.
 
 ## How the name stays changeable
-- The name lives in **one file only: `/brand.config.json`**. It holds several ready **name presets** (`mvp`, `gtb`, `mwm`…) and one `"active"` key.
-- **To switch the whole game to another name, change one line:** `"active": "mvp"` → `"active": "gtb"` → the game becomes **GTB: Gaye Tel Beshi** everywhere (site, menus, loading screen, PWA icon name, edition "GTB: Mohammadpur").
+- The name lives in **one file only: `/brand.config.json`**. It holds several ready **name presets** (`gtm`, `mvp`, `gtb`, `mwm`…) and one `"active"` key.
+- **To switch the whole game to another name, change one line:** `"active": "gtm"` → `"active": "gtb"` → the game becomes **GTB: Gaye Tel Beshi** everywhere (site, menus, loading screen, PWA icon name, edition "GTB: Mohammadpur").
 - To add a brand-new name: copy a preset block, give it a new key, fill it in, set `"active"` to it.
 - Code imports it through `packages/shared/brand.ts`. Website title, meta/SEO tags, PWA manifest, loading screen, main menu, credits and in-game text all read from it.
 - **Rule:** never hard-code the game name in code, UI text or dialogue. In dialogue/i18n files use the placeholder `{game}` or `{hero}`.
@@ -19,16 +19,17 @@ Current working title: **MVP: Mostofa Vs Pulish** (tagline *"Dhaka's Most Wanted
 5. Update `README.md`, `PROGRESS.md` (decision log).
 
 ## Edition naming
-`{shortName}: {edition}` → **MVP: Mohammadpur**, later **MVP: Dhaka**, **MVP: Cox's Bazar**.
+`{shortName}: {edition}` → **GTM: Mohammadpur**, later **GTM: Dhaka**, **GTM: Cox's Bazar**.
 
 ## Name candidates kept for later
 | Name | Meaning |
 |---|---|
-| MVP: Mostofa Vs Pulish (**active**, preset `mvp`) | Hero Mostofa vs the police; "MVP" also means Most Valuable Player |
+| GTM: Great Thief Mostofa (**active**, preset `gtm`) | Named after the hero, so it works for all of Bangladesh; sounds like the genre without copying it ("Thief", not "Theft") |
+| MVP: Mostofa Vs Pulish (**ready**, preset `mvp`) | Hero Mostofa vs the police; "MVP" also means Most Valuable Player |
 | GTB: Gaye Tel Beshi (**ready**, preset `gtb`) | "Too much oil on the body": someone itching for trouble. Closest in sound to GTA |
 | MWM: Most Wanted Mastan (preset `mwm`) | Dhaka's most wanted gangster |
 | MVP: Mastan Vs Pulish | Gangster vs police |
 | Ferari: Dhaka's Most Wanted | "Ferari ashami" (absconder) + Ferrari car pun |
 | Hulia | Bangla for a police "wanted" notice |
 
-Avoid: "GTA", "Grand Theft …", "Grand … Auto", Rockstar logo font/style.
+Avoid: "GTA", "Grand Thief …" (too close), "Grand Theft …", "Grand … Auto", Rockstar logo font/style.

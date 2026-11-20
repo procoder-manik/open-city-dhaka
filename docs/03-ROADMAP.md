@@ -114,7 +114,7 @@ Mobile is not a later phase. Every feature ships with its **touch control + mobi
 ## Decisions needed from you
 1. **Real people:** I recommend original parody characters instead of real influencers/politicians/July fighters (legal & takedown risk). OK? (GDD §4)
 2. **Database:** PostgreSQL (Neon, recommended) or MongoDB Atlas?
-3. ~~Game name~~: working title **MVP: Mostofa Vs Pulish** set in `brand.config.json` (changeable later).
+3. ~~Game name~~: working title **GTM: Great Thief Mostofa** set in `brand.config.json` (changeable later).
 4. **Assets budget:** free CC0 only (Quaternius, Kenney, Poly Haven, Mixamo) to start — OK? Later you may want to hire a 3D artist for hero characters & landmarks.
 5. **The reference image** you mentioned didn't come through — please attach it again if you want me to use it.
 6. **Monetisation:** free for now? (affects hosting plan — Vercel Hobby is non-commercial)

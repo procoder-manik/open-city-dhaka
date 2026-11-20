@@ -6,7 +6,7 @@ Tone: **Dhallywood action movie meets Dhaka street comedy.** Loud, colourful, ab
 
 ## 1. Story premise
 
-> Working title: **MVP: Mostofa Vs Pulish** (name from `/brand.config.json`, changeable). Like the genre it is inspired by, **you play a criminal on the rise**: steal any vehicle, snatch, extort, rob, loot, smash, fight and shoot your way up, and escape the police.
+> Working title: **GTM: Great Thief Mostofa** (name from `/brand.config.json`, changeable). Like the genre it is inspired by, **you play a criminal on the rise**: steal any vehicle, snatch, extort, rob, loot, smash, fight and shoot your way up, and escape the police.
 
 **Mostofa ("Mostu")**, 27, ex-bus helper on the Mohammadpur–Motijheel route. Fired by his owner, cheated by a local *Boro Bhai* who takes his savings as "chanda", and slapped by OC Kamal Pasha for complaining, Mostofa decides: *"Ei shohor-e shot manush-er jayga nai."* He starts small (snatching phones from rickshaw passengers, stealing CNGs), then works for and against rival gangs, extorts shops, robs warehouses and banks, until every thana in Dhaka has his photo on the wall: **Dhaka's Most Wanted**.
 

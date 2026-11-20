@@ -14,8 +14,8 @@
 | Updated by | Claude (Opus 5.5) |
 | Current phase | **Planning complete → Phase 0 not started** |
 | Overall progress | Planning 100 % · Code 0 % |
-| Game name | Working title **MVP: Mostofa Vs Pulish** ("Dhaka's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
-| GitHub repo | Owner is creating it. Remote not set yet |
+| Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
+| GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | Proposed PostgreSQL (Neon) + Drizzle. **Awaiting owner confirmation** |
 | Build status | No code yet |
 
@@ -52,8 +52,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 
 ## ▶ NEXT STEP
 **Start Phase 0 — Foundation** once the owner confirms:
-1. GitHub repo URL → `git remote add origin <url>` and push `main`
-2. Database: PostgreSQL (Neon) or MongoDB Atlas
+1. Database: PostgreSQL (Neon) or MongoDB Atlas
 
 Phase 0 task list (tick as you go, see `docs/03-ROADMAP.md`):
 - [ ] pnpm + Turborepo monorepo: `apps/web`, `packages/engine`, `packages/shared`, `packages/content`, `tools/map-builder`, `tools/asset-pipeline`
@@ -78,13 +77,13 @@ Phase 0 task list (tick as you go, see `docs/03-ROADMAP.md`):
 | 2026-11-20 | All devices from day one (phone landscape full screen + Game Lock, tablet, laptop, desktop) | Owner request |
 | 2026-11-20 | Original parody characters, no real living people/parties (recommended, owner to confirm) | Legal & takedown risk |
 | 2026-11-20 | Everything data-driven & modular so features can be improved anytime | Owner request (see `docs/08-EXTENDING.md`) |
+| 2026-11-20 | Active name GTM: Great Thief Mostofa (hero-based, works for all Bangladesh); repo name neutral: open-city-dhaka | Owner asked for my best pick |
 | 2026-11-20 | Progress handoff via this file, updated + pushed every session | Owner request |
 | 2026-11-20 | Working title MVP: Mostofa Vs Pulish, hero = Mostofa; name only in `brand.config.json` | Owner request; must stay changeable |
 | 2026-11-20 | Player is a rising criminal (snatching, extortion, looting, robbery, vandalism, carjacking), GTA-style; all gangs/parties fictional | Owner request |
 
 ## Open questions for the owner
 - [ ] Final game name (working title set, can change)
-- [ ] GitHub repo URL
 - [ ] DB choice (PostgreSQL recommended)
 - [ ] OK with parody characters instead of real people?
 - [ ] Reference image mentioned earlier (not received)
@@ -96,6 +95,7 @@ _None yet._
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-20 | Claude (Opus 5.5) | Active name → GTM: Great Thief Mostofa; connected GitHub repo open-city-dhaka and pushed | Waiting for DB choice before Phase 0 |
 | 2026-11-20 | Claude (Opus 5.5) | Brand presets: switch name by changing `"active"` (mvp / gtb "Gaye Tel Beshi" / mwm) | Waiting for repo URL + DB choice |
 | 2026-11-20 | Claude (Opus 5.5) | Set working title MVP: Mostofa Vs Pulish via brand.config.json; rewrote story/missions for crime-career | Waiting for repo URL + DB choice before Phase 0 |
 | 2026-11-20 | Claude (Opus 5.5) | Wrote all planning docs (01–08), mobile/all-device spec, feature checklist, extend guide, handoff system; git init + first commit | Waiting for owner's name/repo/DB answers before Phase 0 |
