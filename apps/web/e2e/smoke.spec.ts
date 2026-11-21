@@ -155,3 +155,35 @@ test('combat + mission HUD: health, weapon, shot uses ammo, mission progress', a
   expect(ammo[1]).toBe(ammo[0]! - 1);
   await expect(page.getByTestId('wanted')).toBeVisible();
 });
+
+test('phone: HUD editor moves the jump buttons and remembers it; weather menu', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'phone', 'touch HUD only');
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  await page.getByTestId('pause-btn').click();
+  await page.getByTestId('weather-rain').click();
+  await expect(page.getByTestId('weather-rain')).toHaveClass(/chipActive/);
+  await page.getByTestId('hud-edit-btn').click();
+  const box = page.getByTestId('hud-box-move');
+  await expect(box).toBeVisible();
+  const b = (await box.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 - 120, b.y + b.height / 2 - 40, { steps: 5 });
+  await page.mouse.up();
+  await page.getByTestId('hud-done').click();
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('hud.layout.v1') ?? '{}'),
+  );
+  expect(saved.move.x).toBeLessThan(-80);
+  await page.getByTestId('resume-btn').click();
+  const jump = (await page.getByTestId('touch-jump').boundingBox())!;
+  expect(jump.x).toBeLessThan(b.x);
+});

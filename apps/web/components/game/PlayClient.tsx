@@ -8,6 +8,7 @@ import type { Game, GameLock, GameState, TalkOption } from '@game/engine';
 import { useSession } from '@/lib/auth-client';
 import { CombatHud } from './CombatHud';
 import { HeroPanel, loadIdentity } from './HeroPanel';
+import { HudEditor } from './HudEditor';
 import { MissionHud } from './MissionHud';
 import { FullMap, Minimap } from './Minimap';
 import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
@@ -375,12 +376,15 @@ function GameHud({
     return () => clearTimeout(t);
   }, [headline]);
   const voiceMode = useGame(game, (s) => s.voiceMode);
+  const weather = useGame(game, (s) => s.weather);
   const voiceEffective = useGame(game, (s) => s.voiceEffective);
   const [showStats, setShowStats] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
   );
   const [showHelp, setShowHelp] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [editHud, setEditHud] = useState(false);
+  const [hudPreview, setHudPreview] = useState<'foot' | 'vehicle'>('foot');
   // Phones/tablets always; touch laptops once the screen is touched; hidden while using a gamepad.
   const showTouch = (isTouch || lastInput === 'touch') && lastInput !== 'gamepad';
   const interactLabel = prompt ? (mode === 'vehicle' ? 'নামো' : 'উঠো') : null;
@@ -525,11 +529,21 @@ function GameHud({
       {showTouch && status === 'running' && (
         <TouchControls input={game.input} mode={mode} interactLabel={interactLabel} />
       )}
+      {editHud && status === 'paused' && (
+        <>
+          <TouchControls input={game.input} mode={hudPreview} interactLabel="উঠো" />
+          <HudEditor
+            preview={hudPreview}
+            onPreview={setHudPreview}
+            onDone={() => setEditHud(false)}
+          />
+        </>
+      )}
 
       {(status === 'running' || status === 'paused') && <CombatHud game={game} touch={showTouch} />}
       {(status === 'running' || status === 'paused') && <MissionHud game={game} />}
 
-      {status === 'paused' && (
+      {status === 'paused' && !editHud && (
         <div className={styles.overlay}>
           <div className={`panel ${styles.startCard}`}>
             <h2 className={styles.title}>Paused</h2>
@@ -564,6 +578,19 @@ function GameHud({
               >
                 {muted ? '🔇 সাউন্ড চালু করো' : '🔊 সাউন্ড বন্ধ করো'}
               </button>
+              {showTouch && (
+                <button
+                  className={styles.chip}
+                  type="button"
+                  onClick={() => {
+                    setHudPreview(mode);
+                    setEditHud(true);
+                  }}
+                  data-testid="hud-edit-btn"
+                >
+                  📱 বাটন সাজাও
+                </button>
+              )}
             </div>
             <p className={styles.muted}>
               কণ্ঠ (এখন:{' '}
@@ -588,6 +615,26 @@ function GameHud({
                   className={`${styles.chip} ${voiceMode === m ? styles.chipActive : ''}`}
                   onClick={() => game.setVoiceMode(m)}
                   data-testid={`voice-${m}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className={styles.muted}>আবহাওয়া</p>
+            <div className={styles.menuRow} role="group" aria-label="Weather">
+              {(
+                [
+                  ['auto', 'বর্ষাকাল (Auto)'],
+                  ['clear', 'রোদ'],
+                  ['rain', 'বৃষ্টি'],
+                ] as const
+              ).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`${styles.chip} ${weather === m ? styles.chipActive : ''}`}
+                  onClick={() => game.setWeather(m)}
+                  data-testid={`weather-${m}`}
                 >
                   {label}
                 </button>

@@ -3,6 +3,7 @@ import type { QualityTier } from '@game/shared';
 import type { InputDevice } from '../input/actions';
 import type { HudState } from '../scenes/SliceScene';
 import type { VoiceMode } from '../audio/VoicePlayer';
+import type { WeatherMode } from '../world/Weather';
 
 export type GameStatus = 'idle' | 'loading' | 'running' | 'paused' | 'error';
 
@@ -20,6 +21,7 @@ export interface GameState extends HudState {
   lastInput: InputDevice;
   muted: boolean;
   voiceMode: VoiceMode;
+  weather: WeatherMode;
   voiceEffective: 'recorded' | 'device' | 'off';
   deviceBangla: boolean;
 }
@@ -75,6 +77,7 @@ export const createGameStore = (tier: QualityTier) =>
     area: 'তাজমহল রোড, মোহাম্মদপুর',
     muted: false,
     voiceMode: 'auto',
+    weather: 'auto',
     voiceEffective: 'off',
     deviceBangla: false,
   }));

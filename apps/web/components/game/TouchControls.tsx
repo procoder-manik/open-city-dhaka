@@ -3,6 +3,7 @@
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Action, InputManager } from '@game/engine';
 import styles from './play.module.css';
+import { hudStyle, useHudLayout } from './hudLayout';
 
 const JOYSTICK_RADIUS = 56;
 /** Pushing the stick past this auto-sprints (like popular mobile shooters). */
@@ -20,6 +21,7 @@ interface Props {
  * action buttons. Multi-touch: move + look + press buttons at the same time.
  */
 export function TouchControls({ input, mode, interactLabel }: Props) {
+  const layout = useHudLayout();
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const stickPointer = useRef<number | null>(null);
@@ -172,17 +174,21 @@ export function TouchControls({ input, mode, interactLabel }: Props) {
         onPointerCancel={onLookUp}
       />
       {interactLabel && (
-        <div className={styles.interactWrap}>
+        <div
+          className={styles.interactWrap}
+          data-hud="interact"
+          style={hudStyle(layout, 'interact')}
+        >
           {button('interact', interactLabel, styles.interactBtn ?? '', 'touch-interact')}
         </div>
       )}
       {mode === 'foot' ? (
-        <div className={styles.btnCluster}>
+        <div className={styles.btnCluster} data-hud="move" style={hudStyle(layout, 'move')}>
           {button('sprint', '»', styles.btnSmall ?? '')}
           {button('jump', '⤒', styles.btnBig ?? '', 'touch-jump')}
         </div>
       ) : (
-        <div className={styles.pedalCluster}>
+        <div className={styles.pedalCluster} data-hud="drive" style={hudStyle(layout, 'drive')}>
           {button('horn', '📯', styles.btnSmall ?? '', 'touch-horn')}
           {button('jump', 'HB', styles.btnSmall ?? '')}
           {pedal(-1, '▼', styles.pedalBrake ?? '', 'touch-brake')}

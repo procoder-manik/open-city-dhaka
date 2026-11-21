@@ -13,11 +13,11 @@
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
 | Current phase | **Act 1 playable: P0–P6 done, P7–P8 launch prep done → owner deploys (docs/12-DEPLOY.md)** |
-| Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~50 % (legal/SEO/icons done; weather, HUD editor, real-phone perf left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
+| Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~85 % (legal/SEO/icons, rain weather, HUD editor, actor culling done; real-phone perf test left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | **PostgreSQL (Neon) + Drizzle** via `DATABASE_URL`; embedded PGlite in `.data/` when unset (dev) |
-| Build status | `pnpm typecheck`, `lint`, `test` (57 unit), `build`, `e2e` (18 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
+| Build status | `pnpm typecheck`, `lint`, `test` (60 unit), `build`, `e2e` (19 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
 
 ## How to run
 ```bash
@@ -49,7 +49,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | P4 | Combat, weapons & police (Thana Alert) | ✅ | Fists, pistol, grenades, health, police foot + patrol cars, wasted/busted |
 | P5 | Missions & story Act 1 | ✅ | Mission framework + 5 Act 1 missions (`gameplay/act1.ts`) |
 | P6 | Backend, accounts, cloud saves, leaderboards | ✅ | Login (email + optional Google), account page (change password, delete), hero name, cloud save, leaderboard |
-| P7 | Polish (audio, weather, phone, HUD editor, perf) | 🟨 | Legal pages, PNG icons, SEO done; weather, HUD editor, real-phone perf pass left |
+| P7 | Polish (audio, weather, phone, HUD editor, perf) | 🟨 | Legal pages, PNG icons, SEO, monsoon rain + thunder, touch HUD editor, off-screen actor culling done; real-phone perf test left |
 | P8 | Launch | 🟨 | Ready: deploy guide, env template, robots/sitemap/OG. Owner: create Neon DB + Vercel project |
 | P9+ | Expansion (Dhaka areas, Cox's Bazar, multiplayer) | ⬜ | |
 
@@ -120,15 +120,19 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - [x] **Phase 5 — Missions**: `gameplay/Missions.ts` (pure, tested: goto / enter / talk / wanted / lose / stay+heat, timers, fail on wasted/busted), `gameplay/act1.ts` (5 missions at real places), `MissionMarkers` (yellow start / blue objective cylinders), minimap blips, objective panel + timer, pass/fail cards, rewards, progress saved (`missions` in SaveData)
 - [x] **Phase 6 — rest**: leaderboard (`server/leaderboard.ts`, `/api/leaderboard`, `/leaderboard`), account page (`components/AccountPanel.tsx`: cloud save summary, change password, delete account, sign out), auth secret + DB shared via `globalThis` (fixes sessions across route bundles)
 - [x] **Phase 7–8 (launch prep)**: `/privacy`, `/terms`, `/credits`; PNG + maskable + apple icons and 1200×630 share card per brand (`pnpm assets:icons`); OG/Twitter metadata, `metadataBase`, `robots.txt`, `sitemap.xml`, `siteUrl` in `site.config.json`; `docs/12-DEPLOY.md`; `apps/web/.env.example`
+- [x] **Phase 7 — polish (part 2)**
+  - [x] `world/Weather.ts`: `WeatherCycle` (pure, tested: dry spells → showers that ramp, thunder, roads dry slower than they get wet) + `Rain` (one LineSegments draw call around the camera; drops per tier = new preset field `rainDrops`); road/sidewalk materials go darker + glossier when wet; `Environment.wet/flash` greys sky + fog, dims the sun (soft shadows), lightning flash; `AudioEngine.setRain/thunder`; 9 new Bangla lines (hero `rainStart`/`thunder`, pedestrian/aunty/driver `rain`); pause menu: বর্ষাকাল (Auto) / রোদ / বৃষ্টি (`Game.setWeather`)
+  - [x] Touch HUD editor (`components/game/HudEditor.tsx`, `hudLayout.ts`): pause → 📱 বাটন সাজাও → drag + resize the jump/run, driving pedals, weapon and enter/exit groups; saved per device (`localStorage hud.layout.v1`)
+  - [x] Perf: NPC/pedestrian/cop meshes culled by hand when off-screen or > 75 m (110 m on Medium+) (`Humanoid.cull`, `SliceScene.cullActors`); cops cast shadows only on Medium+
 
 ## ▶ NEXT STEP
 **Owner (to go live):** follow `docs/12-DEPLOY.md` — create a free Neon database and a Vercel project (root `apps/web`), set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`; optional Google OAuth. Fill `site.config.json` (donate, Google Form, socials, siteUrl). Then test on a real phone.
 
 **Next coding steps (recommended order):**
-1. Real-phone performance pass (draw calls rose with traffic/peds/cops: mobile ≈ 150–220 in headless; consider shadows off for peds, fewer pool slots on Lite)
+1. Real-phone performance pass (actors are now culled off-screen; facing a crowd mobile headless ≈ 216 calls — if phones struggle, lower pools on Mobile or drop rain/shadows)
 2. Act 2 missions (new file next to `gameplay/act1.ts`), more step kinds (destroy vehicle, follow, deliver person)
 3. Drive-by shooting, cop cars that ram/chase as physics vehicles, helicopter at 5 stars
-4. Weather (rain + waterlogged roads), refuelling at petrol pumps, garage repair/respray to lose wanted
+4. Waterlogged-road gameplay (less grip, splashes, puddle decals), refuelling at petrol pumps, garage repair/respray to lose wanted
 5. Server-side scoring for leaderboards (currently from client saves, clamped)
 
 **Older notes (still valid):**
@@ -217,12 +221,14 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - Pedestrians walk sidewalks but never cross roads; cops/peds can clip small objects (no navmesh)
 - Police cars are kinematic (drive the graph and park), no drive-by shooting yet
 - Leaderboard values come from client saves (clamped) — cheatable
-- Draw calls rose with traffic/peds/police (mobile headless ≈ 150–220) — needs a real-phone check
+- Draw calls rose with traffic/peds/police (mobile headless ≈ 100 normally, ≈ 216 facing a crowd) — needs a real-phone check
+- Rain is visual + audio only: vehicle grip doesn't change yet (frictionSlip is set once in the physics worker)
 - Character has no hands-on-wheel pose in cars/CNG (player is hidden inside); only the bike shows the rider
 
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Phase 7 polish: monsoon rain (cycle, streaks, wet roads, grey sky, thunder, sounds, Bangla lines, menu toggle), touch HUD editor, off-screen actor culling, cop shadows Medium+; 60 unit + 19 e2e passing | Real-phone test by owner; then Act 2 |
 | 2026-11-21 | Claude (Opus 5.5) | Autonomous run (owner asleep): Phase 3 traffic/pedestrians/carjacking, Phase 4 combat + police + wasted/busted, Phase 5 mission framework + Act 1 (5 missions), Phase 6 leaderboard + account page (change password, delete) + auth-secret/DB sharing fix, Phase 7–8 legal pages, icons, SEO, deploy guide; 57 unit + 18 e2e passing | Ready for owner to deploy (docs/12-DEPLOY.md) and real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 2: OSM fetch (Overpass mirrors) + map builder (anchor on Tajmahal Road, chunks, colliders, minimap, POIs), CityWorld streaming (roads, sidewalks, lane dashes, extruded buildings with shops/signs, water tanks, parks, water), 18k building colliders in physics (static bodies no longer sent per frame), GTA-style rotating minimap + full map | Continuing: Phase 3 traffic & pedestrians |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 6 login: Better Auth (email/password, Google when keys set), Drizzle + Postgres (Neon via DATABASE_URL, embedded PGlite locally), /login page, /api/profile (server-validated hero title/name), /api/save (cloud save, size/zod/rate limited), autosave, signed-in hero editor | Continuing autonomously: Phase 2 map next (OSM data downloaded) |

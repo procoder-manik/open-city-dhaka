@@ -108,7 +108,7 @@ export class PoliceSystem {
         facing: 0,
         look: { ...COP_LOOK, skin: [0x7e5235, 0x8d5a3b, 0x6e4429][i % 3]! },
       });
-      npc.humanoid.setCastShadow(preset.shadows);
+      npc.humanoid.setCastShadow(preset.shadows && preset.shadowMapSize >= 2048);
       npc.humanoid.setGun(true);
       npc.humanoid.root.visible = false;
       npc.humanoid.root.rotation.order = 'YXZ';

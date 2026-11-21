@@ -7,6 +7,7 @@ import {
   type QualityPreset,
   type VehicleDef,
 } from '@game/shared';
+import { Rain, WeatherCycle, type WeatherMode } from '../world/Weather';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import { PedestrianSystem } from '../actors/PedestrianSystem';
@@ -91,6 +92,8 @@ const STASH_ID = 990;
 const STATIC_ID_BASE = 1000;
 /** Hidden platform where spare (carjack) vehicles wait. */
 const STASH_Y = -200;
+const _frustum = new THREE.Frustum();
+const _projScreen = new THREE.Matrix4();
 
 const CAPSULE_HALF = 0.5;
 const CAPSULE_RADIUS = 0.32;
@@ -259,6 +262,10 @@ export class SliceScene {
   private ballMesh: THREE.Mesh;
   private vehicles: VehicleEntity[] = [];
   private npcs: Npc[] = [];
+  private actorsDrawn = 0;
+  private weather: WeatherCycle;
+  private rain: Rain;
+  private wetness = 0;
   private particles: Particles;
   private dialogue: DialogueSystem;
   private driving: VehicleEntity | null = null;
@@ -386,6 +393,13 @@ export class SliceScene {
     });
 
     this.particles = new Particles(preset.npcDensity < 0.5 ? 120 : 220);
+    this.weather = new WeatherCycle(seededRandom(2024));
+    this.rain = new Rain(
+      preset,
+      [this.street.materials.road, this.street.materials.walk],
+      seededRandom(99),
+    );
+    this.scene.add(this.rain.object);
     this.scene.add(this.particles.mesh);
 
     this.dialogue = new DialogueSystem(
@@ -1003,6 +1017,7 @@ export class SliceScene {
       for (const nm of this.city.nightMaterials)
         nm.material.emissiveIntensity = nm.max * this.env.night;
     }
+    this.updateWeather(dt);
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials)
       nm.material.emissiveIntensity = nm.max * this.env.night;
@@ -1010,8 +1025,72 @@ export class SliceScene {
     this.particles.setFogColor((this.scene.fog as THREE.Fog).color);
     this.particles.update(dt, this.camera);
     this.audio?.update(dt, this.env.night);
+    this.cullActors();
 
     this.publishHud(dt);
+  }
+
+  /** Monsoon: rain streaks, wet roads, grey sky, thunder, people complaining. */
+  private updateWeather(dt: number) {
+    if (this.preset.rainDrops <= 0 && this.weather.mode === 'auto') return;
+    for (const e of this.weather.update(dt)) {
+      if (e.type === 'rainStart') {
+        if (!this.overlay) this.dialogue.say('hero', 'rainStart', this.hero, 0.6);
+        const near = this.nearestTalker(14);
+        if (near) this.dialogue.say(near.def.speaker, 'rain', near.humanoid, 3.5);
+      } else if (e.type === 'thunder') {
+        this.env.flash = e.distance < 0.5 ? 1 : 0.45;
+        this.audio?.thunder(e.distance);
+        if (e.distance < 0.25 && Math.random() < 0.5 && !this.overlay)
+          this.dialogue.say('hero', 'thunder', this.hero, 1.2);
+      }
+    }
+    const i = this.weather.intensity;
+    this.wetness = this.weather.wetness(this.wetness, dt);
+    this.env.wet = i;
+    this.rain.update(dt, i, this.wetness, this.camera);
+    this.audio?.setRain(i * (this.driving ? 0.7 : 1));
+  }
+
+  setWeather(mode: WeatherMode) {
+    this.weather.setMode(mode);
+    if (mode === 'clear') {
+      this.weather.intensity = Math.min(this.weather.intensity, 0.1);
+    }
+  }
+
+  /** A pedestrian or street NPC near the player that has lines for `rain`. */
+  private nearestTalker(r: number): Npc | null {
+    const me = this.driving ? this.driving.body.renderPos : this.player.renderPos;
+    let best: Npc | null = null;
+    let bd = r * r;
+    const list = [...this.npcs, ...(this.peds?.active.map((p) => p.npc) ?? [])];
+    for (const n of list) {
+      if (!this.dialogue.has(n.def.speaker, 'rain')) continue;
+      const d = n.position.distanceToSquared(me);
+      if (d < bd) {
+        bd = d;
+        best = n;
+      }
+    }
+    return best;
+  }
+
+  /** Hide NPC / pedestrian / cop meshes that are off-screen or far (they skip frustum culling). */
+  private cullActors() {
+    this.camera.updateMatrixWorld();
+    _projScreen.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    _frustum.setFromProjectionMatrix(_projScreen);
+    const cam = this.camera.position;
+    const far = this.preset.chunkRadius >= 3 ? 110 : 75;
+    let drawn = 0;
+    const each = (h: { cull: Humanoid['cull'] }, on: boolean) => {
+      if (on && h.cull(_frustum, cam, far)) drawn++;
+    };
+    for (const n of this.npcs) each(n.humanoid, n.humanoid.root.visible);
+    for (const p of this.peds?.peds ?? []) each(p.npc.humanoid, p.active);
+    for (const c of this.police.cops) each(c.npc.humanoid, c.active);
+    this.actorsDrawn = drawn;
   }
 
   /** Dust, exhaust, damage smoke and tyre squeal. */
@@ -1174,6 +1253,9 @@ export class SliceScene {
       cityChunks: this.city?.loadedCount ?? 0,
       traffic: this.traffic?.activeCount ?? 0,
       peds: this.peds?.active.length ?? 0,
+      actorsDrawn: this.actorsDrawn,
+      rain: Math.round(this.weather.intensity * 100) / 100,
+      wet: Math.round(this.wetness * 100) / 100,
       knocked: this.peds?.peds.filter((x) => x.active && x.state === 'knocked').length ?? 0,
       carjack: this.carjackCar?.kind ?? null,
       health: Math.round(this.health),
@@ -2059,6 +2141,7 @@ export class SliceScene {
     for (const n of this.npcs) n.humanoid.dispose();
     for (const v of this.vehicles) v.visual.dispose();
     this.particles.dispose();
+    this.rain.dispose();
     this.boards.dispose();
     this.city?.dispose();
     this.traffic?.dispose();

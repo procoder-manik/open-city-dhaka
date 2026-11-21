@@ -15,6 +15,8 @@ export const QualityPresetSchema = z.object({
   chunkRadius: z.number().int().min(1).max(8),
   npcDensity: z.number().min(0).max(1),
   trafficDensity: z.number().min(0).max(1),
+  /** Rain streaks drawn around the camera when it rains (0 = weather off). */
+  rainDrops: z.number().int().min(0).max(6000),
   maxTextureSize: z.number().int().positive(),
   fpsCap: z.number().int().min(0),
   targetFps: z.number().int().positive(),

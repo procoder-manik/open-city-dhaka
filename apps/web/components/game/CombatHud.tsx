@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Game } from '@game/engine';
 import styles from './combat.module.css';
+import { hudStyle, useHudLayout } from './hudLayout';
 
 const ICON: Record<string, string> = { fist: '👊', pistol: '🔫', grenade: '💣' };
 
 /** Health, weapon/ammo, arrest bar, hurt flash and the WASTED / BUSTED screen. */
 export function CombatHud({ game, touch }: { game: Game; touch: boolean }) {
+  const layout = useHudLayout();
   const health = useStore(game.store, (s) => s.health);
   const weapon = useStore(game.store, (s) => s.weapon);
   const weaponName = useStore(game.store, (s) => s.weaponName);
@@ -72,7 +74,7 @@ export function CombatHud({ game, touch }: { game: Game; touch: boolean }) {
       )}
 
       {touch && mode === 'foot' && !overlay && (
-        <div className={styles.touchCombat}>
+        <div className={styles.touchCombat} data-hud="combat" style={hudStyle(layout, 'combat')}>
           <button
             type="button"
             className={styles.fireBtn}

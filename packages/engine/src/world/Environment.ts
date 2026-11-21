@@ -163,6 +163,11 @@ export class Environment {
   timeScale = 24 / (48 * 60);
   night = 0;
   exposure = 1;
+  /** 0 dry … 1 heavy rain: greys the sky, dims the sun, pulls the fog in. */
+  wet = 0;
+  /** Lightning flash brightness (decays quickly). */
+  flash = 0;
+  private fogFar: number;
 
   constructor(
     private scene: THREE.Scene,
@@ -170,7 +175,8 @@ export class Environment {
     startHour = 17.2,
   ) {
     this.hour = startHour;
-    this.fog = new THREE.Fog(0xeab088, 45, preset.chunkRadius >= 4 ? 260 : 190);
+    this.fogFar = preset.chunkRadius >= 4 ? 260 : 190;
+    this.fog = new THREE.Fog(0xeab088, 45, this.fogFar);
     scene.fog = this.fog;
 
     this.hemi = new THREE.HemisphereLight(0xffd0a0, 0x4c3a2c, 1.2);
@@ -241,16 +247,21 @@ export class Environment {
 
   private apply(force = false) {
     const k = this.sample();
+    const w = this.wet;
+    // Monsoon grey, darker at night
+    const grey = mixColor(0x8c9399, 0x1c2126, k.night, new THREE.Color());
     this.sun.color.setHex(k.sun);
-    this.sun.intensity = k.sunIntensity;
-    this.hemi.color.setHex(k.hemiSky);
+    this.sun.intensity = k.sunIntensity * (1 - 0.92 * Math.min(1, w * 1.5));
+    this.hemi.color.setHex(k.hemiSky).lerp(grey, w * 0.7);
     this.hemi.groundColor.setHex(k.hemiGround);
-    this.hemi.intensity = k.hemiIntensity;
-    this.fog.color.setHex(k.fog);
+    this.hemi.intensity = k.hemiIntensity * (1 + 0.15 * w) + this.flash * 2.5;
+    this.fog.color.setHex(k.fog).lerp(grey, Math.min(1, w * 1.3));
+    this.fog.near = 45 - 30 * w;
+    this.fog.far = this.fogFar * (1 - 0.45 * w);
     this.night = k.night;
-    this.exposure = k.exposure;
-    this.skyTop.setHex(k.skyTop);
-    this.horizon.setHex(k.horizon);
+    this.exposure = k.exposure * (1 - 0.12 * w) + this.flash * 0.6;
+    this.skyTop.setHex(k.skyTop).lerp(grey, Math.min(1, w * 1.4));
+    this.horizon.setHex(k.horizon).lerp(grey, Math.min(1, w * 1.4));
     const arr = this.skyColors.array as Float32Array;
     const tmp = new THREE.Color();
     for (let i = 0; i < this.skyHeights.length; i++) {
@@ -276,6 +287,10 @@ export class Environment {
   update(dt: number, focus: THREE.Vector3, camera: THREE.Camera) {
     this.hour = (this.hour + dt * this.timeScale) % 24;
     this.updateTimer -= dt;
+    if (this.flash > 0.01) {
+      this.flash *= Math.exp(-dt * 7);
+      this.updateTimer = 0;
+    } else this.flash = 0;
     if (this.updateTimer <= 0) {
       this.apply();
       this.updateTimer = 0.25;

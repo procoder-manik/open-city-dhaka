@@ -352,6 +352,57 @@ export class AudioEngine {
     }
   }
 
+  private rain: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+
+  /** Rain hiss on the ambience bus; 0 stops it. */
+  setRain(amount: number) {
+    if (amount <= 0.02) {
+      if (this.rain) {
+        const now = this.ctx.currentTime;
+        this.rain.gain.gain.setTargetAtTime(0, now, 0.4);
+        this.rain.src.stop(now + 2);
+        this.rain = null;
+      }
+      return;
+    }
+    if (!this.rain) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noiseBuffer;
+      src.loop = true;
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 900;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 6500;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(hp).connect(lp).connect(gain).connect(this.ambience);
+      src.start();
+      this.rain = { src, gain };
+    }
+    this.rain.gain.gain.setTargetAtTime(Math.min(1.1, amount * 1.1), this.ctx.currentTime, 0.6);
+  }
+
+  /** Thunder: a crack then a long low rumble; `distance` 0 (overhead) … 1 (far). */
+  thunder(distance: number) {
+    const t = this.ctx.currentTime + distance * 1.5;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(1800 - distance * 1400, t);
+    f.frequency.exponentialRampToValueAtTime(120, t + 2.5);
+    const g = this.ctx.createGain();
+    const peak = 0.9 - distance * 0.5;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.05 + distance * 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 3.5);
+    src.connect(f).connect(g).connect(this.sfx);
+    src.start(t, Math.random());
+    src.stop(t + 3.6);
+  }
+
   /** Continuous tyre squeal, 0 = silent. */
   setSkid(amount: number) {
     if (amount <= 0.02) {

@@ -3,6 +3,7 @@ import { cdl, float, pass, vec3, vec4 } from 'three/tsl';
 import { vignette } from 'three/addons/tsl/display/CRT.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
+import type { WeatherMode } from './world/Weather';
 import type { HeroIdentity, QualityTier } from '@game/shared';
 import type { TalkOption } from './actors/Npc';
 import { AudioEngine } from './audio/AudioEngine';
@@ -73,6 +74,8 @@ export interface Game {
   importSave(data: Partial<SaveData>): void;
   /** Voice source: auto (generated files → device AI), device AI, or off. */
   setVoiceMode(mode: VoiceMode): void;
+  /** Weather: monsoon cycle (auto), always clear, or rain now. */
+  setWeather(mode: WeatherMode): void;
   pause(): void;
   resume(): void;
   dispose(): void;
@@ -321,6 +324,10 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       voice.muted = muted;
       if (muted) voice.stop();
       store.setState({ muted });
+    },
+    setWeather(mode: WeatherMode) {
+      world.setWeather(mode);
+      store.setState({ weather: mode });
     },
     setVoiceMode(mode: VoiceMode) {
       voice.mode = mode;

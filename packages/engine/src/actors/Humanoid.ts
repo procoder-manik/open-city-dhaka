@@ -110,6 +110,7 @@ const HIP_HEIGHT = 0.95;
 
 const lerp = THREE.MathUtils.lerp;
 const clamp = THREE.MathUtils.clamp;
+const _sphere = new THREE.Sphere();
 const damp = (current: number, target: number, rate: number, dt: number) =>
   lerp(current, target, 1 - Math.exp(-rate * dt));
 
@@ -697,6 +698,21 @@ export class Humanoid {
       mesh.bind(skeleton);
       this.meshes.push(mesh);
     }
+  }
+
+  /**
+   * Skinned meshes skip three's frustum culling (bind-pose bounds are wrong once posed),
+   * so cull by hand: hide the meshes when the character is off-screen or too far.
+   * Returns whether it is drawn (callers may skip animation work when not).
+   */
+  cull(frustum: THREE.Frustum, cam: THREE.Vector3, maxDist: number): boolean {
+    const p = this.root.position;
+    _sphere.center.set(p.x, p.y + 0.9, p.z);
+    _sphere.radius = 1.3;
+    const show =
+      p.distanceToSquared(cam) < maxDist * maxDist && frustum.intersectsSphere(_sphere);
+    for (const m of this.meshes) m.visible = show;
+    return show;
   }
 
   setCastShadow(on: boolean) {

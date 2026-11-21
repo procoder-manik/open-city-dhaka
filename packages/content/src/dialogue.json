@@ -1123,6 +1123,78 @@
       "emotion": "neutral",
       "bn": "গেল কই? হাওয়া হইয়া গেল নাকি?",
       "en": "Where did he go? Vanished into thin air?"
+    },
+    {
+      "id": "hero.rainStart.1",
+      "speaker": "hero",
+      "situation": "rainStart",
+      "emotion": "happy",
+      "bn": "বৃষ্টি নামছে! আধা ঘণ্টা পর মোহাম্মদপুর হবে ভেনিস।",
+      "en": "Rain! In half an hour Mohammadpur becomes Venice."
+    },
+    {
+      "id": "hero.rainStart.2",
+      "speaker": "hero",
+      "situation": "rainStart",
+      "emotion": "neutral",
+      "bn": "ছাতা নাই, রেইনকোট নাই, আছে শুধু অ্যাটিটিউড।",
+      "en": "No umbrella, no raincoat, just attitude."
+    },
+    {
+      "id": "hero.rainStart.3",
+      "speaker": "hero",
+      "situation": "rainStart",
+      "emotion": "angry",
+      "bn": "আবার বৃষ্টি! সিটি কর্পোরেশনের ড্রেন তো এখনো গত বছরের পানি খাচ্ছে।",
+      "en": "Rain again! The drains are still digesting last year's water."
+    },
+    {
+      "id": "hero.rainStart.4",
+      "speaker": "hero",
+      "situation": "rainStart",
+      "emotion": "happy",
+      "bn": "বৃষ্টির দিনে খিচুড়ি আর ইলিশ… আর আমি করমু ছিনতাই। জীবন সুন্দর।",
+      "en": "Rainy day: khichuri, hilsa… and me, snatching. Life is good."
+    },
+    {
+      "id": "hero.thunder.1",
+      "speaker": "hero",
+      "situation": "thunder",
+      "emotion": "scared",
+      "bn": "আল্লাহ গো! এইটা বাজ না পুলিশের গ্রেনেড?",
+      "en": "Oh God! Was that thunder or a police grenade?"
+    },
+    {
+      "id": "hero.thunder.2",
+      "speaker": "hero",
+      "situation": "thunder",
+      "emotion": "scared",
+      "bn": "আকাশও আমার উপর রাগ করছে মনে হয়।",
+      "en": "Even the sky is angry with me."
+    },
+    {
+      "id": "pedestrian.rain.1",
+      "speaker": "pedestrian",
+      "situation": "rain",
+      "emotion": "angry",
+      "bn": "এই পানি দিয়া হাঁটুম কেমনে? জুতা তো নৌকা হইয়া গেছে!",
+      "en": "How do I walk in this? My shoes became boats!"
+    },
+    {
+      "id": "aunty.rain.1",
+      "speaker": "aunty",
+      "situation": "rain",
+      "emotion": "angry",
+      "bn": "কাপড় ছাদে! কেউ তোলো কাপড়! ও আল্লাহ!",
+      "en": "Laundry's on the roof! Someone get it! Oh God!"
+    },
+    {
+      "id": "driver.rain.1",
+      "speaker": "driver",
+      "situation": "rain",
+      "emotion": "angry",
+      "bn": "রাস্তা না নদী? রিকশা ছাড়া এইখানে কিছু চলবো না!",
+      "en": "Is this a road or a river? Only rickshaws survive here!"
     }
   ]
 }
