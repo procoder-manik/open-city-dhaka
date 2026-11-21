@@ -57,6 +57,7 @@ export interface Game {
   debugCarjack(): string | null;
   debugDriveTo(x: number, z: number, yaw?: number): boolean;
   debugFaceCop(): number | null;
+  debugFace(x: number, z: number): number;
   debugBlackout(seconds?: number): void;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
@@ -287,6 +288,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugBlackout(seconds?: number) {
       world.debugBlackout(seconds);
+    },
+    debugFace(x: number, z: number) {
+      return world.debugFace(x, z);
     },
     debugFaceCop() {
       return world.debugFaceCop();

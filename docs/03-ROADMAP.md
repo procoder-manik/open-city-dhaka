@@ -96,11 +96,11 @@ P0 Foundation ─► P1 "Feel" slice ─► P2 Mohammadpur map ─► P3 Vehicle
 
 ## Phase 7 — Polish
 - Audio: full spatial mix, radio stations, voice barks, music cues
-- Weather: monsoon rain + waterlogging, fog, load-shedding blackout events _(rain, thunder, wet roads done 2026-11-21; waterlogging gameplay + blackouts later)_
+- Weather: monsoon rain + waterlogging, fog, load-shedding blackout events _(rain, thunder, wet roads + grip, spray, load-shedding blackouts done 2026-11-22)_
 - In-game phone (map, contacts, missions, camera/selfie, "FaceBoi" feed)
 - Outfits & customisation shop, garage
-- Touch HUD editor polish, gyro aim, haptics, auto-fire, portrait mode _(HUD editor: move + resize groups done 2026-11-21)_
-- Performance pass on the full device matrix: dynamic resolution, memory, Lite preset, battery saver, low-data mode, loading time
+- Touch HUD editor polish, gyro aim, haptics, auto-fire, portrait mode _(HUD editor, haptics, auto-fire done 2026-11-22; gyro aim, portrait later)_
+- Performance pass on the full device matrix: dynamic resolution, memory, Lite preset, battery saver, low-data mode, loading time _(battery saver + off-screen culling done; real-phone pass left)_
 - Accessibility & settings polish, Bangla font rendering
 
 ## Phase 8 — Launch

@@ -79,6 +79,9 @@ export interface TrafficCar {
   /** Stunned after being hit / carjack fright. */
   stun: number;
   honkCooldown: number;
+  /** The mission's target vehicle (never despawned, bright yellow, can be wrecked). */
+  mission: boolean;
+  hp: number;
 }
 
 export interface TrafficObstacle {
@@ -149,6 +152,8 @@ export class TrafficSystem {
         blocked: 0,
         stun: 0,
         honkCooldown: 0,
+        mission: false,
+        hp: 100,
       });
     }
     this.perKind = perKind;
@@ -236,6 +241,73 @@ export class TrafficSystem {
     c.yaw += Math.atan2(Math.sin(yaw - c.yaw), Math.cos(yaw - c.yaw)) * (1 - Math.exp(-6 * dt));
   }
 
+  /** Mission target: where it is and whether it still runs (null = none out). */
+  missionState: { x: number; z: number; alive: boolean } | null = null;
+
+  get missionCar(): TrafficCar | null {
+    return this.cars.find((c) => c.active && c.mission) ?? null;
+  }
+
+  /** Put a bright yellow target vehicle on the main road nearest (x, z). */
+  spawnMission(kind: TrafficKind, x: number, z: number): TrafficCar | null {
+    this.clearMission();
+    const e =
+      this.graph.edgeNear(x, z, 0, 80, this.rand, 3) ??
+      this.graph.edgeNear(x, z, 0, 150, this.rand, 1);
+    if (!e) return null;
+    // Free slot, or recycle the ordinary car furthest from the target point
+    let c = this.cars.find((x) => !x.active) ?? null;
+    if (!c) {
+      let far = -1;
+      for (const o of this.cars) {
+        const d = Math.hypot(o.pos.x - x, o.pos.z - z);
+        if (!o.mission && d > far) {
+          far = d;
+          c = o;
+        }
+      }
+    }
+    if (!c) return null;
+    const spec = TRAFFIC_KINDS[kind];
+    c.kind = kind;
+    c.edge = e;
+    c.from = e.a;
+    c.t = e.length * 0.3;
+    c.cruise = spec.speed * 0.95;
+    c.speed = c.cruise * 0.5;
+    c.color.setHex(0xf5c400);
+    c.blocked = 0;
+    c.stun = 0;
+    c.mission = true;
+    c.hp = 100;
+    c.active = true;
+    this.place(c, 0);
+    this.missionState = { x: c.pos.x, z: c.pos.z, alive: true };
+    return c;
+  }
+
+  /** Damage the target; returns true when this wrecks it. */
+  damageMission(amount: number): boolean {
+    const c = this.missionCar;
+    if (!c || amount <= 0) return false;
+    c.hp -= amount;
+    c.cruise = TRAFFIC_KINDS[c.kind].speed * 1.4; // panics and floors it
+    if (c.hp > 0) return false;
+    this.missionState = { x: c.pos.x, z: c.pos.z, alive: false };
+    c.mission = false;
+    this.despawn(c);
+    return true;
+  }
+
+  clearMission() {
+    for (const c of this.cars)
+      if (c.mission) {
+        c.mission = false;
+        this.despawn(c);
+      }
+    this.missionState = null;
+  }
+
   /** Remove a car from the road (carjacked). */
   despawn(c: TrafficCar) {
     c.active = false;
@@ -248,7 +320,7 @@ export class TrafficSystem {
     let best: TrafficCar | null = null;
     let bestD = range;
     for (const c of this.cars) {
-      if (!c.active || !TRAFFIC_KINDS[c.kind].def || c.speed > 4) continue;
+      if (!c.active || c.mission || !TRAFFIC_KINDS[c.kind].def || c.speed > 4) continue;
       const d = Math.hypot(c.pos.x - x, c.pos.z - z);
       if (d < bestD) {
         bestD = d;
@@ -270,7 +342,7 @@ export class TrafficSystem {
     this.spawnTimer -= dt;
     for (const c of this.cars) {
       if (!c.active) continue;
-      if (Math.hypot(c.pos.x - focus.x, c.pos.z - focus.z) > 230) this.despawn(c);
+      if (!c.mission && Math.hypot(c.pos.x - focus.x, c.pos.z - focus.z) > 230) this.despawn(c);
     }
     if (this.spawnTimer <= 0) {
       this.spawnTimer = 0.25;
@@ -285,7 +357,7 @@ export class TrafficSystem {
       if (!c.active || !c.edge) continue;
       const spec = TRAFFIC_KINDS[c.kind];
       c.honkCooldown = Math.max(0, c.honkCooldown - dt);
-      c.stun = Math.max(0, c.stun - dt);
+      c.stun = c.mission ? 0 : Math.max(0, c.stun - dt);
       // Look ahead for vehicles / people
       const fx = Math.sin(c.yaw);
       const fz = Math.cos(c.yaw);
@@ -339,6 +411,10 @@ export class TrafficSystem {
         c.edge = next;
       }
       this.place(c, dt);
+      if (c.mission && this.missionState) {
+        this.missionState.x = c.pos.x;
+        this.missionState.z = c.pos.z;
+      }
     }
     this.syncInstances();
   }

@@ -54,7 +54,10 @@ async function mission(id, title, fn) {
     );
   } catch (e) {
     failed = true;
-    results.push(`FAIL ${title}: ${e.message}`);
+    const i = await info();
+    results.push(
+      `FAIL ${title}: ${e.message} | player ${JSON.stringify(i.player)} mode ${i.mode} wanted ${i.wanted}`,
+    );
     await page.screenshot({ path: `${out}/act2-fail-${id}.png` });
     if ((await info()).mission) await g('debugSetWanted', 0);
   }
@@ -149,7 +152,11 @@ await mission('a2-snatch-class', 'ছিনতাইয়ের ক্লাস
   await until('snatch starts', step('a2-snatch-class', 0));
   let n = 0;
   for (let k = 0; k < 30 && n < 3; k++) {
-    if (await g('debugTalk', 'ped', 'snatch')) n++;
+    if (await g('debugTalk', 'ped', 'snatch')) {
+      n++;
+      // Standing still with cops around = busted; phone the OC instead
+      if ((await info()).wanted >= 2) await g('bribe');
+    }
     await wait(1500);
   }
   console.log('  snatches done', n, 'objective', (await st()).mission?.objective);

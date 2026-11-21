@@ -19,6 +19,13 @@ export type MissionStep =
   | { kind: 'crime'; crime: CrimeKind; count: number; text: string }
   /** Reach a speed (km/h) in a vehicle. */
   | { kind: 'speed'; kmh: number; text: string }
+  /**
+   * Follow the mission target vehicle for `seconds` staying between `near` and `far` metres.
+   * Closer than `near` for SPOT_SECONDS = spotted (fail); further than LOSE_DIST after starting = lost.
+   */
+  | { kind: 'tail'; seconds: number; near: number; far: number; text: string }
+  /** Wreck the mission target vehicle (shoot, ram or grenade it). */
+  | { kind: 'destroy'; text: string }
   | {
       kind: 'stay';
       x: number;
@@ -54,7 +61,14 @@ export interface MissionDef {
   reward: MissionReward;
   /** Missions that must be passed first. */
   requires?: string[];
+  /** A special vehicle put into traffic for `tail` / `destroy` steps, near (x, z). */
+  target?: { kind: 'car' | 'cng' | 'bike' | 'bus'; x: number; z: number };
 }
+
+/** Tail: beyond this distance (after the tail began) the target is lost. */
+export const LOSE_DIST = 140;
+/** Tail: seconds allowed too close before being spotted. */
+export const SPOT_SECONDS = 3;
 
 export interface WorldFacts {
   x: number;
@@ -67,10 +81,14 @@ export interface WorldFacts {
   kmh?: number;
   /** Current vehicle's overall damage 0–100 (0 on foot). */
   vehicleDamage?: number;
+  /** The mission target vehicle, if one is out. */
+  target?: { x: number; z: number; alive: boolean } | null;
 }
 
 export type MissionEvent =
   | { type: 'start'; mission: MissionDef }
+  /** Put the mission's target vehicle into the world. */
+  | { type: 'spawnTarget'; mission: MissionDef }
   | { type: 'step'; mission: MissionDef; step: MissionStep; index: number }
   | { type: 'pass'; mission: MissionDef }
   | { type: 'fail'; mission: MissionDef; reason: string }
@@ -85,15 +103,20 @@ export interface ActiveMission {
   crimes: number;
   /** Vehicle damage when a `fragile` step began. */
   baseDamage: number | null;
+  /** Tail: seconds in range so far / seconds spent too close. */
+  tail: number;
+  close: number;
 }
 
-const START_RADIUS = 2.6;
+const START_RADIUS = 3.5;
 
 export class MissionSystem {
   active: ActiveMission | null = null;
   readonly done = new Set<string>();
   private talked: Array<{ npc: string; option: string }> = [];
   private crimes: CrimeKind[] = [];
+  /** Last known position of the target vehicle (marker + minimap). */
+  private targetPos: { x: number; z: number } | null = null;
   /** Seconds before a failed/finished mission's start marker re-arms. */
   private cooldown = 0;
 
@@ -111,6 +134,8 @@ export class MissionSystem {
     if (!s) return null;
     if (s.kind === 'goto' || s.kind === 'stay') return { x: s.x, z: s.z, r: s.r };
     if (s.kind === 'talk') return { x: s.x, z: s.z, r: 2 };
+    if ((s.kind === 'tail' || s.kind === 'destroy') && this.targetPos)
+      return { ...this.targetPos, r: 3 };
     return null;
   }
 
@@ -122,6 +147,10 @@ export class MissionSystem {
     if (s.kind === 'stay' && a.stay > 0)
       return `${s.text} (${Math.max(0, Math.ceil(s.seconds - a.stay))})`;
     if (s.kind === 'crime' && s.count > 1) return `${s.text} (${a.crimes}/${s.count})`;
+    if (s.kind === 'tail') {
+      const left = Math.max(0, Math.ceil(s.seconds - a.tail));
+      return a.close > 0 ? `খুব কাছে! পিছিয়ে যাও (${left})` : `${s.text} (${left})`;
+    }
     return s.text;
   }
 
@@ -141,10 +170,18 @@ export class MissionSystem {
       stay: 0,
       crimes: 0,
       baseDamage: null,
+      tail: 0,
+      close: 0,
     };
+    this.targetPos = null;
     this.talked = [];
     this.crimes = [];
     return { type: 'start', mission: def };
+  }
+
+  /** Events to emit right after `start` (target vehicle). */
+  startExtras(def: MissionDef): MissionEvent[] {
+    return def.target ? [{ type: 'spawnTarget', mission: def }] : [];
   }
 
   fail(reason: string): MissionEvent | null {
@@ -163,7 +200,7 @@ export class MissionSystem {
       if (f.down || this.cooldown > 0) return events;
       for (const d of this.available()) {
         if (Math.hypot(f.x - d.start.x, f.z - d.start.z) < START_RADIUS) {
-          events.push(this.start(d));
+          events.push(this.start(d), ...this.startExtras(d));
           break;
         }
       }
@@ -184,7 +221,25 @@ export class MissionSystem {
         return events;
       }
     }
+    if (f.target) this.targetPos = { x: f.target.x, z: f.target.z };
     const cur = a.def.steps[a.step];
+    if (cur?.kind === 'tail' && f.target) {
+      const d = Math.hypot(f.x - f.target.x, f.z - f.target.z);
+      if (d < cur.near) a.close += dt;
+      else a.close = Math.max(0, a.close - dt * 0.5);
+      const why = !f.target.alive
+        ? 'destroyed'
+        : a.tail > 0 && d > LOSE_DIST
+          ? 'lost'
+          : a.close > SPOT_SECONDS
+            ? 'spotted'
+            : null;
+      if (why) {
+        const e = this.fail(why);
+        if (e) events.push(e);
+        return events;
+      }
+    }
     if (cur?.kind === 'goto' && cur.fragile !== undefined && f.vehicle) {
       const dmg = f.vehicleDamage ?? 0;
       if (a.baseDamage === null) a.baseDamage = dmg;
@@ -204,6 +259,8 @@ export class MissionSystem {
       a.stay = 0;
       a.crimes = 0;
       a.baseDamage = null;
+      a.tail = 0;
+      a.close = 0;
       this.talked = [];
       this.crimes = [];
       if (a.step >= a.def.steps.length) {
@@ -243,6 +300,14 @@ export class MissionSystem {
         return a.crimes >= s.count;
       case 'speed':
         return f.vehicle !== null && (f.kmh ?? 0) >= s.kmh;
+      case 'tail': {
+        if (!f.target) return false;
+        const d = Math.hypot(f.x - f.target.x, f.z - f.target.z);
+        if (d >= s.near && d <= s.far) a.tail += dt;
+        return a.tail >= s.seconds;
+      }
+      case 'destroy':
+        return !!f.target && !f.target.alive;
       case 'stay':
         if (Math.hypot(f.x - s.x, f.z - s.z) > s.r) {
           a.stay = 0;

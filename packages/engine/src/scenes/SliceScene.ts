@@ -35,8 +35,9 @@ import { MissionSystem, type MissionEvent } from '../gameplay/Missions';
 import { MissionMarkers } from '../gameplay/MissionMarkers';
 import { ACT1 } from '../gameplay/act1';
 import { ACT2 } from '../gameplay/act2';
+import { ACT3 } from '../gameplay/act3';
 
-const MISSIONS = [...ACT1, ...ACT2];
+const MISSIONS = [...ACT1, ...ACT2, ...ACT3];
 import type { Pedestrian } from '../actors/PedestrianSystem';
 import { seededRandom } from '../world/random';
 import type { AudioEngine } from '../audio/AudioEngine';
@@ -270,6 +271,7 @@ export class SliceScene {
   private weather: WeatherCycle;
   private rain: Rain;
   private wetness = 0;
+  private ramCd = 0;
   private prefs: GamePrefs = { ...DEFAULT_PREFS };
   private blackout = new Blackout(seededRandom(1971));
   private particles: Particles;
@@ -1025,6 +1027,7 @@ export class SliceScene {
       }
     }
     this.updateBlackout(dt);
+    this.ramMissionCar(dt);
     const lit = this.env.night * (1 - this.blackout.level);
     if (this.city)
       for (const nm of this.city.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
@@ -1038,6 +1041,45 @@ export class SliceScene {
     this.cullActors();
 
     this.publishHud(dt);
+  }
+
+  /** Damage the mission target; wrecks it with a blast when it runs out of health. */
+  private hitMissionCar(amount: number) {
+    const c = this.traffic?.missionCar;
+    if (!c) return;
+    const at = c.pos.clone().setY(0.6);
+    if (this.traffic!.damageMission(amount)) {
+      this.particles.emit('blackSmoke', at, undefined, 14);
+      this.projectiles.explode(at.clone().setY(0.3));
+      this.hud.headline = {
+        id: ++this.headlineId,
+        text: fillHero('হলুদ গাড়ি দাউ দাউ করে জ্বলছে! পেছনে নাকি {hero}', this.identity),
+      };
+    } else this.particles.emit('smoke', at, undefined, 2);
+  }
+
+  /** Ramming the mission target with the player's vehicle. */
+  private ramMissionCar(dt: number) {
+    this.ramCd = Math.max(0, this.ramCd - dt);
+    const v = this.driving;
+    const c = this.traffic?.missionCar;
+    if (!v || !c || this.ramCd > 0) return;
+    const p = v.body.renderPos;
+    const d = Math.hypot(p.x - c.pos.x, p.z - c.pos.z);
+    const reach = v.def.chassisHalfExtents[2] + 2.3;
+    if (d >= reach || d < 0.01) return;
+    // Closing speed along the line between them (rear-end, head-on or T-bone)
+    const nx = (c.pos.x - p.x) / d;
+    const nz = (c.pos.z - p.z) / d;
+    const vel = v.body.vel;
+    const closing =
+      vel.x * nx + vel.z * nz - c.speed * (Math.sin(c.yaw) * nx + Math.cos(c.yaw) * nz);
+    if (closing > 4) {
+      this.ramCd = 0.6;
+      this.hitMissionCar(closing * 7);
+      this.audio?.crash(Math.min(1, closing / 14));
+      this.rig.addShake(0.3);
+    }
   }
 
   /** Load-shedding at night: lights out, people complain, crimes are seen less. */
@@ -1318,6 +1360,13 @@ export class SliceScene {
       rain: Math.round(this.weather.intensity * 100) / 100,
       blackout: this.blackout.active,
       heat: +this.crime.heat.toFixed(2),
+      target: this.traffic?.missionState
+        ? {
+            ...this.traffic.missionState,
+            hp: this.traffic.missionCar?.hp ?? 0,
+            yaw: +(this.traffic.missionCar?.yaw ?? 0).toFixed(3),
+          }
+        : null,
       wet: Math.round(this.wetness * 100) / 100,
       knocked: this.peds?.peds.filter((x) => x.active && x.state === 'knocked').length ?? 0,
       carjack: this.carjackCar?.kind ?? null,
@@ -1588,6 +1637,7 @@ export class SliceScene {
     this.rig.pitch = Math.max(-0.6, this.rig.pitch - 0.015); // recoil kick
     if (hit) this.hitTarget(hit, WEAPONS.pistol.damage, Math.atan2(dir.x, dir.z), 'bullet');
     else if (car) {
+      if (car.mission) this.hitMissionCar(20);
       this.traffic?.stunNear(car.pos.x, car.pos.z, 4, 6);
       this.particles.emit('debris', end, undefined, 5);
     } else if (best < range) this.particles.emit('dust', end, undefined, 3);
@@ -1670,6 +1720,11 @@ export class SliceScene {
       }
     }
     this.traffic?.stunNear(at.x, at.z, 35, 6);
+    const mc = this.traffic?.missionCar;
+    if (mc) {
+      const d = Math.hypot(mc.pos.x - at.x, mc.pos.z - at.z);
+      if (d < R * 1.5) this.hitMissionCar(120 * blastFalloff(d, R * 1.5) + 30);
+    }
     // Vehicles get thrown and damaged
     for (const v of this.vehicles) {
       const d = v.body.renderPos.distanceTo(at);
@@ -1852,6 +1907,7 @@ export class SliceScene {
       vehicle: kind === 'car' || kind === 'cng' || kind === 'bike' ? kind : null,
       kmh: this.driving ? Math.abs(this.driving.speed) * 3.6 : 0,
       vehicleDamage: this.driving ? totalDamage(this.driving.cond) : 0,
+      target: this.traffic?.missionState ?? null,
       wanted: stars(this.crime),
       down: !!this.overlay,
     });
@@ -1910,6 +1966,16 @@ export class SliceScene {
         this.audio?.coin();
         break;
       }
+      case 'spawnTarget': {
+        const t = e.mission.target;
+        if (t && this.traffic?.spawnMission(t.kind, t.x, t.z)) {
+          this.hud.headline = {
+            id: ++this.headlineId,
+            text: 'হলুদ গাড়িটা খুঁজে বের করো — মিনিম্যাপে নীল দাগ',
+          };
+        }
+        break;
+      }
       case 'step':
         this.audio?.coin();
         break;
@@ -1925,6 +1991,7 @@ export class SliceScene {
         };
         break;
       case 'pass': {
+        this.traffic?.clearMission();
         const r = e.mission.reward;
         this.hud.taka += r.taka;
         if (r.ammo) this.arsenal.ammo += r.ammo;
@@ -1945,6 +2012,7 @@ export class SliceScene {
         break;
       }
       case 'fail':
+        this.traffic?.clearMission();
         this.card(
           'fail',
           'মিশন ফেল',
@@ -1952,9 +2020,15 @@ export class SliceScene {
             ? 'সময় শেষ!'
             : e.reason === 'damage'
               ? 'মিষ্টি সব ভর্তা হয়ে গেছে!'
-              : e.mission.title,
+              : e.reason === 'lost'
+                ? 'হলুদ গাড়িটা হারিয়ে গেছে!'
+                : e.reason === 'spotted'
+                  ? 'বেশি কাছে গেছিলা — ধরা পড়ে গেছো!'
+                  : e.reason === 'destroyed'
+                    ? 'আরে! পিছু নিতে বলছিলাম, উড়াইতে না!'
+                    : e.mission.title,
         );
-        if (e.reason === 'time' || e.reason === 'damage')
+        if (e.reason !== 'down' && e.reason !== 'debug')
           this.dialogue.interrupt('hero', 'missionFail', this.hero);
         break;
     }
@@ -1972,6 +2046,7 @@ export class SliceScene {
     }
     if (this.missions.active) this.missions.fail('debug');
     this.onMissionEvent(this.missions.start(def));
+    for (const x of this.missions.startExtras(def)) this.onMissionEvent(x);
     return true;
   }
 
@@ -2223,6 +2298,13 @@ export class SliceScene {
     this.nearest = v;
     this.toggleVehicle();
     return true;
+  }
+
+  /** Testing/debug: turn the camera (and aim) toward a world point; returns its distance. */
+  debugFace(x: number, z: number): number {
+    const me = this.player.renderPos;
+    this.rig.yaw = Math.atan2(-(x - me.x), -(z - me.z));
+    return +Math.hypot(x - me.x, z - me.z).toFixed(1);
   }
 
   /** Testing/debug: turn the camera toward the nearest standing cop; returns its distance. */

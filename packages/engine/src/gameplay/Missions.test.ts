@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ACT1 } from './act1';
 import { ACT2 } from './act2';
-import { MissionSystem, type MissionDef, type WorldFacts } from './Missions';
+import { ACT3 } from './act3';
+import { LOSE_DIST, MissionSystem, type MissionDef, type WorldFacts } from './Missions';
 
 const DEF: MissionDef = {
   id: 'test',
@@ -66,8 +67,8 @@ describe('MissionSystem', () => {
     expect(m2.active).toBeNull();
   });
 
-  it('Acts 1–2 are well formed: unique ids, requirements exist, rewards positive', () => {
-    const ALL = [...ACT1, ...ACT2];
+  it('Acts 1–3 are well formed: unique ids, requirements exist, rewards positive', () => {
+    const ALL = [...ACT1, ...ACT2, ...ACT3];
     const ids = new Set(ALL.map((d) => d.id));
     expect(ids.size).toBe(ALL.length);
     for (const d of ALL) {
@@ -129,5 +130,55 @@ describe('MissionSystem', () => {
     expect(m.active).not.toBeNull();
     const ev = m.update(0.1, at(30, 0, { vehicle: 'car', vehicleDamage: 40 }));
     expect(ev[0]).toMatchObject({ type: 'fail', reason: 'damage' });
+  });
+
+  describe('target vehicle: tail + destroy', () => {
+    const def: MissionDef = {
+      id: 't',
+      title: 't',
+      giver: 'hero',
+      intro: '',
+      start: { x: 0, z: 0 },
+      target: { kind: 'car', x: 100, z: 0 },
+      steps: [
+        { kind: 'tail', seconds: 5, near: 10, far: 40, text: 'follow' },
+        { kind: 'destroy', text: 'wreck it' },
+      ],
+      reward: { taka: 1 },
+    };
+    const tgt = (x: number, alive = true) => ({ target: { x, z: 0, alive } });
+
+    it('spawns the target, counts time only in range, then needs a wreck', () => {
+      const m = new MissionSystem([def]);
+      const ev = m.update(0.1, at(0, 0));
+      expect(ev.map((e) => e.type)).toEqual(['start', 'spawnTarget']);
+      m.update(2, at(0, 0, tgt(100))); // too far: nothing yet, not lost (never in range)
+      expect(m.active?.tail).toBe(0);
+      expect(m.target()).toEqual({ x: 100, z: 0, r: 3 });
+      for (let i = 0; i < 6; i++) m.update(1, at(80, 0, tgt(100))); // 20 m behind
+      expect(m.active?.step).toBe(1);
+      m.update(0.1, at(80, 0, tgt(100)));
+      expect(m.active?.step).toBe(1);
+      const end = m.update(0.1, at(80, 0, tgt(100, false)));
+      expect(end.some((e) => e.type === 'pass')).toBe(true);
+    });
+
+    it('fails when spotted (too close), lost (too far) or wrecked early', () => {
+      const close = new MissionSystem([def]);
+      close.update(0.1, at(0, 0));
+      for (let i = 0; i < 3; i++) close.update(1, at(95, 0, tgt(100)));
+      expect(close.update(1.5, at(95, 0, tgt(100)))[0]).toMatchObject({ reason: 'spotted' });
+
+      const lost = new MissionSystem([def]);
+      lost.update(0.1, at(0, 0));
+      lost.update(1, at(80, 0, tgt(100)));
+      expect(lost.update(1, at(80, 0, tgt(100 + LOSE_DIST + 10)))[0]).toMatchObject({
+        reason: 'lost',
+      });
+
+      const boom = new MissionSystem([def]);
+      boom.update(0.1, at(0, 0));
+      expect(boom.update(1, at(80, 0, tgt(100, false)))[0]).toMatchObject({ reason: 'destroyed' });
+    });
   });
 });
