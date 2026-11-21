@@ -54,6 +54,16 @@
       "name": "জাম্বু ভাই",
       "nameEn": "Jambu Bhai",
       "color": "#e57373"
+    },
+    "pumpBoy": {
+      "name": "পাম্পের ছেলে",
+      "nameEn": "Pump attendant",
+      "color": "#ffab40"
+    },
+    "mechanic": {
+      "name": "মিস্ত্রি ওস্তাদ",
+      "nameEn": "Mechanic",
+      "color": "#90a4ae"
     }
   },
   "lines": [
@@ -1296,6 +1306,94 @@
       "emotion": "neutral",
       "bn": "সিগন্যাল বন্ধ, এখন যে আগে যাইবো সে-ই রাজা।",
       "en": "Signals are off; whoever goes first is king."
+    },
+    {
+      "id": "pumpBoy.fuelFull.1",
+      "speaker": "pumpBoy",
+      "situation": "fuelFull",
+      "emotion": "happy",
+      "bn": "ফুল কইরা দিলাম ভাই! মিটার দেখেন, এক ফোঁটাও কম না… মোটামুটি।",
+      "en": "Filled right up, bro! Check the meter, not a drop short… mostly."
+    },
+    {
+      "id": "pumpBoy.fuelFull.2",
+      "speaker": "pumpBoy",
+      "situation": "fuelFull",
+      "emotion": "neutral",
+      "bn": "ট্যাংক ফুল। গ্লাস মুইছা দিমু? ওইটা বিশ টাকা এক্সট্রা।",
+      "en": "Tank's full. Wipe the windscreen? That's twenty extra."
+    },
+    {
+      "id": "pumpBoy.fuelBroke.1",
+      "speaker": "pumpBoy",
+      "situation": "fuelBroke",
+      "emotion": "angry",
+      "bn": "টাকা শেষ? তাইলে তেলও শেষ! বাকির খাতা বন্ধ।",
+      "en": "Out of money? Then out of fuel too! No credit here."
+    },
+    {
+      "id": "mechanic.garageDone.1",
+      "speaker": "mechanic",
+      "situation": "garageDone",
+      "emotion": "smug",
+      "bn": "নতুন রং, নতুন জীবন! পুলিশ তো দূরের কথা, তোমার মা-ও চিনবো না।",
+      "en": "New paint, new life! Forget the police, your own mother won't recognise it."
+    },
+    {
+      "id": "mechanic.garageDone.2",
+      "speaker": "mechanic",
+      "situation": "garageDone",
+      "emotion": "happy",
+      "bn": "ডেন্ট সোজা, রং চকচকে। পরের বার একটু আস্তে মাইরো।",
+      "en": "Dents fixed, paint shining. Hit things a bit softer next time."
+    },
+    {
+      "id": "mechanic.garageSeen.1",
+      "speaker": "mechanic",
+      "situation": "garageSeen",
+      "emotion": "scared",
+      "bn": "পুলিশ দেখতেছে ভাই! রং করলে আমার দোকান সিল কইরা দিবো। খালি মেরামত করলাম।",
+      "en": "Cops are watching, bro! Paint it and they'll seal my shop. Only repaired it."
+    },
+    {
+      "id": "mechanic.garageBroke.1",
+      "speaker": "mechanic",
+      "situation": "garageBroke",
+      "emotion": "angry",
+      "bn": "টাকা ছাড়া স্প্রে মেশিন চলে না, ভাই। আগে কামাই কইরা আসো।",
+      "en": "The spray machine doesn't run on promises. Earn some first."
+    },
+    {
+      "id": "mechanic.garageNothing.1",
+      "speaker": "mechanic",
+      "situation": "garageNothing",
+      "emotion": "neutral",
+      "bn": "গাড়ি তো ঠিকই আছে! খামাখা আসছো? চা খাইয়া যাও।",
+      "en": "Your car's fine! Came for nothing? Have a cup of tea then."
+    },
+    {
+      "id": "hero.lowFuel.1",
+      "speaker": "hero",
+      "situation": "lowFuel",
+      "emotion": "scared",
+      "bn": "তেল প্রায় শেষ! মিনিম্যাপে ⛽ খুঁজি, নাইলে ঠেইলা নিতে হইবো।",
+      "en": "Almost out of fuel! Find ⛽ on the minimap or I'll be pushing this."
+    },
+    {
+      "id": "hero.lowFuel.2",
+      "speaker": "hero",
+      "situation": "lowFuel",
+      "emotion": "neutral",
+      "bn": "তেলের কাঁটা লাল দাগে। পাম্প খুঁজতে হবে।",
+      "en": "Fuel needle's in the red. Need a pump."
+    },
+    {
+      "id": "hero.outOfFuel.1",
+      "speaker": "hero",
+      "situation": "outOfFuel",
+      "emotion": "angry",
+      "bn": "তেল শেষ! এখন কি হাঁইটা পালামু?",
+      "en": "Out of fuel! Now I run away on foot?"
     }
   ]
 }

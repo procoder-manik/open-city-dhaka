@@ -365,6 +365,7 @@ function GameHud({
   const notoriety = useGame(game, (s) => s.notoriety);
   const publicLove = useGame(game, (s) => s.publicLove);
   const subtitle = useGame(game, (s) => s.subtitle);
+  const station = useGame(game, (s) => s.station);
   const talk = useGame(game, (s) => s.talk);
   const fuel = useGame(game, (s) => Math.round(s.fuel * 100));
   const damage = useGame(game, (s) => s.damage);
@@ -544,6 +545,14 @@ function GameHud({
         <div className={styles.prompt} data-testid="prompt">
           <kbd>{lastInput === 'gamepad' ? 'Y' : 'F'}</kbd>
           {prompt}
+        </div>
+      )}
+
+      {station && status === 'running' && (
+        <div className={styles.stationPill} data-testid="station" data-type={station.type}>
+          <span aria-hidden>{station.type === 'pump' ? '⛽' : '🔧'}</span>
+          <b>{station.name}</b>
+          <span>{station.text}</span>
         </div>
       )}
 

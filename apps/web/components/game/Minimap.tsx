@@ -123,6 +123,21 @@ export function Minimap({ game }: { game: Game }) {
         const rz = dx * Math.sin(rot) + dz * Math.cos(rot);
         g.fillText(icon, size / 2 + (rx * size) / 2, size / 2 + (rz * size) / 2);
       }
+      // Petrol pumps + garages
+      const { stations: stationIcons } = game.store.getState();
+      g.font = '13px sans-serif';
+      for (const [sx, sz, type] of stationIcons) {
+        const dx = (sx - pos[0]) / VIEW_RADIUS_M;
+        const dz = (sz - pos[1]) / VIEW_RADIUS_M;
+        if (dx * dx + dz * dz > 0.85) continue;
+        const rx = dx * Math.cos(rot) - dz * Math.sin(rot);
+        const rz = dx * Math.sin(rot) + dz * Math.cos(rot);
+        g.fillText(
+          type === 'pump' ? '⛽' : '🔧',
+          size / 2 + (rx * size) / 2,
+          size / 2 + (rz * size) / 2,
+        );
+      }
       // Mission blips: yellow = mission start, blue = objective (clamped to the rim)
       const { missionBlips, mission } = game.store.getState();
       const blip = (x: number, z: number, color: string, label: string) => {
@@ -223,7 +238,13 @@ export function FullMap({ game }: { game: Game }) {
         g.strokeText(r.n, x, y);
         g.fillText(r.n, x, y);
       }
-      const { pos } = game.store.getState();
+      const { pos, stations: stationIcons } = game.store.getState();
+      g.font = '16px sans-serif';
+      g.textBaseline = 'middle';
+      for (const [sx, sz, type] of stationIcons) {
+        const [x, y] = toPx(sx, sz);
+        g.fillText(type === 'pump' ? '⛽' : '🔧', x, y);
+      }
       const [px, py] = toPx(pos[0], pos[1]);
       g.fillStyle = '#ff9f1c';
       g.beginPath();

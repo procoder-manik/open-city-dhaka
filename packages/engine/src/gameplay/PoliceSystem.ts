@@ -38,6 +38,9 @@ export interface Cop {
   wpNode: number;
   /** Preferred side when steering around obstacles. */
   side: number;
+  /** Seconds chasing without getting closer (stuck behind a building). */
+  stuck: number;
+  best: number;
 }
 
 export interface PoliceCar {
@@ -52,7 +55,10 @@ export interface PoliceCar {
   yaw: number;
   /** Arrived near the player and dropped its cops. */
   parked: boolean;
+  /** Seconds without getting closer to the player (greedy routing can circle). */
   stuck: number;
+  /** Closest it has been to the player this run. */
+  best: number;
 }
 
 export type PoliceEvent =
@@ -125,6 +131,8 @@ export class PoliceSystem {
         wp: null,
         wpNode: -1,
         side: i % 2 ? 1 : -1,
+        stuck: 0,
+        best: Infinity,
       });
     }
     for (let i = 0; i < 3; i++)
@@ -140,6 +148,7 @@ export class PoliceSystem {
         yaw: 0,
         parked: false,
         stuck: 0,
+        best: Infinity,
       });
     const body = new MeshBuilder();
     // Pickup: navy cab, white doors stripe, open bed with bench
@@ -263,6 +272,8 @@ export class PoliceSystem {
     c.npc.humanoid.setEmotion('angry', 30);
     c.wp = null;
     c.wpNode = -1;
+    c.stuck = 0;
+    c.best = Infinity;
     return c;
   }
 
@@ -290,7 +301,8 @@ export class PoliceSystem {
     ).length;
     if (this.spawnTimer <= 0 && ctx.stars > 0) {
       this.spawnTimer = 2.5;
-      if (conscious < want.cops && this.cars.every((c) => !c.active || c.parked)) {
+      // Foot cops come with the car — but don't wait for a car that can't get through
+      if (conscious < want.cops && this.cars.every((c) => !c.active || c.parked || c.stuck > 8)) {
         const at = this.spawnPoint(p, 30, 55);
         if (this.spawnCop(at)) events.push({ type: 'bark', cop: null, situation: 'chase' });
       }
@@ -306,6 +318,7 @@ export class PoliceSystem {
           car.t = 0;
           car.speed = 8;
           car.stuck = 0;
+          car.best = Infinity;
           const a = this.graph.nodes[e.a]!;
           car.pos.set(a.x, 0, a.z);
         }
@@ -313,6 +326,9 @@ export class PoliceSystem {
     }
 
     // Patrol cars: greedy route toward the player, stop and drop cops
+    // Player far from every road (courtyard, field): cars can't get within 16 m, so they
+    // may pull over once they stop getting closer. On a road they keep routing.
+    const offRoad = !this.graph?.edgeNear(p.x, p.z, 0, 14, this.rand, 1);
     for (const car of this.cars) {
       if (!car.active) continue;
       const d = Math.hypot(car.pos.x - p.x, car.pos.z - p.z);
@@ -322,10 +338,20 @@ export class PoliceSystem {
       }
       if (car.parked || !car.edge || !this.graph) {
         car.speed = 0;
-        if (ctx.stars > 0 && car.parked && d > 60) car.parked = false; // player got away → follow again
+        if (ctx.stars > 0 && car.parked && d > 60) {
+          car.parked = false; // player got away → follow again
+          car.stuck = 0;
+          car.best = d;
+        }
         continue;
       }
-      if (d < 16 && ctx.stars > 0) {
+      if (d < car.best - 0.5) {
+        car.best = d;
+        car.stuck = 0;
+      } else car.stuck += dt;
+      // Close enough — or it stopped getting closer (player off-road / routing loop):
+      // pull over and let the cops run the rest
+      if (ctx.stars > 0 && (d < 16 || (car.stuck > 10 && d < 70 && offRoad))) {
         car.parked = true;
         for (let k = 0; k < 2; k++) {
           const side = new THREE.Vector3(
@@ -384,6 +410,17 @@ export class PoliceSystem {
         // Shoot from range at 2+ stars, otherwise run in to arrest
         const shooter = ctx.stars >= 2 && dist < 22 && dist > 3;
         c.state = shooter ? 'shoot' : 'chase';
+        // Stuck behind a building for a while → give up; a fresh cop spawns elsewhere
+        if (!shooter && dist > 8) {
+          if (dist < c.best - 0.5) {
+            c.best = dist;
+            c.stuck = 0;
+          } else c.stuck += dt;
+          if (c.stuck > 8) {
+            this.despawnCop(c);
+            continue;
+          }
+        } else c.stuck = 0;
         h.aiming = shooter;
         if (!shooter) speed = dist > 1.3 ? c.speed * (dist < 4 ? 0.6 : 1) : 0;
         else speed = dist > 12 ? c.speed * 0.5 : 0;

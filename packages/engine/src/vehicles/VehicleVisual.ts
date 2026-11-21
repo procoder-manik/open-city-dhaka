@@ -59,12 +59,19 @@ export class VehicleVisual {
   }> = [];
   private lean = 0;
   private materials: THREE.Material[] = [];
+  private paintMat: THREE.MeshStandardMaterial | null = null;
+
+  /** Garage respray: new body colour. */
+  setPaint(color: THREE.ColorRepresentation) {
+    this.paintMat?.color.set(color);
+  }
 
   constructor(readonly def: VehicleDef) {
     this.root.add(this.leanGroup);
     const paint = this.mat(
       new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.35, metalness: 0.4 }),
     );
+    this.paintMat = paint as THREE.MeshStandardMaterial;
     const dark = this.mat(new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: 0.7 }));
     const chrome = this.mat(
       new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.25, metalness: 0.9 }),

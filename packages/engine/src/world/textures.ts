@@ -206,7 +206,7 @@ export function signAtlas(seed: number): THREE.CanvasTexture {
   return toTexture(c);
 }
 
-function fitText(
+export function fitText(
   g: CanvasRenderingContext2D,
   text: string,
   x: number,

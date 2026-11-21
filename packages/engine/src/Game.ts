@@ -58,6 +58,8 @@ export interface Game {
   debugDriveTo(x: number, z: number, yaw?: number): boolean;
   debugFaceCop(): number | null;
   debugFace(x: number, z: number): number;
+  debugFuel(f: number): void;
+  debugMoney(taka: number): void;
   debugBlackout(seconds?: number): void;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
@@ -288,6 +290,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugBlackout(seconds?: number) {
       world.debugBlackout(seconds);
+    },
+    debugMoney(taka: number) {
+      world.debugMoney(taka);
+    },
+    debugFuel(f: number) {
+      world.debugFuel(f);
     },
     debugFace(x: number, z: number) {
       return world.debugFace(x, z);

@@ -1,5 +1,5 @@
 import * as THREE from 'three/webgpu';
-import { dialogue, getVehicleDef } from '@game/content';
+import { dialogue, getVehicleDef, stations } from '@game/content';
 import {
   DEFAULT_IDENTITY,
   fillHero,
@@ -9,6 +9,8 @@ import {
 } from '@game/shared';
 import { Blackout, Rain, WeatherCycle, type WeatherMode } from '../world/Weather';
 import { DEFAULT_PREFS, type GamePrefs } from '../state/prefs';
+import { StationSystem } from '../gameplay/Stations';
+import { StationProps } from '../world/StationProps';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import { PedestrianSystem } from '../actors/PedestrianSystem';
@@ -94,6 +96,8 @@ const NPC_ID_BASE = 100;
 const TRAFFIC_ID_BASE = 400;
 const POLICE_ID_BASE = 450;
 const STASH_ID = 990;
+const STATION_ID_BASE = 900;
+const RESPRAY_COLORS = [0x1d5c96, 0x8a1d1d, 0x2f6b3a, 0x202020, 0xd9d2c0, 0x6b2f80];
 const STATIC_ID_BASE = 1000;
 /** Hidden platform where spare (carjack) vehicles wait. */
 const STASH_Y = -200;
@@ -185,6 +189,10 @@ export interface HudState {
   missionBlips: Array<[number, number]>;
   missionsDone: number;
   missionsTotal: number;
+  /** Petrol pump / garage the player is parked at: what's happening there. */
+  station: { type: 'pump' | 'garage'; name: string; text: string } | null;
+  /** Static minimap icons: [x, z, type]. */
+  stations: Array<[number, number, 'pump' | 'garage']>;
 }
 
 /** Physics position/velocity with extrapolation + smoothing for jitter-free rendering. */
@@ -272,6 +280,10 @@ export class SliceScene {
   private rain: Rain;
   private wetness = 0;
   private ramCd = 0;
+  private stationProps: StationProps;
+  private stationSys = new StationSystem(stations);
+  private fuelSpent = 0;
+  private lowFuelWarned = new WeakSet<object>();
   private prefs: GamePrefs = { ...DEFAULT_PREFS };
   private blackout = new Blackout(seededRandom(1971));
   private particles: Particles;
@@ -325,6 +337,8 @@ export class SliceScene {
     missionBlips: [],
     missionsDone: 0,
     missionsTotal: MISSIONS.length,
+    station: null,
+    stations: stations.map((s) => [s.x, s.z, s.type] as [number, number, 'pump' | 'garage']),
   };
   private city: CityWorld | null = null;
   private graph: RoadGraph | null = null;
@@ -389,6 +403,10 @@ export class SliceScene {
     this.police = new PoliceSystem(this.graph, preset, seededRandom(31337), POLICE_ID_BASE);
     this.scene.add(this.police.group);
     this.bodies.push(...this.police.physicsBodies());
+    // Petrol pumps + garages
+    this.stationProps = new StationProps(stations, preset);
+    this.scene.add(this.stationProps.group);
+    this.stationProps.bodies.forEach((b, i) => this.bodies.push({ ...b, id: STATION_ID_BASE + i }));
     this.scene.add(this.projectiles.group);
     this.scene.add(this.markers.group);
     this.projectiles.onExplode = (at) => this.explosion(at);
@@ -1022,18 +1040,25 @@ export class SliceScene {
       this.city.update(dt, focus);
       if (this.city.version !== this.cityVersion) {
         this.cityVersion = this.city.version;
-        this.cityBoxes = [...this.street.colliders, ...this.city.colliders()];
+        this.cityBoxes = [
+          ...this.street.colliders,
+          ...this.city.colliders(),
+          ...this.stationProps.colliders,
+        ];
         this.rig.setColliders(this.cityBoxes);
       }
     }
     this.updateBlackout(dt);
     this.ramMissionCar(dt);
+    this.updateStations(dt);
     const lit = this.env.night * (1 - this.blackout.level);
     if (this.city)
       for (const nm of this.city.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
     this.updateWeather(dt);
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
+    for (const nm of this.stationProps.nightMaterials)
+      nm.material.emissiveIntensity = 0.05 + nm.max * lit;
     for (const g of this.street.nightGlows) g.material.opacity = g.max * lit;
     this.particles.setFogColor((this.scene.fog as THREE.Fog).color);
     this.particles.update(dt, this.camera);
@@ -1080,6 +1105,105 @@ export class SliceScene {
       this.audio?.crash(Math.min(1, closing / 14));
       this.rig.addShake(0.3);
     }
+  }
+
+  /** Petrol pumps (refuel) and garages (repair + respray), low-fuel warnings. */
+  private updateStations(dt: number) {
+    const v = this.driving;
+    const kind = v?.def.kind;
+    const vk = kind === 'car' || kind === 'cng' || kind === 'bike' ? kind : null;
+    const f = this.focusPos;
+    const events = this.stationSys.update(dt, {
+      x: f.x,
+      z: f.z,
+      vehicle: vk,
+      speed: v ? Math.abs(v.speed) : 0,
+      fuel: v?.cond.fuel ?? 1,
+      damage: v ? totalDamage(v.cond) : 0,
+      wanted: stars(this.crime),
+      // Only a cop right at the door stops a respray (they spawn 30–55 m out)
+      copNear: this.police.copNear(f, 20),
+      taka: this.hud.taka,
+    });
+    for (const e of events) {
+      if (e.type === 'fuel' && v) {
+        v.cond.fuel = Math.min(1, v.cond.fuel + e.add);
+        this.hud.taka = Math.max(0, this.hud.taka - e.cost);
+        this.fuelSpent += e.cost;
+        this.lowFuelWarned.delete(v);
+      } else if (e.type === 'fuelDone') {
+        this.audio?.coin();
+        this.dialogue.say('pumpBoy', e.reason === 'full' ? 'fuelFull' : 'fuelBroke', null);
+        this.fuelSpent = 0;
+      } else if (e.type === 'service' && v) {
+        this.hud.taka = Math.max(0, this.hud.taka - e.cost);
+        if (e.repaired) {
+          v.cond.damage = { front: 0, rear: 0, left: 0, right: 0 };
+          this.audio?.coin();
+        }
+        if (e.resprayed) {
+          this.crime.heat = 0;
+          this.crime.calm = 0;
+          this.police.standDown();
+          v.visual.setPaint(RESPRAY_COLORS[Math.floor(Math.random() * RESPRAY_COLORS.length)]!);
+          this.hud.headline = {
+            id: ++this.headlineId,
+            text: fillHero('রং বদলে গেল! পুলিশ এখন অন্য গাড়ি খুঁজতেছে — {hero} হাওয়া', this.identity),
+          };
+        }
+        const line =
+          e.note === 'seen'
+            ? 'garageSeen'
+            : e.note === 'broke'
+              ? 'garageBroke'
+              : e.note === 'nothing'
+                ? 'garageNothing'
+                : 'garageDone';
+        this.dialogue.say('mechanic', line, null);
+      }
+      this.hudDirty = true;
+    }
+    // Status pill
+    const cur = this.stationSys.current;
+    let station: HudState['station'] = null;
+    if (cur && v) {
+      const s = cur.station;
+      const pct = Math.round(v.cond.fuel * 100);
+      const text =
+        s.type === 'pump'
+          ? cur.filling
+            ? `তেল ভরা হচ্ছে… ${pct}% · ৳${Math.round(this.fuelSpent)}`
+            : cur.wait === null
+              ? `ট্যাংক ${pct}% — রাস্তায় নামো`
+              : 'গাড়ি থামাও, তেল ভরবে'
+          : cur.wait === null
+            ? 'কাজ শেষ — বের হও'
+            : Math.abs(v.speed) < 1.5
+              ? `মেরামত ও রং হচ্ছে… ${Math.ceil(cur.wait)}`
+              : 'ভেতরে থামাও: মেরামত + রং (ওয়ান্টেড মুছে যায়)';
+      station = { type: s.type, name: s.name, text };
+    }
+    if (JSON.stringify(station) !== JSON.stringify(this.hud.station)) {
+      this.hud.station = station;
+      this.hudDirty = true;
+    }
+    // Low fuel
+    if (v && v.cond.fuel < 0.15 && !this.lowFuelWarned.has(v)) {
+      this.lowFuelWarned.add(v);
+      if (!this.overlay)
+        this.dialogue.say('hero', v.cond.fuel <= 0 ? 'outOfFuel' : 'lowFuel', this.hero);
+    }
+  }
+
+  /** Testing/debug: set the player's cash. */
+  debugMoney(taka: number) {
+    this.hud.taka = Math.max(0, Math.round(taka));
+    this.hudDirty = true;
+  }
+
+  /** Testing/debug: set the current vehicle's fuel (0..1). */
+  debugFuel(f: number) {
+    if (this.driving) this.driving.cond.fuel = Math.max(0, Math.min(1, f));
   }
 
   /** Load-shedding at night: lights out, people complain, crimes are seen less. */
@@ -1359,6 +1483,9 @@ export class SliceScene {
       actorsDrawn: this.actorsDrawn,
       rain: Math.round(this.weather.intensity * 100) / 100,
       blackout: this.blackout.active,
+      station: this.hud.station,
+      vehicleDmg: this.driving ? totalDamage(this.driving.cond) : null,
+      fuel: this.driving ? +this.driving.cond.fuel.toFixed(3) : null,
       heat: +this.crime.heat.toFixed(2),
       target: this.traffic?.missionState
         ? {
@@ -1381,6 +1508,17 @@ export class SliceScene {
         c.state,
       ]),
       copsDown: this.police.activeCops.filter((c) => c.state === 'down').length,
+      patrolCars: this.police.cars
+        .filter((c) => c.active)
+        .map((c) => ({
+          pos: [Math.round(c.pos.x), Math.round(c.pos.z)],
+          parked: c.parked,
+          stuck: +c.stuck.toFixed(1),
+        })),
+      copList: this.police.activeCops.map((c) => ({
+        state: c.state,
+        pos: [Math.round(c.npc.position.x), Math.round(c.npc.position.z)],
+      })),
       policeCars: this.police.cars.filter((c) => c.active).length,
       overlay: this.overlay?.kind ?? null,
       mission: this.missions.active
@@ -2380,6 +2518,7 @@ export class SliceScene {
     for (const v of this.vehicles) v.visual.dispose();
     this.particles.dispose();
     this.rain.dispose();
+    this.stationProps.dispose();
     this.boards.dispose();
     this.city?.dispose();
     this.traffic?.dispose();

@@ -1,13 +1,16 @@
 import {
   DialogueFileSchema,
   QualityPresetsSchema,
+  StationsSchema,
   VehicleDefsSchema,
   type DialogueFile,
   type QualityPresets,
+  type Station,
   type VehicleDef,
 } from '@game/shared';
 import rawDialogue from './dialogue.json';
 import rawPresets from './presets.json';
+import rawStations from './stations.json';
 import rawVehicles from './vehicles.json';
 
 /** Graphics quality presets, validated at load. Edit presets.json to tune. */
@@ -18,6 +21,9 @@ export const vehicleDefs: VehicleDef[] = VehicleDefsSchema.parse(rawVehicles);
 
 /** All spoken lines (Bangla + English meaning). Edit dialogue.json to add more. */
 export const dialogue: DialogueFile = DialogueFileSchema.parse(rawDialogue);
+
+/** Petrol pumps and garages on the map. Edit stations.json to add more. */
+export const stations: Station[] = StationsSchema.parse(rawStations);
 
 export function getVehicleDef(id: string): VehicleDef {
   const def = vehicleDefs.find((v) => v.id === id);

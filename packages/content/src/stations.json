@@ -1,0 +1,56 @@
+[
+  {
+    "id": "pump-mama",
+    "type": "pump",
+    "name": "মামা ফিলিং স্টেশন",
+    "x": 89.2,
+    "z": -0.9,
+    "roadX": 75.7,
+    "roadZ": -1.0
+  },
+  {
+    "id": "pump-mirpur",
+    "type": "pump",
+    "name": "মিরপুর রোড পেট্রোল পাম্প",
+    "x": 579.3,
+    "z": -299.5,
+    "roadX": 563.3,
+    "roadZ": -299.0
+  },
+  {
+    "id": "pump-satmasjid",
+    "type": "pump",
+    "name": "সাত মসজিদ ফিলিং",
+    "x": -287.6,
+    "z": 1330.1,
+    "roadX": -275.0,
+    "roadZ": 1323.0
+  },
+  {
+    "id": "pump-adabor",
+    "type": "pump",
+    "name": "আদাবর তেলঘর",
+    "x": -212.2,
+    "z": -750.5,
+    "roadX": -221.9,
+    "roadZ": -761.3
+  },
+  {
+    "id": "garage-kalyan",
+    "type": "garage",
+    "name": "কল্যাণ মটরস — রং ও মেরামত",
+    "x": -676.6,
+    "z": 695.7,
+    "roadX": -663.8,
+    "roadZ": 691.3
+  },
+  {
+    "id": "garage-townhall",
+    "type": "garage",
+    "name": "টাউন হল অটো ওয়ার্কস",
+    "x": -69.6,
+    "z": 722.3,
+    "roadX": -70.8,
+    "roadZ": 707.9
+  }
+]

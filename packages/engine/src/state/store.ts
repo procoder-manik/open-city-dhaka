@@ -78,6 +78,8 @@ export const createGameStore = (tier: QualityTier) =>
     missionBlips: [],
     missionsDone: 0,
     missionsTotal: 15,
+    station: null,
+    stations: [],
     heading: 0,
     area: 'তাজমহল রোড, মোহাম্মদপুর',
     muted: false,

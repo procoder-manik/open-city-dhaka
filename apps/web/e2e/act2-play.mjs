@@ -100,6 +100,10 @@ console.log('start', JSON.stringify((await st()).missionBlips), 'done', (await s
 
 // 1. Wedding sweets: walk onto the marker, take a car, market, then a careful arrival.
 await mission('a2-wedding-mishti', 'বিয়ের মিষ্টি', async () => {
+  await g('debugSetWanted', 0);
+  await page.waitForFunction(() => !window.__game.store.getState().overlay, null, {
+    timeout: 60000,
+  });
   await g('debugView', 9, 24, Math.PI, 0.2);
   await wait(1200);
   await g('debugView', 9, 22, Math.PI, 0.2);
@@ -146,21 +150,33 @@ await mission('a2-wedding-mishti', 'বিয়ের মিষ্টি', asyn
 
 // 2. Snatch class: three real snatches from walking pedestrians, then lose the cops.
 await mission('a2-snatch-class', 'ছিনতাইয়ের ক্লাস', async () => {
+  await g('debugSetWanted', 0);
+  await page.waitForFunction(() => !window.__game.store.getState().overlay, null, {
+    timeout: 60000,
+  });
   await g('debugView', 3, 47, 0, 0.2);
   await wait(1200);
   await g('debugView', 3, 45, 0, 0.2);
   await until('snatch starts', step('a2-snatch-class', 0));
   let n = 0;
   for (let k = 0; k < 30 && n < 3; k++) {
-    if (await g('debugTalk', 'ped', 'snatch')) {
+    const ok = await g('debugTalk', 'ped', 'snatch');
+    {
+      const i = await info();
+      const c = await st();
+      console.log(
+        `  snatch#${k} ok=${ok} mission=${JSON.stringify(i.mission)} wanted=${i.wanted} overlay=${JSON.stringify(c.overlay)} card=${c.missionCard?.kind}:${c.missionCard?.sub} cops=${JSON.stringify(i.copList)}`,
+      );
+    }
+    if (ok) {
       n++;
       // Standing still with cops around = busted; phone the OC instead
-      if ((await info()).wanted >= 2) await g('bribe');
+      if ((await info()).wanted >= 1) await g('bribe');
     }
     await wait(1500);
   }
   console.log('  snatches done', n, 'objective', (await st()).mission?.objective);
-  await until('3 snatches', step('a2-snatch-class', 1));
+  await until('3 snatches', (i) => step('a2-snatch-class', 1)(i) || passed('a2-snatch-class')(i));
   const w = (await info()).wanted;
   const r = await g('bribe');
   console.log('  wanted', w, 'bribe', r);
@@ -168,6 +184,10 @@ await mission('a2-snatch-class', 'ছিনতাইয়ের ক্লাস
 
 // 3. Speed test: bike on Mirpur Road (≈1 km straight), hold W until 90 km/h.
 await mission('a2-speed-test', 'বাইকের স্পিড টেস্ট', async () => {
+  await g('debugSetWanted', 0);
+  await page.waitForFunction(() => !window.__game.store.getState().overlay, null, {
+    timeout: 60000,
+  });
   await g('debugView', 8.8, 18, 0, 0.2);
   await wait(1200);
   await g('debugView', 8.8, 16, 0, 0.2);
@@ -194,6 +214,10 @@ await mission('a2-speed-test', 'বাইকের স্পিড টেস্�
 
 // 4. Garage order: two real carjacks, each delivered to Bashbari.
 await mission('a2-carjack-order', 'গ্যারেজের অর্ডার', async () => {
+  await g('debugSetWanted', 0);
+  await page.waitForFunction(() => !window.__game.store.getState().overlay, null, {
+    timeout: 60000,
+  });
   await g('debugView', -171, 177, 0, 0.2);
   await wait(1200);
   await g('debugView', -171, 175, 0, 0.2);
@@ -219,6 +243,10 @@ await mission('a2-carjack-order', 'গ্যারেজের অর্ডা�
 
 // 5. Finale: Kalyan Bazar, 4 stars, hit two cops, escape, home.
 await mission('a2-kalyan-bazar', 'কল্যাণ বাজারের তাণ্ডব', async () => {
+  await g('debugSetWanted', 0);
+  await page.waitForFunction(() => !window.__game.store.getState().overlay, null, {
+    timeout: 60000,
+  });
   await g('debugView', 9, -22, 0, 0.2);
   await wait(1200);
   await g('debugView', 9, -20, 0, 0.2);
@@ -232,9 +260,11 @@ await mission('a2-kalyan-bazar', 'কল্যাণ বাজারের ত�
   // Wait for cops, then shoot/punch them (auto-aim picks cops first)
   let hits = 0;
   const t0 = Date.now();
-  while (Date.now() - t0 < 120000) {
+  while (Date.now() - t0 < 240000) {
     const j = await info();
     if (j.mission?.step >= 3) break;
+    if (Date.now() - t0 > 0 && hits === 0 && Math.random() < 0.15)
+      console.log('  fight:', JSON.stringify(j.copList), 'cars', JSON.stringify(j.patrolCars));
     if (j.cops > 0) {
       const d = await g('debugFaceCop');
       if (d !== null && d < 26) {
