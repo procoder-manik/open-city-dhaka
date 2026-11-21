@@ -3,6 +3,7 @@ import { cdl, float, pass, vec3, vec4 } from 'three/tsl';
 import { vignette } from 'three/addons/tsl/display/CRT.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
+import type { GamePrefs } from './state/prefs';
 import type { WeatherMode } from './world/Weather';
 import type { HeroIdentity, QualityTier } from '@game/shared';
 import type { TalkOption } from './actors/Npc';
@@ -56,6 +57,7 @@ export interface Game {
   debugCarjack(): string | null;
   debugDriveTo(x: number, z: number, yaw?: number): boolean;
   debugFaceCop(): number | null;
+  debugBlackout(seconds?: number): void;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
   debugAttack(weapon: 'fist' | 'pistol' | 'grenade'): boolean;
@@ -78,6 +80,8 @@ export interface Game {
   setVoiceMode(mode: VoiceMode): void;
   /** Weather: monsoon cycle (auto), always clear, or rain now. */
   setWeather(mode: WeatherMode): void;
+  /** Haptics, auto-fire, battery saver. */
+  setPrefs(p: Partial<GamePrefs>): void;
   pause(): void;
   resume(): void;
   dispose(): void;
@@ -197,11 +201,13 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     preset.resolutionScale,
   );
   const basePixelRatio = Math.min(device.pixelRatio, preset.maxPixelRatio);
+  /** Battery saver renders at 80 % resolution. */
+  let saverRatio = 1;
 
   const applySize = () => {
     const w = Math.max(1, opts.container.clientWidth);
     const h = Math.max(1, opts.container.clientHeight);
-    renderer.setPixelRatio(basePixelRatio * dynRes.scale);
+    renderer.setPixelRatio(basePixelRatio * saverRatio * dynRes.scale);
     renderer.setSize(w, h, false);
     world.setAspect(w / h);
   };
@@ -215,7 +221,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   let frames = 0;
   let statsStart = lastTime;
   let frameMsSum = 0;
-  const minFrameMs = preset.fpsCap > 0 ? 1000 / preset.fpsCap - 1 : 0;
+  let minFrameMs = preset.fpsCap > 0 ? 1000 / preset.fpsCap - 1 : 0;
 
   const frame = (time: number) => {
     if (minFrameMs && time - lastRender < minFrameMs) return;
@@ -279,6 +285,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     debugView(x: number, z: number, yaw: number, pitch?: number) {
       world.debugView(x, z, yaw, pitch);
     },
+    debugBlackout(seconds?: number) {
+      world.debugBlackout(seconds);
+    },
     debugFaceCop() {
       return world.debugFaceCop();
     },
@@ -332,6 +341,15 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       voice.muted = muted;
       if (muted) voice.stop();
       store.setState({ muted });
+    },
+    setPrefs(p: Partial<GamePrefs>) {
+      const prefs = { ...store.getState().prefs, ...p };
+      store.setState({ prefs });
+      world.setPrefs(prefs);
+      const cap = prefs.batterySaver ? Math.min(preset.fpsCap || 30, 30) : preset.fpsCap;
+      minFrameMs = cap > 0 ? 1000 / cap - 1 : 0;
+      saverRatio = prefs.batterySaver ? 0.8 : 1;
+      applySize();
     },
     setWeather(mode: WeatherMode) {
       world.setWeather(mode);

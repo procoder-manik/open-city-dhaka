@@ -5,6 +5,10 @@ import type { HudState } from '../scenes/SliceScene';
 import type { VoiceMode } from '../audio/VoicePlayer';
 import type { WeatherMode } from '../world/Weather';
 
+export { DEFAULT_PREFS, type GamePrefs } from './prefs';
+import type { GamePrefs } from './prefs';
+import { DEFAULT_PREFS } from './prefs';
+
 export type GameStatus = 'idle' | 'loading' | 'running' | 'paused' | 'error';
 
 export interface GameState extends HudState {
@@ -22,6 +26,7 @@ export interface GameState extends HudState {
   muted: boolean;
   voiceMode: VoiceMode;
   weather: WeatherMode;
+  prefs: GamePrefs;
   voiceEffective: 'recorded' | 'device' | 'off';
   deviceBangla: boolean;
 }
@@ -78,6 +83,7 @@ export const createGameStore = (tier: QualityTier) =>
     muted: false,
     voiceMode: 'auto',
     weather: 'auto',
+    prefs: DEFAULT_PREFS,
     voiceEffective: 'off',
     deviceBangla: false,
   }));

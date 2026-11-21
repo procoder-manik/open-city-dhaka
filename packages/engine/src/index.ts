@@ -1,5 +1,6 @@
 export { createGame, type Game, type GameOptions } from './Game';
-export type { GameState, GameStatus, GameStore } from './state/store';
+export type { GamePrefs, GameState, GameStatus, GameStore } from './state/store';
+export type { WeatherMode } from './world/Weather';
 export type { Action, InputDevice } from './input/actions';
 export type { TalkOption } from './actors/Npc';
 export type { HudState, SaveData } from './scenes/SliceScene';

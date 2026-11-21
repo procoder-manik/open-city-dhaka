@@ -1224,6 +1224,78 @@
       "emotion": "angry",
       "bn": "মিষ্টির বাক্সটাও আমার মতো দুর্ভাগা!",
       "en": "Even the sweet box is as unlucky as me!"
+    },
+    {
+      "id": "hero.blackout.1",
+      "speaker": "hero",
+      "situation": "blackout",
+      "emotion": "happy",
+      "bn": "লোডশেডিং! অন্ধকারে মোস্তফার ব্যবসা ভালো চলে।",
+      "en": "Power cut! Mostofa's business does well in the dark."
+    },
+    {
+      "id": "hero.blackout.2",
+      "speaker": "hero",
+      "situation": "blackout",
+      "emotion": "smug",
+      "bn": "কারেন্ট গেছে, ক্যামেরাও গেছে। এখন আমি অদৃশ্য।",
+      "en": "Power's gone, so are the cameras. Now I'm invisible."
+    },
+    {
+      "id": "hero.blackout.3",
+      "speaker": "hero",
+      "situation": "blackout",
+      "emotion": "neutral",
+      "bn": "এই এলাকায় কারেন্ট থাকে কম, যায় বেশি।",
+      "en": "Power here mostly visits, rarely stays."
+    },
+    {
+      "id": "hero.powerBack.1",
+      "speaker": "hero",
+      "situation": "powerBack",
+      "emotion": "surprised",
+      "bn": "আরে! কারেন্ট আসছে! ঈদ নাকি আজকে?",
+      "en": "Whoa! Power's back! Is it Eid today?"
+    },
+    {
+      "id": "hero.powerBack.2",
+      "speaker": "hero",
+      "situation": "powerBack",
+      "emotion": "neutral",
+      "bn": "আলো আসছে… এবার আবার ভালো মানুষ সাজতে হবে।",
+      "en": "Lights are back… time to act innocent again."
+    },
+    {
+      "id": "pedestrian.blackout.1",
+      "speaker": "pedestrian",
+      "situation": "blackout",
+      "emotion": "angry",
+      "bn": "আবার কারেন্ট গেল! ফোনে চার্জ মাত্র তিন পার্সেন্ট!",
+      "en": "Power's gone again! My phone's at three percent!"
+    },
+    {
+      "id": "aunty.blackout.1",
+      "speaker": "aunty",
+      "situation": "blackout",
+      "emotion": "angry",
+      "bn": "ফ্রিজের মাছ সব নষ্ট হইবো! আল্লাহ এই লোডশেডিং কবে যাইবো!",
+      "en": "All the fish in the fridge will rot! When will this end!"
+    },
+    {
+      "id": "shopkeeper.blackout.1",
+      "speaker": "shopkeeper",
+      "situation": "blackout",
+      "emotion": "angry",
+      "bn": "জেনারেটর চালাও! না না, তেল নাই, মোমবাতি জ্বালাও!",
+      "en": "Start the generator! No wait, no fuel, light a candle!"
+    },
+    {
+      "id": "driver.blackout.1",
+      "speaker": "driver",
+      "situation": "blackout",
+      "emotion": "neutral",
+      "bn": "সিগন্যাল বন্ধ, এখন যে আগে যাইবো সে-ই রাজা।",
+      "en": "Signals are off; whoever goes first is king."
     }
   ]
 }

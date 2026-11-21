@@ -233,14 +233,20 @@ export class PhysicsWorld {
         const engine = cmd?.engine ?? 0;
         const brake = cmd?.brake ?? veh.def.brakeForce * 0.4; // parked: hold still
         const perDrive = veh.driveWheels.length ? engine / veh.driveWheels.length : 0;
+        const grip = cmd?.grip ?? 1;
         veh.def.wheels.forEach((_, w) => {
-          ctrl.setWheelEngineForce(w, veh.driveWheels.includes(w) ? perDrive : 0);
+          ctrl.setWheelEngineForce(
+            w,
+            veh.driveWheels.includes(w) ? perDrive * (0.6 + 0.4 * grip) : 0,
+          );
           const rear = veh.rearWheels.includes(w);
           const hb = cmd?.handbrake && rear;
-          ctrl.setWheelBrake(w, hb ? veh.def.brakeForce * 1.5 : brake);
+          // Brakes can only stop as hard as the tyres grip (wet roads → longer stops)
+          ctrl.setWheelBrake(w, (hb ? veh.def.brakeForce * 1.5 : brake) * grip);
+          ctrl.setWheelFrictionSlip(w, veh.def.frictionSlip * grip);
           ctrl.setWheelSideFrictionStiffness(
             w,
-            hb ? veh.def.sideFriction * 0.35 : veh.def.sideFriction,
+            (hb ? veh.def.sideFriction * 0.35 : veh.def.sideFriction) * grip,
           );
         });
         for (const w of veh.steerWheels) ctrl.setWheelSteering(w, cmd?.steer ?? 0);

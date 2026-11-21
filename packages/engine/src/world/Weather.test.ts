@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WeatherCycle } from './Weather';
+import { Blackout, WeatherCycle } from './Weather';
 
 const step = (w: WeatherCycle, seconds: number, dt = 0.5) => {
   const ev = [];
@@ -40,5 +40,36 @@ describe('WeatherCycle', () => {
     w.intensity = 0;
     for (let i = 0; i < 40; i++) wet = w.wetness(wet, 0.5);
     expect(wet).toBeGreaterThan(0.8);
+  });
+});
+
+describe('Blackout', () => {
+  const run = (b: Blackout, seconds: number, night: number) => {
+    const ev = [];
+    for (let t = 0; t < seconds; t += 0.25) ev.push(...b.update(0.25, night));
+    return ev;
+  };
+
+  it('only cuts the power at night, then restores it with a flicker', () => {
+    const b = new Blackout(() => 0.5, 10);
+    expect(run(b, 60, 0)).toEqual([]); // daytime: never
+    const ev = run(b, 40, 1);
+    expect(ev[0]).toEqual({ type: 'cut' });
+    expect(b.active).toBe(true);
+    expect(b.level).toBe(1);
+    const back = run(b, 40, 1);
+    expect(back.some((e) => e.type === 'restore')).toBe(true);
+    expect(b.active).toBe(false);
+    run(b, 3, 1);
+    expect(b.level).toBe(0);
+  });
+
+  it('a forced cut works any time', () => {
+    const b = new Blackout(() => 0.5, 999);
+    b.cut(5);
+    run(b, 1, 0);
+    expect(b.active).toBe(true);
+    run(b, 5, 0);
+    expect(b.active).toBe(false);
   });
 });

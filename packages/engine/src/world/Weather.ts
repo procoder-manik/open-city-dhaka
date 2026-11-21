@@ -187,3 +187,59 @@ export class Rain {
     }
   }
 }
+
+export type BlackoutEvent = { type: 'cut' } | { type: 'restore' };
+
+/**
+ * Load-shedding: at night the power goes out for a while (streetlights, shop signs and
+ * windows go dark), then comes back with a flicker. Pure logic, unit tested.
+ */
+export class Blackout {
+  /** 0 = power on … 1 = full blackout (light multiplier = 1 - level). */
+  level = 0;
+  private out = false;
+  private timer: number;
+  private flicker = 0;
+
+  constructor(
+    private rand: () => number,
+    firstAfter = 120,
+  ) {
+    this.timer = firstAfter;
+  }
+
+  get active(): boolean {
+    return this.out;
+  }
+
+  /** Force a cut now (debug / missions). */
+  cut(seconds = 30) {
+    this.out = true;
+    this.timer = seconds;
+  }
+
+  update(dt: number, night: number): BlackoutEvent[] {
+    const ev: BlackoutEvent[] = [];
+    this.timer -= dt;
+    if (this.out) {
+      if (this.timer <= 0) {
+        this.out = false;
+        this.flicker = 1.2;
+        this.timer = 150 + this.rand() * 210;
+        ev.push({ type: 'restore' });
+      }
+    } else if (this.timer <= 0) {
+      if (night > 0.5) {
+        this.cut(25 + this.rand() * 25);
+        ev.push({ type: 'cut' });
+      } else this.timer = 30; // check again later; only at night
+    }
+    if (this.out) this.level = Math.min(1, this.level + dt * 6);
+    else if (this.flicker > 0) {
+      this.flicker -= dt;
+      // Power stutters back: on/off a few times
+      this.level = this.flicker > 0 && Math.sin(this.flicker * 40) > 0.2 ? 0.8 : 0;
+    } else this.level = 0;
+    return ev;
+  }
+}

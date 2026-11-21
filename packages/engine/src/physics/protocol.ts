@@ -49,6 +49,8 @@ export interface VehicleInput {
   /** Front wheel angle (rad), positive = left. */
   steer: number;
   handbrake: boolean;
+  /** Tyre grip multiplier (1 = dry asphalt; wet roads ≈ 0.7). */
+  grip?: number;
   /** Move the vehicle instantly (carjack swap / respawn). */
   teleport?: { x: number; y: number; z: number; yaw: number };
 }

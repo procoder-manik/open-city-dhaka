@@ -156,7 +156,7 @@ test('combat + mission HUD: health, weapon, shot uses ammo, mission progress', a
   await expect(page.getByTestId('wanted')).toBeVisible();
 });
 
-test('phone: HUD editor moves the jump buttons and remembers it; weather menu', async ({
+test('phone: HUD editor + settings (weather, battery saver, subtitles) persist', async ({
   page,
 }, info) => {
   test.skip(info.project.name !== 'phone', 'touch HUD only');
@@ -170,6 +170,16 @@ test('phone: HUD editor moves the jump buttons and remembers it; weather menu', 
   await page.getByTestId('pause-btn').click();
   await page.getByTestId('weather-rain').click();
   await expect(page.getByTestId('weather-rain')).toHaveClass(/chipActive/);
+  // Settings are saved per device and re-applied after a reload
+  await page.getByTestId('pref-battery').click();
+  await page.getByTestId('subs-1.3').click();
+  await expect(page.getByTestId('pref-battery')).toHaveClass(/chipActive/);
+  const stored = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('game.settings.v1') ?? '{}'),
+  );
+  expect(stored.prefs.batterySaver).toBe(true);
+  expect(stored.weather).toBe('rain');
+  expect(stored.subtitleScale).toBe(1.3);
   await page.getByTestId('hud-edit-btn').click();
   const box = page.getByTestId('hud-box-move');
   await expect(box).toBeVisible();
@@ -186,4 +196,21 @@ test('phone: HUD editor moves the jump buttons and remembers it; weather menu', 
   await page.getByTestId('resume-btn').click();
   const jump = (await page.getByTestId('touch-jump').boundingBox())!;
   expect(jump.x).toBeLessThan(b.x);
+
+  await page.reload();
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  const after = await page.evaluate(() => {
+    const st = (
+      window as unknown as {
+        __game: { store: { getState(): { prefs: { batterySaver: boolean }; weather: string } } };
+      }
+    ).__game.store.getState();
+    return { saver: st.prefs.batterySaver, weather: st.weather };
+  });
+  expect(after).toEqual({ saver: true, weather: 'rain' });
 });

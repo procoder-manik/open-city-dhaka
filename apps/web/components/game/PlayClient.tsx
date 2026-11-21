@@ -9,6 +9,13 @@ import { useSession } from '@/lib/auth-client';
 import { CombatHud } from './CombatHud';
 import { HeroPanel, loadIdentity } from './HeroPanel';
 import { HudEditor } from './HudEditor';
+import {
+  DEFAULT_SETTINGS,
+  applySettings,
+  loadSettings,
+  saveSettings,
+  type SavedSettings,
+} from './settings';
 import { MissionHud } from './MissionHud';
 import { FullMap, Minimap } from './Minimap';
 import { fetchProfile, loadProgress, saveProfile, saveProgress } from './persistence';
@@ -134,6 +141,7 @@ export function PlayClient() {
     });
     const progress = await loadProgress(realSessionRef.current);
     if (progress) g.importSave(progress);
+    applySettings(g, loadSettings());
     gameRef.current = g;
     if (new URLSearchParams(window.location.search).has('debug')) {
       (window as unknown as { __game?: Game }).__game = g;
@@ -377,6 +385,15 @@ function GameHud({
   }, [headline]);
   const voiceMode = useGame(game, (s) => s.voiceMode);
   const weather = useGame(game, (s) => s.weather);
+  const prefs = useGame(game, (s) => s.prefs);
+  const [settings, setSettings] = useState<SavedSettings>(() =>
+    typeof window === 'undefined' ? DEFAULT_SETTINGS : loadSettings(),
+  );
+  const updateSettings = (patch: Partial<SavedSettings>) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    saveSettings(next);
+  };
   const voiceEffective = useGame(game, (s) => s.voiceEffective);
   const [showStats, setShowStats] = useState(
     () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('debug'),
@@ -495,9 +512,13 @@ function GameHud({
       )}
 
       {subtitle && (
-        <div className={styles.subtitle} data-testid="subtitle">
+        <div
+          className={styles.subtitle}
+          data-testid="subtitle"
+          style={{ fontSize: `calc(clamp(15px, 2.2vw, 20px) * ${settings.subtitleScale})` }}
+        >
           <b style={{ color: subtitle.color }}>{subtitle.name}:</b> {subtitle.text}
-          <small>{subtitle.en}</small>
+          {settings.english && <small>{subtitle.en}</small>}
         </div>
       )}
 
@@ -613,7 +634,10 @@ function GameHud({
                   key={m}
                   type="button"
                   className={`${styles.chip} ${voiceMode === m ? styles.chipActive : ''}`}
-                  onClick={() => game.setVoiceMode(m)}
+                  onClick={() => {
+                    game.setVoiceMode(m);
+                    updateSettings({ voiceMode: m });
+                  }}
                   data-testid={`voice-${m}`}
                 >
                   {label}
@@ -633,12 +657,85 @@ function GameHud({
                   key={m}
                   type="button"
                   className={`${styles.chip} ${weather === m ? styles.chipActive : ''}`}
-                  onClick={() => game.setWeather(m)}
+                  onClick={() => {
+                    game.setWeather(m);
+                    updateSettings({ weather: m });
+                  }}
                   data-testid={`weather-${m}`}
                 >
                   {label}
                 </button>
               ))}
+            </div>
+            <p className={styles.muted}>সেটিংস</p>
+            <div className={styles.menuRow} role="group" aria-label="Settings">
+              {showTouch && (
+                <button
+                  type="button"
+                  className={`${styles.chip} ${prefs.haptics ? styles.chipActive : ''}`}
+                  onClick={() => {
+                    const p = { ...prefs, haptics: !prefs.haptics };
+                    game.setPrefs(p);
+                    updateSettings({ prefs: p });
+                  }}
+                  data-testid="pref-haptics"
+                >
+                  📳 ভাইব্রেশন {prefs.haptics ? 'চালু' : 'বন্ধ'}
+                </button>
+              )}
+              {showTouch && (
+                <button
+                  type="button"
+                  className={`${styles.chip} ${prefs.autoFire ? styles.chipActive : ''}`}
+                  onClick={() => {
+                    const p = { ...prefs, autoFire: !prefs.autoFire };
+                    game.setPrefs(p);
+                    updateSettings({ prefs: p });
+                  }}
+                  data-testid="pref-autofire"
+                >
+                  🎯 অটো-ফায়ার {prefs.autoFire ? 'চালু' : 'বন্ধ'}
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${styles.chip} ${prefs.batterySaver ? styles.chipActive : ''}`}
+                onClick={() => {
+                  const p = { ...prefs, batterySaver: !prefs.batterySaver };
+                  game.setPrefs(p);
+                  updateSettings({ prefs: p });
+                }}
+                data-testid="pref-battery"
+              >
+                🔋 ব্যাটারি সেভার {prefs.batterySaver ? 'চালু' : 'বন্ধ'}
+              </button>
+            </div>
+            <div className={styles.menuRow} role="group" aria-label="Subtitles">
+              {(
+                [
+                  [0.85, 'ছোট লেখা'],
+                  [1, 'মাঝারি'],
+                  [1.3, 'বড় লেখা'],
+                ] as const
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`${styles.chip} ${settings.subtitleScale === v ? styles.chipActive : ''}`}
+                  onClick={() => updateSettings({ subtitleScale: v })}
+                  data-testid={`subs-${v}`}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`${styles.chip} ${settings.english ? styles.chipActive : ''}`}
+                onClick={() => updateSettings({ english: !settings.english })}
+                data-testid="subs-english"
+              >
+                English {settings.english ? '✓' : '✗'}
+              </button>
             </div>
             {showHelp && (
               <dl className={styles.help}>

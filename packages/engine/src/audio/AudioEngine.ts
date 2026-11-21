@@ -352,6 +352,26 @@ export class AudioEngine {
     }
   }
 
+  /** Power cut: a dying "thunk" + the city hum drops; restore: a rising buzz + generator. */
+  powerCut(out: boolean) {
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(out ? 110 : 45, t);
+    o.frequency.exponentialRampToValueAtTime(out ? 35 : 100, t + 0.5);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 600;
+    o.connect(f).connect(g).connect(this.sfx);
+    o.start(t);
+    o.stop(t + 0.65);
+    this.ambience.gain.setTargetAtTime(out ? 0.15 : 0.35, t, 0.3);
+  }
+
   private rain: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
 
   /** Rain hiss on the ambience bus; 0 stops it. */

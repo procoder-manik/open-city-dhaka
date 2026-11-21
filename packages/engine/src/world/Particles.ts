@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 
-export type ParticleKind = 'dust' | 'exhaust' | 'smoke' | 'blackSmoke' | 'debris';
+export type ParticleKind = 'dust' | 'exhaust' | 'smoke' | 'blackSmoke' | 'debris' | 'spray';
 
 interface P {
   alive: boolean;
@@ -23,6 +23,7 @@ const KIND: Record<
   smoke: { life: [1.2, 2.2], size: [0.4, 2.0], color: 0xbdbdbd, rise: 1.4, drag: 0.8 },
   blackSmoke: { life: [1.6, 2.8], size: [0.5, 2.6], color: 0x2a2a2a, rise: 1.8, drag: 0.7 },
   debris: { life: [0.6, 1.1], size: [0.08, 0.05], color: 0x3a3a3a, rise: -9, drag: 0.2 },
+  spray: { life: [0.35, 0.7], size: [0.25, 1.1], color: 0xcfd8de, rise: -1.5, drag: 2.2 },
 };
 
 function softTexture(): THREE.CanvasTexture {

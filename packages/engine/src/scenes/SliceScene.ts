@@ -7,7 +7,8 @@ import {
   type QualityPreset,
   type VehicleDef,
 } from '@game/shared';
-import { Rain, WeatherCycle, type WeatherMode } from '../world/Weather';
+import { Blackout, Rain, WeatherCycle, type WeatherMode } from '../world/Weather';
+import { DEFAULT_PREFS, type GamePrefs } from '../state/prefs';
 import { Humanoid } from '../actors/Humanoid';
 import { Npc, TALK_LABELS, defaultNpcs, type TalkOption } from '../actors/Npc';
 import { PedestrianSystem } from '../actors/PedestrianSystem';
@@ -269,6 +270,8 @@ export class SliceScene {
   private weather: WeatherCycle;
   private rain: Rain;
   private wetness = 0;
+  private prefs: GamePrefs = { ...DEFAULT_PREFS };
+  private blackout = new Blackout(seededRandom(1971));
   private particles: Particles;
   private dialogue: DialogueSystem;
   private driving: VehicleEntity | null = null;
@@ -564,7 +567,9 @@ export class SliceScene {
         v.handbrake = c.handbrake;
         v.steer = c.steer;
         burnFuel(v.cond, v.def.kind, input.move.y, dt);
-        return withTp(c);
+        // Wet roads: less traction (bikes and CNGs feel it most)
+        const grip = 1 - this.wetness * (v.def.kind === 'car' ? 0.28 : 0.38);
+        return withTp(grip < 0.99 ? { ...c, grip } : c);
       }
       v.throttle = 0;
       v.handbrake = false;
@@ -812,6 +817,7 @@ export class SliceScene {
     if (added <= 0) return;
     const strength = Math.min(1, mag / 14);
     this.audio?.crash(strength);
+    if (v === this.driving) this.haptic(Math.round(30 + strength * 90));
     this.particles.emit(
       'debris',
       v.body.renderPos.clone().add(new THREE.Vector3(0, 0.4, 0)),
@@ -1017,14 +1023,15 @@ export class SliceScene {
         this.cityBoxes = [...this.street.colliders, ...this.city.colliders()];
         this.rig.setColliders(this.cityBoxes);
       }
-      for (const nm of this.city.nightMaterials)
-        nm.material.emissiveIntensity = nm.max * this.env.night;
     }
+    this.updateBlackout(dt);
+    const lit = this.env.night * (1 - this.blackout.level);
+    if (this.city)
+      for (const nm of this.city.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
     this.updateWeather(dt);
     this.env.update(dt, focus, this.camera);
-    for (const nm of this.street.nightMaterials)
-      nm.material.emissiveIntensity = nm.max * this.env.night;
-    for (const g of this.street.nightGlows) g.material.opacity = g.max * this.env.night;
+    for (const nm of this.street.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
+    for (const g of this.street.nightGlows) g.material.opacity = g.max * lit;
     this.particles.setFogColor((this.scene.fog as THREE.Fog).color);
     this.particles.update(dt, this.camera);
     this.audio?.update(dt, this.env.night);
@@ -1033,13 +1040,42 @@ export class SliceScene {
     this.publishHud(dt);
   }
 
+  /** Load-shedding at night: lights out, people complain, crimes are seen less. */
+  private updateBlackout(dt: number) {
+    for (const e of this.blackout.update(dt, this.env.night)) {
+      if (e.type === 'cut') this.onPowerCut();
+      else {
+        this.audio?.powerCut(false);
+        if (!this.overlay) this.dialogue.say('hero', 'powerBack', this.hero, 0.3);
+      }
+    }
+  }
+
+  private onPowerCut() {
+    this.hud.headline = {
+      id: ++this.headlineId,
+      text: 'লোডশেডিং! মোহাম্মদপুরে আবার কারেন্ট নাই — অন্ধকারে কেউ কিছু দেখে না',
+    };
+    this.hudDirty = true;
+    this.audio?.powerCut(true);
+    if (!this.overlay) this.dialogue.say('hero', 'blackout', this.hero, 0.4);
+    const near = this.nearestTalker(16, 'blackout');
+    if (near) this.dialogue.say(near.def.speaker, 'blackout', near.humanoid, 2.5);
+  }
+
+  /** Testing/debug: cut the power now. */
+  debugBlackout(seconds = 30) {
+    this.blackout.cut(seconds);
+    this.onPowerCut();
+  }
+
   /** Monsoon: rain streaks, wet roads, grey sky, thunder, people complaining. */
   private updateWeather(dt: number) {
     if (this.preset.rainDrops <= 0 && this.weather.mode === 'auto') return;
     for (const e of this.weather.update(dt)) {
       if (e.type === 'rainStart') {
         if (!this.overlay) this.dialogue.say('hero', 'rainStart', this.hero, 0.6);
-        const near = this.nearestTalker(14);
+        const near = this.nearestTalker(14, 'rain');
         if (near) this.dialogue.say(near.def.speaker, 'rain', near.humanoid, 3.5);
       } else if (e.type === 'thunder') {
         this.env.flash = e.distance < 0.5 ? 1 : 0.45;
@@ -1055,6 +1091,20 @@ export class SliceScene {
     this.audio?.setRain(i * (this.driving ? 0.7 : 1));
   }
 
+  setPrefs(p: GamePrefs) {
+    this.prefs = { ...p };
+  }
+
+  /** Short vibration on phones (no-op where unsupported or turned off). */
+  private haptic(pattern: number | number[]) {
+    if (!this.prefs.haptics || typeof navigator === 'undefined' || !navigator.vibrate) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // Some browsers throw before the first user gesture
+    }
+  }
+
   setWeather(mode: WeatherMode) {
     this.weather.setMode(mode);
     if (mode === 'clear') {
@@ -1063,13 +1113,13 @@ export class SliceScene {
   }
 
   /** A pedestrian or street NPC near the player that has lines for `rain`. */
-  private nearestTalker(r: number): Npc | null {
+  private nearestTalker(r: number, situation: string): Npc | null {
     const me = this.driving ? this.driving.body.renderPos : this.player.renderPos;
     let best: Npc | null = null;
     let bd = r * r;
     const list = [...this.npcs, ...(this.peds?.active.map((p) => p.npc) ?? [])];
     for (const n of list) {
-      if (!this.dialogue.has(n.def.speaker, 'rain')) continue;
+      if (!this.dialogue.has(n.def.speaker, situation)) continue;
       const d = n.position.distanceToSquared(me);
       if (d < bd) {
         bd = d;
@@ -1123,8 +1173,14 @@ export class SliceScene {
     )
       .applyQuaternion(q)
       .add(v.body.renderPos);
-    if (skid > 0.2 || wheelspin)
+    const wet = this.wetness > 0.3;
+    if ((skid > 0.2 || wheelspin) && !wet)
       this.particles.emit('dust', rear, v.body.vel.clone().multiplyScalar(-0.1));
+    // Rooster tails of spray off wet tarmac
+    if (wet && speed > 4 && Math.random() < this.wetness * Math.min(1, speed / 12)) {
+      const up = new THREE.Vector3(0, 1.2 + speed * 0.05, 0);
+      this.particles.emit('spray', rear, v.body.vel.clone().multiplyScalar(-0.15).add(up), 2);
+    }
     if (
       v === this.driving &&
       (v.def.kind === 'cng' || v.def.kind === 'bike') &&
@@ -1260,6 +1316,8 @@ export class SliceScene {
       peds: this.peds?.active.length ?? 0,
       actorsDrawn: this.actorsDrawn,
       rain: Math.round(this.weather.intensity * 100) / 100,
+      blackout: this.blackout.active,
+      heat: +this.crime.heat.toFixed(2),
       wet: Math.round(this.wetness * 100) / 100,
       knocked: this.peds?.peds.filter((x) => x.active && x.state === 'knocked').length ?? 0,
       carjack: this.carjackCar?.kind ?? null,
@@ -1334,6 +1392,26 @@ export class SliceScene {
       else this.throwGrenade();
     }
     if (input.pressed('throw') && this.arsenal.grenades > 0) this.throwGrenade();
+    // Touch auto-fire: shoot when a cop is under the crosshair (only while wanted)
+    if (
+      this.prefs.autoFire &&
+      input.lastDevice === 'touch' &&
+      w === 'pistol' &&
+      this.arsenal.ammo > 0 &&
+      this.fireCd <= 0 &&
+      stars(this.crime) > 0 &&
+      this.autoFireTarget()
+    )
+      this.shoot();
+  }
+
+  /** A standing cop in front of the camera, within pistol range, in line of sight. */
+  private autoFireTarget(): boolean {
+    const t = this.pickAimTarget();
+    if (!t) return false;
+    return this.police.cops.some(
+      (c) => c.active && c.state !== 'down' && c.npc.position.distanceTo(t) < 2,
+    );
   }
 
   private get chest(): THREE.Vector3 {
@@ -1505,6 +1583,7 @@ export class SliceScene {
       );
     this.projectiles.shot(muzzle, end);
     this.audio?.gunshot(0);
+    this.haptic(15);
     this.rig.addShake(0.18);
     this.rig.pitch = Math.max(-0.6, this.rig.pitch - 0.015); // recoil kick
     if (hit) this.hitTarget(hit, WEAPONS.pistol.damage, Math.atan2(dir.x, dir.z), 'bullet');
@@ -1551,6 +1630,7 @@ export class SliceScene {
     const focus = this.focusPos;
     const dist = at.distanceTo(focus);
     this.audio?.explosion(dist);
+    if (dist < 25) this.haptic([60, 30, Math.round(120 - dist * 3)]);
     this.rig.addShake(Math.min(1.2, 14 / (dist + 4)));
     this.particles.emit('debris', at.clone().setY(0.3), undefined, 22);
     this.particles.emit('blackSmoke', at.clone().setY(0.6), undefined, 10);
@@ -1618,6 +1698,7 @@ export class SliceScene {
     this.health = Math.max(0, this.health - amount);
     this.hurtCalm = 0;
     this.hud.hurtId += 1;
+    this.haptic(Math.min(120, 25 + amount * 3));
     this.rig.addShake(Math.min(0.5, amount / 40));
     if (!this.driving && amount > 5) this.hero.setEmotion('angry', 2);
     if (from && !this.driving) this.particles.emit('dust', this.player.renderPos, undefined, 2);
@@ -1629,6 +1710,7 @@ export class SliceScene {
     if (this.overlay) return;
     if (this.driving) this.toggleVehicle(true);
     this.overlay = { kind: 'wasted', t: 5 };
+    this.haptic([200, 80, 300]);
     this.aiming = false;
     this.hero.aiming = false;
     this.dialogue.interrupt('hero', 'wasted', this.hero);
@@ -1640,6 +1722,7 @@ export class SliceScene {
     if (this.overlay) return;
     if (this.driving) this.toggleVehicle(true);
     this.overlay = { kind: 'busted', t: 5 };
+    this.haptic([80, 60, 80]);
     this.aiming = false;
     this.hero.aiming = false;
     this.hero.handsUp = true;
@@ -2042,7 +2125,10 @@ export class SliceScene {
 
   private crimeEvent(kind: CrimeKind) {
     const before = stars(this.crime);
+    const heat0 = this.crime.heat;
     commitCrime(this.crime, kind);
+    // In a blackout fewer people see it
+    if (this.blackout.active) this.crime.heat = heat0 + (this.crime.heat - heat0) * 0.5;
     this.missions.notifyCrime(kind);
     const text = headlineFor(kind, Math.random());
     if (text && (kind !== 'crash' || Math.random() < 0.5)) {
