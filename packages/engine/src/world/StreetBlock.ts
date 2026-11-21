@@ -648,8 +648,9 @@ export function buildStreetBlock(
     materials: { road: roadMat, walk: pathMat },
     points: {
       spawn: [roadHalf + footWidth * 0.5, curbHeight + 1.1, 0],
-      car: [roadHalf - 2.2, 0.95, 7],
-      cng: [roadHalf - 2.3, 0.95, -6],
+      // Tight to the kerb, clear of the traffic lane
+      car: [roadHalf - 1.35, 0.95, 18], // clear of the real side street at z ≈ 7
+      cng: [roadHalf - 1.15, 0.95, -6],
       bike: [roadHalf - 0.9, 0.85, 2.5],
     },
     dispose() {

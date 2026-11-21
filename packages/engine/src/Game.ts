@@ -54,6 +54,8 @@ export interface Game {
   /** Debug/tests: talk to an NPC by id from anywhere. */
   debugTalk(npcId: string, option: TalkOption): boolean;
   debugCarjack(): string | null;
+  debugDriveTo(x: number, z: number, yaw?: number): boolean;
+  debugFaceCop(): number | null;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
   debugAttack(weapon: 'fist' | 'pistol' | 'grenade'): boolean;
@@ -276,6 +278,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugView(x: number, z: number, yaw: number, pitch?: number) {
       world.debugView(x, z, yaw, pitch);
+    },
+    debugFaceCop() {
+      return world.debugFaceCop();
+    },
+    debugDriveTo(x: number, z: number, yaw?: number) {
+      return world.debugDriveTo(x, z, yaw);
     },
     debugCarjack() {
       return world.debugCarjack();

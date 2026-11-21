@@ -85,6 +85,8 @@ export interface TrafficObstacle {
   x: number;
   z: number;
   radius: number;
+  /** Vehicles: real half width, so a car parked at the kerb doesn't block the lane. */
+  halfWidth?: number;
 }
 
 const PARK_Y = -80;
@@ -304,7 +306,8 @@ export class TrafficSystem {
         const rz = o.z - c.pos.z;
         const ahead = rx * fx + rz * fz;
         if (ahead <= 0 || ahead > 14) continue;
-        if (Math.abs(rx * fz - rz * fx) > spec.half[0] + o.radius + 0.6) continue;
+        const lateral = o.halfWidth !== undefined ? o.halfWidth + 0.35 : o.radius + 0.6;
+        if (Math.abs(rx * fz - rz * fx) > spec.half[0] + lateral) continue;
         const g = ahead - spec.half[2] - o.radius;
         if (g < gap) {
           gap = g;

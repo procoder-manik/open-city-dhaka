@@ -39,7 +39,7 @@ export const ACT1: MissionDef[] = [
         vehicle: 'cng',
         text: 'একটা সিএনজি জোগাড় করো (রাস্তা থেকে ছিনিয়ে নিলেও চলবে!)',
       },
-      { kind: 'goto', x: -100, z: 670, r: 12, text: 'টাউন হল বাজারে পার্সেল পৌঁছাও' },
+      { kind: 'goto', x: -74, z: 670, r: 12, text: 'টাউন হল বাজারে পার্সেল পৌঁছাও' },
     ],
     time: 180,
     reward: { taka: 700 },
@@ -51,7 +51,7 @@ export const ACT1: MissionDef[] = [
     intro: 'শোনো মোস্তফা, প্রমোশনের জন্য খাতায় একটা "চেজ" দরকার। হইচই করো, তারপর হাওয়া! কেউ জানবে না।',
     introEn:
       'Listen Mostofa, I need a "chase" on record for my promotion. Make noise, then vanish!',
-    start: { x: 380, z: 380 },
+    start: { x: 380, z: 362 },
     requires: ['a1-cng-parcel'],
     steps: [
       { kind: 'wanted', min: 2, text: 'এলাকায় হইচই করো — ২ তারা ওয়ান্টেড হও' },
@@ -70,7 +70,7 @@ export const ACT1: MissionDef[] = [
     steps: [
       { kind: 'enter', vehicle: 'bike', text: 'মোটরসাইকেলে ওঠো' },
       { kind: 'goto', x: 3, z: 125, r: 9, text: 'চেকপয়েন্ট ১: তাজমহল রোডের মাথা' },
-      { kind: 'goto', x: -100, z: 670, r: 12, text: 'চেকপয়েন্ট ২: টাউন হল' },
+      { kind: 'goto', x: -74, z: 670, r: 12, text: 'চেকপয়েন্ট ২: টাউন হল' },
       { kind: 'goto', x: -270, z: 1330, r: 14, text: 'ফিনিশ: সাত মসজিদ রোড' },
     ],
     time: 200,

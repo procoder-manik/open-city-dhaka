@@ -1250,6 +1250,8 @@ export class SliceScene {
         id: v.def.id,
         pos: r(v.body.renderPos),
         speed: +v.speed.toFixed(2),
+        dmg: totalDamage(v.cond),
+        spare: !!v.spare,
       })),
       npcs: this.npcs.map((n) => ({ id: n.def.id, pos: r(n.position) })),
       hour: +this.env.hour.toFixed(2),
@@ -1998,16 +2000,19 @@ export class SliceScene {
     if (!this.traffic || !this.peds) return;
     const focus = this.focusPos;
     const obstacles: TrafficObstacle[] = [];
-    if (this.driving) {
-      const v = this.driving;
+    // Every street vehicle (driven, parked or abandoned) blocks traffic, so traffic never
+    // drives through a parked car (kinematic traffic would shove and wreck it).
+    for (const v of this.vehicles) {
+      if (v.body.renderPos.y < STASH_Y + 20) continue;
       obstacles.push({
         x: v.body.renderPos.x,
         z: v.body.renderPos.z,
-        radius: v.def.chassisHalfExtents[0] + 0.6,
+        radius: v.def.chassisHalfExtents[2],
+        halfWidth: v.def.chassisHalfExtents[0],
       });
-    } else {
-      obstacles.push({ x: this.player.renderPos.x, z: this.player.renderPos.z, radius: 0.5 });
     }
+    if (!this.driving)
+      obstacles.push({ x: this.player.renderPos.x, z: this.player.renderPos.z, radius: 0.5 });
     for (const p of this.peds.peds)
       if (p.active && (p.state === 'knocked' || p.state === 'getup'))
         obstacles.push({ x: p.npc.position.x, z: p.npc.position.z, radius: 0.9 });
@@ -2134,6 +2139,38 @@ export class SliceScene {
     return true;
   }
 
+  /** Testing/debug: turn the camera toward the nearest standing cop; returns its distance. */
+  debugFaceCop(): number | null {
+    const me = this.player.renderPos;
+    let best: Cop | null = null;
+    let bd = Infinity;
+    for (const c of this.police.activeCops) {
+      if (c.state === 'down') continue;
+      const d = c.npc.position.distanceTo(me);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    if (!best) return null;
+    this.rig.yaw = Math.atan2(-(best.npc.position.x - me.x), -(best.npc.position.z - me.z));
+    return +bd.toFixed(1);
+  }
+
+  /** Testing/debug: move the vehicle being driven to (x, z) facing `yaw` (keeps the player in it). */
+  debugDriveTo(x: number, z: number, yaw = 0): boolean {
+    const v = this.driving;
+    if (!v) return false;
+    const y = v.def.kind === 'bike' ? 0.85 : 0.95;
+    v.tp = { x, y, z, yaw, sent: false, frames: 0 };
+    const at = new THREE.Vector3(x, y, z);
+    v.body.snap(at);
+    v.body.quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    v.body.renderQuat.copy(v.body.quat);
+    this.rig.yaw = yaw + Math.PI;
+    return true;
+  }
+
   /** Testing/debug: put the player on foot at (x, z) with a camera yaw/pitch. */
   debugView(x: number, z: number, yaw: number, pitch = 0.2) {
     if (this.driving) this.toggleVehicle();
@@ -2146,7 +2183,18 @@ export class SliceScene {
 
   /** Testing/debug: talk to an NPC by id from anywhere. */
   debugTalk(npcId: string, option: TalkOption): boolean {
-    const npc = this.npcs.find((n) => n.def.id === npcId);
+    // 'ped' = the nearest walking pedestrian that can still be robbed
+    const npc =
+      npcId === 'ped'
+        ? ([...(this.peds?.active ?? [])]
+            .map((p) => p.npc)
+            .filter((n) => n.snatchCooldown <= 0)
+            .sort(
+              (a, b) =>
+                a.position.distanceToSquared(this.player.renderPos) -
+                b.position.distanceToSquared(this.player.renderPos),
+            )[0] ?? null)
+        : this.npcs.find((n) => n.def.id === npcId);
     if (!npc) return false;
     this.talkTarget = npc;
     return this.chooseTalk(option);

@@ -17,7 +17,7 @@ export const ACT2: MissionDef[] = [
     requires: ['a1-thana-selfie'],
     steps: [
       { kind: 'enter', vehicle: 'any', text: 'একটা গাড়ি, সিএনজি বা বাইক জোগাড় করো' },
-      { kind: 'goto', x: -55, z: 682, r: 12, text: 'টাউন হল মার্কেট থেকে মিষ্টি তোলো' },
+      { kind: 'goto', x: -74, z: 670, r: 12, text: 'টাউন হল মার্কেট থেকে মিষ্টি তোলো' },
       {
         kind: 'goto',
         x: -801,
@@ -58,7 +58,7 @@ export const ACT2: MissionDef[] = [
     steps: [
       { kind: 'enter', vehicle: 'bike', text: 'মোটরসাইকেলে ওঠো' },
       { kind: 'speed', kmh: 90, text: 'ঘণ্টায় ৯০ কিমি তোলো (সোজা রাস্তা খোঁজো!)' },
-      { kind: 'goto', x: -261, z: 1291, r: 14, text: 'সাত মসজিদ রোডে বাইক পৌঁছে দাও' },
+      { kind: 'goto', x: -271, z: 1330, r: 14, text: 'সাত মসজিদ রোডে বাইক পৌঁছে দাও' },
     ],
     time: 240,
     reward: { taka: 1300 },

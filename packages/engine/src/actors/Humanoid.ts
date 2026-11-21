@@ -709,8 +709,7 @@ export class Humanoid {
     const p = this.root.position;
     _sphere.center.set(p.x, p.y + 0.9, p.z);
     _sphere.radius = 1.3;
-    const show =
-      p.distanceToSquared(cam) < maxDist * maxDist && frustum.intersectsSphere(_sphere);
+    const show = p.distanceToSquared(cam) < maxDist * maxDist && frustum.intersectsSphere(_sphere);
     for (const m of this.meshes) m.visible = show;
     return show;
   }

@@ -521,7 +521,9 @@ function facadeQuad(
   );
   g.setAttribute(
     'uv',
-    new THREE.Float32BufferAttribute([uv[0], uv[1], uv[2], uv[1], uv[2], uv[3], uv[0], uv[3]], 2),
+    // Seen from outside (along -n) x1 is on the viewer's right, so u runs x2 → x1;
+    // otherwise Bangla signboards read mirrored.
+    new THREE.Float32BufferAttribute([uv[2], uv[1], uv[0], uv[1], uv[0], uv[3], uv[2], uv[3]], 2),
   );
   g.setAttribute(
     'normal',
