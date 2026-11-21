@@ -30,7 +30,8 @@ pnpm build && pnpm e2e
 # manual checks with screenshots (server on :3100): node apps/web/e2e/phase1-check.mjs <outDir> [tier]
 #                                                   node apps/web/e2e/drive-check.mjs <outDir>
 #                                                   node apps/web/e2e/life-check.mjs <outDir> [tier]
-#   city-check / traffic-check / combat-check / busted-check / mission-check .mjs (same usage)
+#   city-check / traffic-check / combat-check / busted-check / mission-check / weather-check / act2-check .mjs (same usage)
+#   act2-play.mjs: full Act 2 play-through (every mission start → pass, real mechanics); exits 1 on any failure
 pnpm assets:icons   # regenerate PNG icons + share card after changing brand logos
 ```
 Deploy: see `docs/12-DEPLOY.md` (Vercel + Neon, env vars in `apps/web/.env.example`).
@@ -125,6 +126,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] Touch HUD editor (`components/game/HudEditor.tsx`, `hudLayout.ts`): pause → 📱 বাটন সাজাও → drag + resize the jump/run, driving pedals, weapon and enter/exit groups; saved per device (`localStorage hud.layout.v1`)
   - [x] Perf: NPC/pedestrian/cop meshes culled by hand when off-screen or > 75 m (110 m on Medium+) (`Humanoid.cull`, `SliceScene.cullActors`); cops cast shadows only on Medium+
 - [x] **Act 2 — জাম্বু ভাইয়ের দল** (`gameplay/act2.ts`, unlocks after the Act 1 finale): বিয়ের মিষ্টি (fragile delivery Town Hall → Chanmiya Housing), ছিনতাইয়ের ক্লাস (3 snatches + escape), বাইকের স্পিড টেস্ট (90 km/h → Satmasjid Road), গ্যারেজের অর্ডার (2 carjacks → Bashbari garage), কল্যাণ বাজারের তাণ্ডব (4★ finale). New step kinds `crime` / `speed`, `goto.fragile`, `stay.headline`; `MissionSystem.notifyCrime`; fictional boss speaker `boroBhai` (জাম্বু ভাই) with pass lines; HUD mission counter now 0/10
+- [x] **Play-test pass (2026-11-21)**: `e2e/act2-play.mjs` plays all 5 Act 2 missions start → pass in the real game (real snatching, keyboard driving to 90 km/h on Mirpur Road, real carjacks, shooting cops). Fixed what it found: starter car parked in a real side-street mouth got rammed by traffic (34 % damage before you touch it) → moved + traffic yields to all street vehicles using real widths; Town Hall / Satmasjid drop-off / OC start were 20–25 m off any road → snapped onto roads; city shop signboards read mirrored → UVs fixed
+- [x] **Fresh-clone check**: clone from GitHub → `pnpm install` → typecheck, lint, 62 unit, build, 19 e2e (incl. sign-up) and `pnpm dev` all work with **no .env file** (embedded PGlite)
 
 ## ▶ NEXT STEP
 **Owner (to go live):** follow `docs/12-DEPLOY.md` — create a free Neon database and a Vercel project (root `apps/web`), set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`; optional Google OAuth. Fill `site.config.json` (donate, Google Form, socials, siteUrl). Then test on a real phone.
@@ -229,6 +232,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Self play-test of all Act 2 missions (act2-play.mjs, all pass) + 3 real bugs fixed (parked car rammed by traffic, off-road mission targets, mirrored signs); fresh-clone setup verified end to end | Owner: run locally / deploy; then Act 3 |
 | 2026-11-21 | Claude (Opus 5.5) | Act 2: 5 missions (act2.ts), crime/speed/fragile step kinds, giver pass lines, missions-done HUD fix; 62 unit + 19 e2e passing; `e2e/act2-check.mjs` | Next: real-phone test, then Act 3 |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 7 polish: monsoon rain (cycle, streaks, wet roads, grey sky, thunder, sounds, Bangla lines, menu toggle), touch HUD editor, off-screen actor culling, cop shadows Medium+; 60 unit + 19 e2e passing | Real-phone test by owner; then Act 2 |
 | 2026-11-21 | Claude (Opus 5.5) | Autonomous run (owner asleep): Phase 3 traffic/pedestrians/carjacking, Phase 4 combat + police + wasted/busted, Phase 5 mission framework + Act 1 (5 missions), Phase 6 leaderboard + account page (change password, delete) + auth-secret/DB sharing fix, Phase 7–8 legal pages, icons, SEO, deploy guide; 57 unit + 18 e2e passing | Ready for owner to deploy (docs/12-DEPLOY.md) and real-phone test |
