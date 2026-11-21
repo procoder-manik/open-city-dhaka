@@ -33,6 +33,9 @@ import { Projectiles } from '../gameplay/Projectiles';
 import { MissionSystem, type MissionEvent } from '../gameplay/Missions';
 import { MissionMarkers } from '../gameplay/MissionMarkers';
 import { ACT1 } from '../gameplay/act1';
+import { ACT2 } from '../gameplay/act2';
+
+const MISSIONS = [...ACT1, ...ACT2];
 import type { Pedestrian } from '../actors/PedestrianSystem';
 import { seededRandom } from '../world/random';
 import type { AudioEngine } from '../audio/AudioEngine';
@@ -316,7 +319,7 @@ export class SliceScene {
     missionCard: null,
     missionBlips: [],
     missionsDone: 0,
-    missionsTotal: ACT1.length,
+    missionsTotal: MISSIONS.length,
   };
   private city: CityWorld | null = null;
   private graph: RoadGraph | null = null;
@@ -325,7 +328,7 @@ export class SliceScene {
   private carjackCar: TrafficCar | null = null;
   private police: PoliceSystem;
   private projectiles = new Projectiles();
-  private missions = new MissionSystem(ACT1);
+  private missions = new MissionSystem(MISSIONS);
   private markers = new MissionMarkers();
   private cardId = 0;
   private missionHudTimer = 0;
@@ -1762,6 +1765,8 @@ export class SliceScene {
       x: f.x,
       z: f.z,
       vehicle: kind === 'car' || kind === 'cng' || kind === 'bike' ? kind : null,
+      kmh: this.driving ? Math.abs(this.driving.speed) * 3.6 : 0,
+      vehicleDamage: this.driving ? totalDamage(this.driving.cond) : 0,
       wanted: stars(this.crime),
       down: !!this.overlay,
     });
@@ -1784,7 +1789,8 @@ export class SliceScene {
       const blips = starts.map((s) => [s.x, s.z] as [number, number]);
       if (
         JSON.stringify(next) !== JSON.stringify(this.hud.mission) ||
-        blips.length !== this.hud.missionBlips.length
+        blips.length !== this.hud.missionBlips.length ||
+        this.missions.done.size !== this.hud.missionsDone
       ) {
         this.hud.mission = next;
         this.hud.missionBlips = blips;
@@ -1827,7 +1833,10 @@ export class SliceScene {
         this.crime.calm = 0;
         this.hud.headline = {
           id: ++this.headlineId,
-          text: fillHero('থানার সামনে সেলফি! {hero}-কে ধরতে পুলিশের দৌড়', this.identity),
+          text: fillHero(
+            e.headline ?? 'থানার সামনে সেলফি! {hero}-কে ধরতে পুলিশের দৌড়',
+            this.identity,
+          ),
         };
         break;
       case 'pass': {
@@ -1845,12 +1854,23 @@ export class SliceScene {
           `${e.mission.title} · +৳${r.taka}${extra ? ' · ' + extra : ''}`,
         );
         this.dialogue.interrupt('hero', 'missionPass', this.hero);
+        if (this.dialogue.has(e.mission.giver, 'missionPass'))
+          this.dialogue.say(e.mission.giver, 'missionPass', null, 2.5);
         this.audio?.coin();
         break;
       }
       case 'fail':
-        this.card('fail', 'মিশন ফেল', e.reason === 'time' ? 'সময় শেষ!' : e.mission.title);
-        if (e.reason === 'time') this.dialogue.interrupt('hero', 'missionFail', this.hero);
+        this.card(
+          'fail',
+          'মিশন ফেল',
+          e.reason === 'time'
+            ? 'সময় শেষ!'
+            : e.reason === 'damage'
+              ? 'মিষ্টি সব ভর্তা হয়ে গেছে!'
+              : e.mission.title,
+        );
+        if (e.reason === 'time' || e.reason === 'damage')
+          this.dialogue.interrupt('hero', 'missionFail', this.hero);
         break;
     }
     this.hudDirty = true;
@@ -1858,7 +1878,7 @@ export class SliceScene {
 
   /** Testing/debug: start a mission by id (anywhere) or mark it passed. */
   debugMission(id: string, pass = false): boolean {
-    const def = ACT1.find((m) => m.id === id);
+    const def = MISSIONS.find((m) => m.id === id);
     if (!def) return false;
     if (pass) {
       this.missions.done.add(id);
@@ -2018,6 +2038,7 @@ export class SliceScene {
   private crimeEvent(kind: CrimeKind) {
     const before = stars(this.crime);
     commitCrime(this.crime, kind);
+    this.missions.notifyCrime(kind);
     const text = headlineFor(kind, Math.random());
     if (text && (kind !== 'crash' || Math.random() < 0.5)) {
       this.hud.headline = { id: ++this.headlineId, text: fillHero(text, this.identity) };
@@ -2086,7 +2107,8 @@ export class SliceScene {
       this.arsenal.grenades = Math.max(0, Math.min(20, Math.floor(s.grenades)));
     if (typeof s.health === 'number') this.health = Math.max(20, Math.min(100, s.health));
     if (Array.isArray(s.missions))
-      for (const id of s.missions) if (ACT1.some((m) => m.id === id)) this.missions.done.add(id);
+      for (const id of s.missions)
+        if (MISSIONS.some((m) => m.id === id)) this.missions.done.add(id);
     if (s.crime) {
       this.crime.heat = Math.min(5, Math.max(0, s.crime.heat ?? 0));
       for (const k of Object.keys(this.crime.record) as Array<keyof typeof this.crime.record>) {

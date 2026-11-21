@@ -16,7 +16,7 @@ Goal: any feature can be improved, replaced or added **at any time** without rew
 |---|---|
 | Add a vehicle | Model → `tools/asset-pipeline` → add entry in `content/vehicles/*.json` (handling, seats, sounds, price) → it appears in traffic/shops |
 | Tune a weapon | Edit `content/weapons/*.json` (damage, recoil, fire rate, ammo, price) |
-| Add a mission | New file in `content/missions/` (objectives, triggers, dialogue ids) + dialogue in `content/dialogue/bn|en/` + optional script hook |
+| Add a mission | Today: add a `MissionDef` to an act file (`packages/engine/src/gameplay/act1.ts`, `act2.ts`, …) and list the act in `MISSIONS` in `SliceScene.ts`. Step kinds: `goto` (optional `fragile` damage limit), `enter`, `talk`, `wanted`, `lose`, `stay` (optional `heat` + `headline`), `crime` (count crimes of a kind), `speed` (km/h). Giver lines go in `content/src/dialogue.json` (speaker + `missionPass`). Ids are saved — never rename them |
 | Add a side activity | New module under `engine/activities/` implementing the `Activity` interface + data file |
 | Add a new area/district | Add OSM bounding box + landmark overrides in `tools/map-builder/zones/<zone>.json` → build → upload chunks → register zone |
 | Add a character | Outfit/mesh parts + `content/characters/*.json` (name, voice set, behaviour profile) |

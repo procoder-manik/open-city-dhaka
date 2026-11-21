@@ -12,12 +12,12 @@
 |---|---|
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
-| Current phase | **Act 1 playable: P0–P6 done, P7–P8 launch prep done → owner deploys (docs/12-DEPLOY.md)** |
+| Current phase | **Acts 1–2 playable (10 missions): P0–P6 done, P7 ~85 %, P8 launch prep done → owner deploys (docs/12-DEPLOY.md)** |
 | Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~85 % (legal/SEO/icons, rain weather, HUD editor, actor culling done; real-phone perf test left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
 | Database | **PostgreSQL (Neon) + Drizzle** via `DATABASE_URL`; embedded PGlite in `.data/` when unset (dev) |
-| Build status | `pnpm typecheck`, `lint`, `test` (60 unit), `build`, `e2e` (19 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
+| Build status | `pnpm typecheck`, `lint`, `test` (62 unit), `build`, `e2e` (19 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
 
 ## How to run
 ```bash
@@ -124,13 +124,14 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
   - [x] `world/Weather.ts`: `WeatherCycle` (pure, tested: dry spells → showers that ramp, thunder, roads dry slower than they get wet) + `Rain` (one LineSegments draw call around the camera; drops per tier = new preset field `rainDrops`); road/sidewalk materials go darker + glossier when wet; `Environment.wet/flash` greys sky + fog, dims the sun (soft shadows), lightning flash; `AudioEngine.setRain/thunder`; 9 new Bangla lines (hero `rainStart`/`thunder`, pedestrian/aunty/driver `rain`); pause menu: বর্ষাকাল (Auto) / রোদ / বৃষ্টি (`Game.setWeather`)
   - [x] Touch HUD editor (`components/game/HudEditor.tsx`, `hudLayout.ts`): pause → 📱 বাটন সাজাও → drag + resize the jump/run, driving pedals, weapon and enter/exit groups; saved per device (`localStorage hud.layout.v1`)
   - [x] Perf: NPC/pedestrian/cop meshes culled by hand when off-screen or > 75 m (110 m on Medium+) (`Humanoid.cull`, `SliceScene.cullActors`); cops cast shadows only on Medium+
+- [x] **Act 2 — জাম্বু ভাইয়ের দল** (`gameplay/act2.ts`, unlocks after the Act 1 finale): বিয়ের মিষ্টি (fragile delivery Town Hall → Chanmiya Housing), ছিনতাইয়ের ক্লাস (3 snatches + escape), বাইকের স্পিড টেস্ট (90 km/h → Satmasjid Road), গ্যারেজের অর্ডার (2 carjacks → Bashbari garage), কল্যাণ বাজারের তাণ্ডব (4★ finale). New step kinds `crime` / `speed`, `goto.fragile`, `stay.headline`; `MissionSystem.notifyCrime`; fictional boss speaker `boroBhai` (জাম্বু ভাই) with pass lines; HUD mission counter now 0/10
 
 ## ▶ NEXT STEP
 **Owner (to go live):** follow `docs/12-DEPLOY.md` — create a free Neon database and a Vercel project (root `apps/web`), set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`; optional Google OAuth. Fill `site.config.json` (donate, Google Form, socials, siteUrl). Then test on a real phone.
 
 **Next coding steps (recommended order):**
 1. Real-phone performance pass (actors are now culled off-screen; facing a crowd mobile headless ≈ 216 calls — if phones struggle, lower pools on Mobile or drop rain/shadows)
-2. Act 2 missions (new file next to `gameplay/act1.ts`), more step kinds (destroy vehicle, follow, deliver person)
+2. Act 3 (new `gameplay/act3.ts`, add to `MISSIONS` in `SliceScene.ts`); step kinds still missing: destroy a target vehicle, follow/tail a car, escort a passenger
 3. Drive-by shooting, cop cars that ram/chase as physics vehicles, helicopter at 5 stars
 4. Waterlogged-road gameplay (less grip, splashes, puddle decals), refuelling at petrol pumps, garage repair/respray to lose wanted
 5. Server-side scoring for leaderboards (currently from client saves, clamped)
@@ -228,6 +229,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-21 | Claude (Opus 5.5) | Act 2: 5 missions (act2.ts), crime/speed/fragile step kinds, giver pass lines, missions-done HUD fix; 62 unit + 19 e2e passing; `e2e/act2-check.mjs` | Next: real-phone test, then Act 3 |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 7 polish: monsoon rain (cycle, streaks, wet roads, grey sky, thunder, sounds, Bangla lines, menu toggle), touch HUD editor, off-screen actor culling, cop shadows Medium+; 60 unit + 19 e2e passing | Real-phone test by owner; then Act 2 |
 | 2026-11-21 | Claude (Opus 5.5) | Autonomous run (owner asleep): Phase 3 traffic/pedestrians/carjacking, Phase 4 combat + police + wasted/busted, Phase 5 mission framework + Act 1 (5 missions), Phase 6 leaderboard + account page (change password, delete) + auth-secret/DB sharing fix, Phase 7–8 legal pages, icons, SEO, deploy guide; 57 unit + 18 e2e passing | Ready for owner to deploy (docs/12-DEPLOY.md) and real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Phase 2: OSM fetch (Overpass mirrors) + map builder (anchor on Tajmahal Road, chunks, colliders, minimap, POIs), CityWorld streaming (roads, sidewalks, lane dashes, extruded buildings with shops/signs, water tanks, parks, water), 18k building colliders in physics (static bodies no longer sent per frame), GTA-style rotating minimap + full map | Continuing: Phase 3 traffic & pedestrians |

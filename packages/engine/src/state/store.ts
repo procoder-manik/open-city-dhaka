@@ -72,7 +72,7 @@ export const createGameStore = (tier: QualityTier) =>
     missionCard: null,
     missionBlips: [],
     missionsDone: 0,
-    missionsTotal: 5,
+    missionsTotal: 10,
     heading: 0,
     area: 'তাজমহল রোড, মোহাম্মদপুর',
     muted: false,

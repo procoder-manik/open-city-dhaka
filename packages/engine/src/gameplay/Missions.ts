@@ -1,10 +1,24 @@
+import type { CrimeKind } from './CrimeSystem';
+
 /** Data-driven missions: steps checked against world facts each frame. Pure logic (unit tested). */
 export type MissionStep =
-  | { kind: 'goto'; x: number; z: number; r: number; text: string }
+  | {
+      kind: 'goto';
+      x: number;
+      z: number;
+      r: number;
+      text: string;
+      /** Fragile cargo: fail if the vehicle takes more than this much damage (%) on the way. */
+      fragile?: number;
+    }
   | { kind: 'enter'; vehicle: 'car' | 'cng' | 'bike' | 'any'; text: string }
   | { kind: 'talk'; npc: string; option: string; x: number; z: number; text: string }
   | { kind: 'wanted'; min: number; text: string }
   | { kind: 'lose'; text: string }
+  /** Commit `count` crimes of a kind (counted from when the step starts). */
+  | { kind: 'crime'; crime: CrimeKind; count: number; text: string }
+  /** Reach a speed (km/h) in a vehicle. */
+  | { kind: 'speed'; kmh: number; text: string }
   | {
       kind: 'stay';
       x: number;
@@ -14,6 +28,8 @@ export type MissionStep =
       text: string;
       /** Raise the wanted level when done (the finale). */
       heat?: number;
+      /** Headline shown when the heat hits ({hero} placeholder allowed). */
+      headline?: string;
     };
 
 export interface MissionReward {
@@ -47,6 +63,10 @@ export interface WorldFacts {
   wanted: number;
   /** Player can't act (wasted/busted). */
   down: boolean;
+  /** Vehicle speed in km/h (0 on foot). */
+  kmh?: number;
+  /** Current vehicle's overall damage 0–100 (0 on foot). */
+  vehicleDamage?: number;
 }
 
 export type MissionEvent =
@@ -54,13 +74,17 @@ export type MissionEvent =
   | { type: 'step'; mission: MissionDef; step: MissionStep; index: number }
   | { type: 'pass'; mission: MissionDef }
   | { type: 'fail'; mission: MissionDef; reason: string }
-  | { type: 'heat'; amount: number };
+  | { type: 'heat'; amount: number; headline?: string };
 
 export interface ActiveMission {
   def: MissionDef;
   step: number;
   timeLeft: number | null;
   stay: number;
+  /** Crimes counted for a `crime` step. */
+  crimes: number;
+  /** Vehicle damage when a `fragile` step began. */
+  baseDamage: number | null;
 }
 
 const START_RADIUS = 2.6;
@@ -69,6 +93,7 @@ export class MissionSystem {
   active: ActiveMission | null = null;
   readonly done = new Set<string>();
   private talked: Array<{ npc: string; option: string }> = [];
+  private crimes: CrimeKind[] = [];
   /** Seconds before a failed/finished mission's start marker re-arms. */
   private cooldown = 0;
 
@@ -96,6 +121,7 @@ export class MissionSystem {
     if (!s) return null;
     if (s.kind === 'stay' && a.stay > 0)
       return `${s.text} (${Math.max(0, Math.ceil(s.seconds - a.stay))})`;
+    if (s.kind === 'crime' && s.count > 1) return `${s.text} (${a.crimes}/${s.count})`;
     return s.text;
   }
 
@@ -103,9 +129,21 @@ export class MissionSystem {
     this.talked.push({ npc, option });
   }
 
+  notifyCrime(kind: CrimeKind) {
+    if (this.active) this.crimes.push(kind);
+  }
+
   start(def: MissionDef): MissionEvent {
-    this.active = { def, step: 0, timeLeft: def.time ?? null, stay: 0 };
+    this.active = {
+      def,
+      step: 0,
+      timeLeft: def.time ?? null,
+      stay: 0,
+      crimes: 0,
+      baseDamage: null,
+    };
     this.talked = [];
+    this.crimes = [];
     return { type: 'start', mission: def };
   }
 
@@ -130,6 +168,7 @@ export class MissionSystem {
         }
       }
       this.talked = [];
+      this.crimes = [];
       return events;
     }
     if (f.down) {
@@ -145,6 +184,16 @@ export class MissionSystem {
         return events;
       }
     }
+    const cur = a.def.steps[a.step];
+    if (cur?.kind === 'goto' && cur.fragile !== undefined && f.vehicle) {
+      const dmg = f.vehicleDamage ?? 0;
+      if (a.baseDamage === null) a.baseDamage = dmg;
+      else if (dmg - a.baseDamage > cur.fragile) {
+        const e = this.fail('damage');
+        if (e) events.push(e);
+        return events;
+      }
+    }
     // Several instant steps may complete in one frame
     for (let guard = 0; guard < 4; guard++) {
       const s = a.def.steps[a.step];
@@ -153,7 +202,10 @@ export class MissionSystem {
       events.push({ type: 'step', mission: a.def, step: s, index: a.step });
       a.step += 1;
       a.stay = 0;
+      a.crimes = 0;
+      a.baseDamage = null;
       this.talked = [];
+      this.crimes = [];
       if (a.step >= a.def.steps.length) {
         this.done.add(a.def.id);
         this.active = null;
@@ -185,6 +237,12 @@ export class MissionSystem {
         return f.wanted >= s.min;
       case 'lose':
         return f.wanted === 0;
+      case 'crime':
+        a.crimes += this.crimes.filter((k) => k === s.crime).length;
+        this.crimes = [];
+        return a.crimes >= s.count;
+      case 'speed':
+        return f.vehicle !== null && (f.kmh ?? 0) >= s.kmh;
       case 'stay':
         if (Math.hypot(f.x - s.x, f.z - s.z) > s.r) {
           a.stay = 0;
@@ -192,7 +250,7 @@ export class MissionSystem {
         }
         a.stay += dt;
         if (a.stay < s.seconds) return false;
-        if (s.heat) events.push({ type: 'heat', amount: s.heat });
+        if (s.heat) events.push({ type: 'heat', amount: s.heat, headline: s.headline });
         return true;
     }
   }

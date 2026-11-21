@@ -49,6 +49,11 @@
       "name": "পুলিশ",
       "nameEn": "Police",
       "color": "#64b5f6"
+    },
+    "boroBhai": {
+      "name": "জাম্বু ভাই",
+      "nameEn": "Jambu Bhai",
+      "color": "#e57373"
     }
   },
   "lines": [
@@ -1195,6 +1200,30 @@
       "emotion": "angry",
       "bn": "রাস্তা না নদী? রিকশা ছাড়া এইখানে কিছু চলবো না!",
       "en": "Is this a road or a river? Only rickshaws survive here!"
+    },
+    {
+      "id": "boroBhai.missionPass.1",
+      "speaker": "boroBhai",
+      "situation": "missionPass",
+      "emotion": "smug",
+      "bn": "সাবাশ মোস্তফা! তোমারে আমি নিজের ছোট ভাইয়ের মতো… না, ছোট ভাই তো কাজ পারে না।",
+      "en": "Well done Mostofa! You're like my little brother… no, he's useless."
+    },
+    {
+      "id": "boroBhai.missionPass.2",
+      "speaker": "boroBhai",
+      "situation": "missionPass",
+      "emotion": "happy",
+      "bn": "কাজ হইছে, টাকা বিকাশে যাইবো। মানে… যাইবো, ইনশাল্লাহ।",
+      "en": "Job done, money goes by bKash. I mean… it will, eventually."
+    },
+    {
+      "id": "hero.missionFail.2",
+      "speaker": "hero",
+      "situation": "missionFail",
+      "emotion": "angry",
+      "bn": "মিষ্টির বাক্সটাও আমার মতো দুর্ভাগা!",
+      "en": "Even the sweet box is as unlucky as me!"
     }
   ]
 }

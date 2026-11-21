@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACT1 } from './act1';
+import { ACT2 } from './act2';
 import { MissionSystem, type MissionDef, type WorldFacts } from './Missions';
 
 const DEF: MissionDef = {
@@ -65,15 +66,68 @@ describe('MissionSystem', () => {
     expect(m2.active).toBeNull();
   });
 
-  it('Act 1 is well formed: unique ids, requirements exist, rewards positive', () => {
-    const ids = new Set(ACT1.map((d) => d.id));
-    expect(ids.size).toBe(ACT1.length);
-    for (const d of ACT1) {
+  it('Acts 1–2 are well formed: unique ids, requirements exist, rewards positive', () => {
+    const ALL = [...ACT1, ...ACT2];
+    const ids = new Set(ALL.map((d) => d.id));
+    expect(ids.size).toBe(ALL.length);
+    for (const d of ALL) {
       expect(d.steps.length).toBeGreaterThan(0);
       expect(d.reward.taka).toBeGreaterThan(0);
       for (const r of d.requires ?? []) expect(ids.has(r)).toBe(true);
     }
-    const m = new MissionSystem(ACT1);
+    const m = new MissionSystem(ALL);
     expect(m.available().length).toBeGreaterThan(0);
+    // Act 2 unlocks only after the Act 1 finale
+    expect(m.available().some((d) => d.id.startsWith('a2-'))).toBe(false);
+    for (const d of ACT1) m.done.add(d.id);
+    expect(m.available().map((d) => d.id)).toEqual(['a2-wedding-mishti']);
+  });
+
+  it('crime steps count only crimes of that kind after the step starts', () => {
+    const def: MissionDef = {
+      id: 'c',
+      title: 'c',
+      giver: 'hero',
+      intro: '',
+      start: { x: 0, z: 0 },
+      steps: [
+        { kind: 'crime', crime: 'snatch', count: 2, text: 'snatch' },
+        { kind: 'speed', kmh: 80, text: 'fast' },
+      ],
+      reward: { taka: 1 },
+    };
+    const m = new MissionSystem([def]);
+    m.notifyCrime('snatch'); // before start: ignored
+    m.update(0.1, at(0, 0));
+    m.notifyCrime('snatch');
+    m.notifyCrime('assault');
+    m.update(0.1, at(0, 0));
+    expect(m.objective()).toBe('snatch (1/2)');
+    m.notifyCrime('snatch');
+    m.update(0.1, at(0, 0));
+    expect(m.active?.step).toBe(1);
+    m.update(0.1, at(0, 0, { kmh: 120 })); // on foot doesn't count
+    expect(m.active?.step).toBe(1);
+    const ev = m.update(0.1, at(0, 0, { vehicle: 'bike', kmh: 85 }));
+    expect(ev.some((e) => e.type === 'pass')).toBe(true);
+  });
+
+  it('fragile cargo fails when the vehicle takes too much damage', () => {
+    const def: MissionDef = {
+      id: 'f',
+      title: 'f',
+      giver: 'hero',
+      intro: '',
+      start: { x: 0, z: 0 },
+      steps: [{ kind: 'goto', x: 500, z: 0, r: 5, fragile: 15, text: 'careful' }],
+      reward: { taka: 1 },
+    };
+    const m = new MissionSystem([def]);
+    m.update(0.1, at(0, 0));
+    m.update(0.1, at(10, 0, { vehicle: 'car', vehicleDamage: 20 })); // old dents don't count
+    m.update(0.1, at(20, 0, { vehicle: 'car', vehicleDamage: 30 }));
+    expect(m.active).not.toBeNull();
+    const ev = m.update(0.1, at(30, 0, { vehicle: 'car', vehicleDamage: 40 }));
+    expect(ev[0]).toMatchObject({ type: 'fail', reason: 'damage' });
   });
 });
