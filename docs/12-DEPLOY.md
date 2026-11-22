@@ -9,6 +9,9 @@ The site is one Next.js app (`apps/web`) + a free PostgreSQL database. Recommend
    (`postgresql://…-pooler…/neondb?sslmode=require`).
 2. That's it — tables are created automatically on first request (`server/db/index.ts`
    runs an idempotent bootstrap SQL). No migration step needed.
+3. Paste it into `apps/web/.env.local` as `DATABASE_URL=…` and run `pnpm db:check` — it connects
+   (without printing the string) and lists the tables. Then `pnpm dev`, sign up once at
+   `/login`, and run `pnpm db:check` again: the tables (`user`, `profile`, `save_slot`, …) appear.
 
 ## 2. Environment variables
 
@@ -30,6 +33,8 @@ Never commit `.env.local` (it is git-ignored).
 
 1. Import the GitHub repo → **Root Directory: `apps/web`** → Framework: Next.js.
 2. Install command: `pnpm install` (Vercel detects pnpm from the lockfile). Build: default.
+   Add the env var `ENABLE_EXPERIMENTAL_COREPACK=1` so Vercel uses the exact pnpm version pinned in
+   the root `package.json` (`packageManager`).
 3. Add the env vars above → Deploy.
 4. Domain: Project → Domains → add yours (free `*.vercel.app` works too).
 

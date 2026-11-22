@@ -22,7 +22,8 @@
     "assets:textures": "node tools/asset-pipeline/fetch-textures.mjs",
     "map:fetch": "node tools/map-builder/fetch-osm.mjs",
     "map:build": "node tools/map-builder/build.mjs",
-    "assets:icons": "node tools/asset-pipeline/make-icons.mjs"
+    "assets:icons": "node tools/asset-pipeline/make-icons.mjs",
+    "db:check": "pnpm --filter @game/web db:check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
