@@ -87,7 +87,8 @@ export function getAuth(): Promise<Auth> {
         },
         // Players can delete their own account (password-confirmed); saves cascade.
         user: { deleteUser: { enabled: true } },
-        rateLimit: { enabled: true, window: 60, max: 30 },
+        // Abuse protection; switched off only for the automated test server
+        rateLimit: { enabled: process.env.AUTH_RATE_LIMIT !== 'off', window: 60, max: 30 },
         advanced: { useSecureCookies: isProd && !!process.env.VERCEL },
       }) as unknown as Auth,
   );

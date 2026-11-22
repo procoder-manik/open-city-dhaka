@@ -21,8 +21,9 @@ export async function createRenderer(
   });
   await renderer.init();
 
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  // Khronos PBR Neutral: true colours and brightness (ACES crushed both)
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = preset.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;

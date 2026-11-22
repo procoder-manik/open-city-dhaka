@@ -96,6 +96,8 @@ const NPC_ID_BASE = 100;
 const TRAFFIC_ID_BASE = 400;
 const POLICE_ID_BASE = 450;
 const STASH_ID = 990;
+/** Easy keyboard controls: turn speed (rad/s) for A/D. */
+const EASY_TURN = 2.8;
 const STATION_ID_BASE = 900;
 const RESPRAY_COLORS = [0x1d5c96, 0x8a1d1d, 0x2f6b3a, 0x202020, 0xd9d2c0, 0x6b2f80];
 const STATIC_ID_BASE = 1000;
@@ -150,6 +152,8 @@ export interface HudState {
   publicLove: number;
   subtitle: Subtitle | null;
   talk: { name: string; options: Array<{ id: TalkOption; label: string }> } | null;
+  /** Someone to talk to nearby (menu closed): show "E — কথা বলো". */
+  talkHint: string | null;
   fuel: number;
   damage: number;
   damageZones: Record<DamageZone, number>;
@@ -280,6 +284,8 @@ export class SliceScene {
   private rain: Rain;
   private wetness = 0;
   private ramCd = 0;
+  /** Seconds the hero keeps fists up after a punch. */
+  private guardTimer = 0;
   private stationProps: StationProps;
   private stationSys = new StationSystem(stations);
   private fuelSpent = 0;
@@ -299,6 +305,11 @@ export class SliceScene {
   private pendingTeleport: [number, number, number] | null = null;
   private nearest: VehicleEntity | null = null;
   private talkTarget: Npc | null = null;
+  /** Talk menu opened with E / the talk button. */
+  private talkOpen = false;
+  private talkToggles = 0;
+  /** This frame the hero is steered tank-style (easy keyboard controls). */
+  private easyMove = false;
   private crashBarkCooldown = 0;
   private hornOn = false;
   private hud: HudState = {
@@ -312,6 +323,7 @@ export class SliceScene {
     publicLove: 0,
     subtitle: null,
     talk: null,
+    talkHint: null,
     fuel: 1,
     damage: 0,
     damageZones: { front: 0, rear: 0, left: 0, right: 0 },
@@ -563,6 +575,7 @@ export class SliceScene {
   } {
     const frozen = !!this.overlay;
     if (!frozen && input.pressed('interact')) this.toggleVehicle();
+    if (!frozen && input.pressed('talk')) this.openTalk();
     if (!frozen && !this.driving) this.combatInput(input);
     else this.aiming = false;
 
@@ -619,13 +632,27 @@ export class SliceScene {
           ? WALK_SPEED * (mag / 0.55)
           : WALK_SPEED + (JOG_SPEED - WALK_SPEED) * ((mag - 0.55) / 0.45);
       const speed = sprint && mag > 0.1 ? SPRINT_SPEED : base;
-      const [fx, fz] = this.rig.forward;
-      const dx = mag > 0 ? (-fz * input.move.x + fx * input.move.y) / Math.max(mag, 1e-3) : 0;
-      const dz = mag > 0 ? (fx * input.move.x + fz * input.move.y) / Math.max(mag, 1e-3) : 0;
-      const len = Math.hypot(dx, dz) || 1;
       const k = 1 - Math.exp(-GROUND_ACCEL * dt);
-      this.moveVel.x += ((dx / len) * speed - this.moveVel.x) * k;
-      this.moveVel.y += ((dz / len) * speed - this.moveVel.y) * k;
+      this.easyMove =
+        this.prefs.easyControls && input.lastDevice === 'keyboard' && !this.aiming && !frozen;
+      if (this.easyMove) {
+        // Easy: A/D turn on the spot, W forward, S backward (slower). Camera follows.
+        this.facing -= input.move.x * EASY_TURN * dt;
+        const fwd = input.move.y;
+        const spd =
+          fwd >= 0 ? (sprint && fwd > 0.1 ? SPRINT_SPEED : JOG_SPEED * fwd) : WALK_SPEED * fwd;
+        const tx = Math.sin(this.facing) * spd;
+        const tz = Math.cos(this.facing) * spd;
+        this.moveVel.x += (tx - this.moveVel.x) * k;
+        this.moveVel.y += (tz - this.moveVel.y) * k;
+      } else {
+        const [fx, fz] = this.rig.forward;
+        const dx = mag > 0 ? (-fz * input.move.x + fx * input.move.y) / Math.max(mag, 1e-3) : 0;
+        const dz = mag > 0 ? (fx * input.move.x + fz * input.move.y) / Math.max(mag, 1e-3) : 0;
+        const len = Math.hypot(dx, dz) || 1;
+        this.moveVel.x += ((dx / len) * speed - this.moveVel.x) * k;
+        this.moveVel.y += ((dz / len) * speed - this.moveVel.y) * k;
+      }
       vx = this.moveVel.x;
       vz = this.moveVel.y;
     }
@@ -698,6 +725,34 @@ export class SliceScene {
   // ---------------- Talking ----------------
 
   /** Player picked a talk option (menu button or number key). */
+  /** Open / close the talk menu with the person in front (E key or the talk button). */
+  openTalk(): boolean {
+    if (this.driving) return false;
+    if (!this.talkTarget) {
+      // A step too far still counts: nearest person within a forgiving range
+      const p = this.player.renderPos;
+      let best: Npc | null = null;
+      let bd = TALK_RANGE + 1.0;
+      for (const n of this.allNpcs()) {
+        const d = Math.hypot(n.position.x - p.x, n.position.z - p.z);
+        if (d < bd) {
+          bd = d;
+          best = n;
+        }
+      }
+      if (!best) return false;
+      this.talkTarget = best;
+    }
+    this.talkOpen = !this.talkOpen;
+    this.talkToggles++;
+    if (this.talkOpen) {
+      this.talkTarget.humanoid.lookAt(this.player.renderPos);
+      this.dialogue.say(this.talkTarget.def.speaker, 'idle', this.talkTarget.humanoid);
+    }
+    this.hudDirty = true;
+    return this.talkOpen;
+  }
+
   chooseTalk(option: TalkOption): boolean {
     const npc = this.talkTarget;
     if (!npc || this.driving || !npc.options.includes(option)) return false;
@@ -915,7 +970,7 @@ export class SliceScene {
       if (this.aiming) {
         const [fx, fz] = this.rig.forward;
         this.facing += wrapAngle(Math.atan2(fx, fz) - this.facing) * (1 - Math.exp(-20 * dt));
-      } else if (this.moveVel.lengthSq() > 0.04) {
+      } else if (!this.easyMove && this.moveVel.lengthSq() > 0.04) {
         const target = Math.atan2(this.moveVel.x, this.moveVel.y);
         this.facing += wrapAngle(target - this.facing) * (1 - Math.exp(-12 * dt));
       }
@@ -950,7 +1005,10 @@ export class SliceScene {
         distance: this.aiming ? 2.3 : sprinting ? 4.1 : 3.6,
         shoulder: this.aiming ? 0.75 : 0.45,
         fov: this.aiming ? 48 : sprinting ? 68 : 60,
-        autoAlignYaw: null,
+        // Easy controls: the camera swings behind the hero by itself
+        autoAlignYaw: this.easyMove ? this.facing : null,
+        alignDelay: 0.6,
+        alignRate: 3.5,
         lookInput: input.look,
       });
 
@@ -978,6 +1036,11 @@ export class SliceScene {
           this.dialogue.interrupt(npc.def.speaker, 'bumped', npc.humanoid);
           npc.barkCooldown = 5;
         }
+      }
+      // An open conversation stays open until you really walk away (no flicker at the edge)
+      if (this.talkOpen && this.talkTarget && bestNpc !== this.talkTarget) {
+        const t = this.talkTarget.position;
+        if (Math.hypot(t.x - p.x, t.z - p.z) < TALK_RANGE + 1.5) bestNpc = this.talkTarget;
       }
       if (bestNpc !== this.talkTarget) {
         this.talkTarget = bestNpc;
@@ -1050,10 +1113,14 @@ export class SliceScene {
     }
     this.updateBlackout(dt);
     this.ramMissionCar(dt);
+    this.guardTimer = Math.max(0, this.guardTimer - dt);
+    this.hero.guard = !this.driving && this.arsenal.weapon === 'fist' && this.guardTimer > 0;
     this.updateStations(dt);
     const lit = this.env.night * (1 - this.blackout.level);
-    if (this.city)
+    if (this.city) {
       for (const nm of this.city.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
+      for (const gl of this.city.nightGlows) gl.material.opacity = gl.max * lit;
+    }
     this.updateWeather(dt);
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
@@ -1379,8 +1446,13 @@ export class SliceScene {
             ? `ছিনিয়ে নাও: ${CARJACK_NAMES[this.carjackCar.kind] ?? 'গাড়ি'}`
             : null;
     const mode = this.driving ? 'vehicle' : 'foot';
+    if (!this.talkTarget || this.driving) this.talkOpen = false;
+    const talkHint =
+      !this.driving && this.talkTarget && !this.talkOpen
+        ? (dialogue.speakers[this.talkTarget.def.speaker]?.name ?? '')
+        : null;
     const talk =
-      !this.driving && this.talkTarget
+      !this.driving && this.talkTarget && this.talkOpen
         ? {
             name: dialogue.speakers[this.talkTarget.def.speaker]?.name ?? '',
             options: this.talkTarget.options.map((id) => ({
@@ -1397,6 +1469,7 @@ export class SliceScene {
       this.hudDirty ||
       prompt !== this.hud.prompt ||
       mode !== this.hud.mode ||
+      talkHint !== this.hud.talkHint ||
       JSON.stringify(talk) !== JSON.stringify(this.hud.talk);
     if (changed || this.hudTimer <= 0) {
       const c = this.driving?.cond;
@@ -1405,6 +1478,7 @@ export class SliceScene {
         mode,
         prompt,
         talk,
+        talkHint,
         vehicleName: this.driving?.def.nameBn ?? null,
         speedKmh: this.driving ? Math.round(Math.abs(this.driving.speed) * 3.6) : 0,
         hour: this.env.hour,
@@ -1483,6 +1557,8 @@ export class SliceScene {
       actorsDrawn: this.actorsDrawn,
       rain: Math.round(this.weather.intensity * 100) / 100,
       blackout: this.blackout.active,
+      talkOpen: this.talkOpen,
+      talkToggles: this.talkToggles,
       station: this.hud.station,
       vehicleDmg: this.driving ? totalDamage(this.driving.cond) : null,
       fuel: this.driving ? +this.driving.cond.fuel.toFixed(3) : null,
@@ -1624,6 +1700,7 @@ export class SliceScene {
     if (this.fireCd > 0) return;
     this.fireCd = WEAPONS.fist.cooldown;
     this.hero.punch();
+    this.guardTimer = 4;
     const fwd = new THREE.Vector3(Math.sin(this.facing), 0, Math.cos(this.facing));
     const me = this.player.renderPos;
     let hit = false;
@@ -1650,6 +1727,7 @@ export class SliceScene {
   ) {
     if (t.cop) {
       const down = this.police.hurt(t.cop, damage, yaw);
+      if (!down) t.cop.npc.humanoid.hitReact(Math.random() < 0.5);
       this.crimeEvent('copAssault');
       if (!this.dialogue.busy || down)
         this.dialogue.interrupt('police', down ? 'hurt' : 'hit', t.cop.npc.humanoid);
@@ -1664,6 +1742,7 @@ export class SliceScene {
       this.peds.scareAll(t.pos, 12, 6);
     } else if (t.npc) {
       t.npc.fear = 1;
+      t.npc.humanoid.hitReact(Math.random() < 0.5);
       t.npc.humanoid.setEmotion('scared', 6);
       this.crimeEvent('assault');
       this.dialogue.interrupt(t.npc.def.speaker, 'threatenReply', t.npc.humanoid);

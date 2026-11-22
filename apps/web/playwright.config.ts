@@ -24,5 +24,14 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Never touch the real (Neon) database from tests: an empty DATABASE_URL beats .env.local
+    // and makes the app use the embedded PGlite DB; auth URL must match the test port.
+    env: {
+      DATABASE_URL: '',
+      PGLITE_DIR: '.data/pglite-e2e',
+      AUTH_RATE_LIMIT: 'off',
+      BETTER_AUTH_URL: `http://localhost:${PORT}`,
+      NEXT_PUBLIC_SITE_URL: `http://localhost:${PORT}`,
+    },
   },
 });

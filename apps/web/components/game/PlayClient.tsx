@@ -367,6 +367,7 @@ function GameHud({
   const subtitle = useGame(game, (s) => s.subtitle);
   const station = useGame(game, (s) => s.station);
   const talk = useGame(game, (s) => s.talk);
+  const talkHint = useGame(game, (s) => s.talkHint);
   const fuel = useGame(game, (s) => Math.round(s.fuel * 100));
   const damage = useGame(game, (s) => s.damage);
   const zones = useGame(game, (s) => s.damageZones);
@@ -523,6 +524,16 @@ function GameHud({
         </div>
       )}
 
+      {talkHint && !talk && status === 'running' && mode === 'foot' && (
+        <button
+          type="button"
+          className={styles.talkHint}
+          onClick={() => game.openTalk()}
+          data-testid="talk-hint"
+        >
+          {!showTouch && <kbd>E</kbd>}💬 কথা বলো: {talkHint}
+        </button>
+      )}
       {talk && status === 'running' && mode === 'foot' && (
         <div className={styles.talkMenu} data-testid="talk-menu">
           <div className={styles.talkName}>{talk.name}</div>
@@ -718,6 +729,20 @@ function GameHud({
               >
                 🔋 ব্যাটারি সেভার {prefs.batterySaver ? 'চালু' : 'বন্ধ'}
               </button>
+              {!showTouch && (
+                <button
+                  type="button"
+                  className={`${styles.chip} ${prefs.easyControls ? styles.chipActive : ''}`}
+                  onClick={() => {
+                    const p = { ...prefs, easyControls: !prefs.easyControls };
+                    game.setPrefs(p);
+                    updateSettings({ prefs: p });
+                  }}
+                  data-testid="pref-easy"
+                >
+                  🎮 সহজ কন্ট্রোল {prefs.easyControls ? 'চালু' : 'বন্ধ'}
+                </button>
+              )}
             </div>
             <div className={styles.menuRow} role="group" aria-label="Subtitles">
               {(
@@ -749,9 +774,9 @@ function GameHud({
             {showHelp && (
               <dl className={styles.help}>
                 <dt>হাঁটা</dt>
-                <dd>WASD / জয়স্টিক</dd>
+                <dd>W সামনে · S পেছনে · A বামে ঘোরো · D ডানে ঘোরো (অ্যারো কী-ও চলে) / জয়স্টিক</dd>
                 <dt>দৌড়</dt>
-                <dd>Shift / জয়স্টিক পুরো ঠেলো</dd>
+                <dd>Shift চেপে ধরে W / জয়স্টিক পুরো ঠেলো</dd>
                 <dt>লাফ</dt>
                 <dd>Space / ⤒</dd>
                 <dt>গাড়িতে ওঠা/নামা</dt>
@@ -763,9 +788,11 @@ function GameHud({
                 <dt>হর্ন</dt>
                 <dd>H / 📯 বাটন</dd>
                 <dt>কথা বলা</dt>
-                <dd>কারো কাছে গিয়ে 1–5 / মেনু বাটন</dd>
+                <dd>কারো কাছে গিয়ে E (বা 💬 বাটন), তারপর 1–5</dd>
+                <dt>ঘুষি / গুলি</dt>
+                <dd>Q ঘুষি · মাউস ক্লিক গুলি · X অস্ত্র বদল · G গ্রেনেড</dd>
                 <dt>ক্যামেরা</dt>
-                <dd>মাউস / ডান দিকে আঙুল টানো</dd>
+                <dd>নিজে থেকেই পেছনে থাকে; চাইলে মাউস / ডান দিকে আঙুল টানো</dd>
               </dl>
             )}
             <button

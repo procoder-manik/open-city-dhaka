@@ -12,6 +12,7 @@ export const ACTIONS = [
   'horn',
   'weapon',
   'throw',
+  'talk',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 

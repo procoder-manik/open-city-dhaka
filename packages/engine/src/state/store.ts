@@ -78,6 +78,7 @@ export const createGameStore = (tier: QualityTier) =>
     missionBlips: [],
     missionsDone: 0,
     missionsTotal: 15,
+    talkHint: null,
     station: null,
     stations: [],
     heading: 0,

@@ -69,6 +69,8 @@ export interface Game {
   debugMission(id: string, pass?: boolean): boolean;
   /** Pick a talk option for the NPC in front of the player. */
   chooseTalk(option: TalkOption): boolean;
+  /** Open/close the talk menu with the person in front (same as the E key). */
+  openTalk(): boolean;
   setMuted(muted: boolean): void;
   /** Phone the OC and pay a bribe to clear the wanted level. */
   bribe(): 'paid' | 'refused' | 'clean';
@@ -185,12 +187,12 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       // contrast + saturation, soft vignette — the cinematic open-world look.
       const graded = cdl(
         lit.rgb,
-        vec3(1.05, 1.0, 0.93),
-        vec3(-0.004, 0.0, 0.008),
-        vec3(1.06, 1.04, 1.02),
-        float(1.1),
+        vec3(1.04, 1.0, 0.96),
+        vec3(0.004, 0.004, 0.008),
+        vec3(0.94, 0.95, 0.96),
+        float(1.12),
       );
-      pipeline.outputNode = vec4(vignette(graded.rgb, float(0.32), float(0.55)), float(1));
+      pipeline.outputNode = vec4(vignette(graded.rgb, float(0.18), float(0.7)), float(1));
     } catch (err) {
       console.warn('[render] bloom unavailable:', err);
       pipeline = null;
@@ -344,6 +346,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     importSave(data: Partial<SaveData>) {
       world.importSave(data);
+    },
+    openTalk() {
+      return world.openTalk();
     },
     chooseTalk(option: TalkOption) {
       return world.chooseTalk(option);

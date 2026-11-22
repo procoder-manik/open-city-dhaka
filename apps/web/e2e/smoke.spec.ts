@@ -9,6 +9,79 @@ test('landing page shows the active brand name', async ({ page }) => {
   await expect(page.getByRole('link', { name: /খেলা শুরু/ })).toBeVisible();
 });
 
+test('desktop: E opens the talk menu; easy controls turn with A/D and walk with W', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'keyboard only');
+  await page.goto('/play?debug=1');
+  await page.getByTestId('play-btn').click();
+  await page.waitForFunction(
+    () => (window as DebugWindow).__game?.store.getState().status === 'running',
+    null,
+    { timeout: 60_000 },
+  );
+  type G = {
+    debugInfo(): { npcs: Array<{ id: string; pos: number[] }>; player: number[] };
+    debugView(x: number, z: number, yaw: number, pitch?: number): void;
+  };
+  const mofiz = await page.evaluate(
+    () =>
+      (window as unknown as { __game: G }).__game.debugInfo().npcs.find((n) => n.id === 'mofiz')!
+        .pos,
+  );
+  // Stand 1.6 m in front of him; wait until the game itself has him as the talk target
+  // (the slow test browser applies the move a few frames later)
+  await page.evaluate(
+    ([x, z]) => (window as unknown as { __game: G }).__game.debugView(x!, z!, 0, 0.2),
+    [mofiz[0]!, mofiz[2]! + 1.6] as const,
+  );
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as { __game: { debugInfo(): { talkTarget: string | null } } }
+            ).__game.debugInfo().talkTarget,
+        ),
+      { timeout: 40_000 },
+    )
+    .toBe('mofiz');
+  await expect(page.getByTestId('talk-hint')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId('talk-menu')).toHaveCount(0);
+  await page.keyboard.press('e');
+  // The software-rendered test browser runs at ~1 fps: the key lands a frame or two later
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            (
+              window as unknown as { __game: { debugInfo(): { talkOpen: boolean } } }
+            ).__game.debugInfo().talkOpen,
+        ),
+      { timeout: 40_000 },
+    )
+    .toBe(true);
+  await expect(page.getByTestId('talk-menu')).toBeVisible({ timeout: 20_000 });
+
+  // Easy controls: walk away with W; the hero moves
+  await page.evaluate(() =>
+    (window as unknown as { __game: G }).__game.debugView(3, 30, Math.PI, 0.2),
+  );
+  await page.waitForTimeout(1500);
+  const p0 = await page.evaluate(
+    () => (window as unknown as { __game: G }).__game.debugInfo().player,
+  );
+  await page.keyboard.down('w');
+  await page.waitForTimeout(3000);
+  await page.keyboard.up('w');
+  const p1 = await page.evaluate(
+    () => (window as unknown as { __game: G }).__game.debugInfo().player,
+  );
+  expect(Math.hypot(p1[0]! - p0[0]!, p1[2]! - p0[2]!)).toBeGreaterThan(0.5);
+});
+
 test('game boots: canvas renders and engine reports running', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

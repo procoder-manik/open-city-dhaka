@@ -60,6 +60,8 @@ export interface CityMaterials {
   mark: THREE.MeshStandardMaterial;
   water: THREE.MeshStandardMaterial;
   park: THREE.MeshStandardMaterial;
+  lamp: THREE.MeshStandardMaterial;
+  pool: THREE.MeshBasicMaterial;
 }
 
 /**
@@ -72,6 +74,8 @@ export class CityWorld {
   readonly group = new THREE.Group();
   readonly materials: CityMaterials;
   readonly nightMaterials: Array<{ material: THREE.MeshStandardMaterial; max: number }> = [];
+  /** Additive street-light pools on the road (opacity follows the night). */
+  readonly nightGlows: Array<{ material: THREE.MeshBasicMaterial; max: number }> = [];
   private loaded = new Map<string, LoadedChunk>();
   private loading = new Set<string>();
   private available: Set<string>;
@@ -140,7 +144,30 @@ export class CityWorld {
         new THREE.MeshStandardMaterial({ color: 0x4d6a63, roughness: 0.12, metalness: 0.2 }),
       ),
       park: keep(new THREE.MeshStandardMaterial({ color: 0x5f7f43, roughness: 1 })),
+      lamp: keep(
+        new THREE.MeshStandardMaterial({
+          color: 0xfff1cf,
+          emissive: 0xffd38a,
+          emissiveIntensity: 0,
+          roughness: 0.4,
+        }),
+      ),
+      pool: keep(
+        new THREE.MeshBasicMaterial({
+          map: keep(radialGlowTexture()),
+          color: 0xffc27a,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          fog: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+        }),
+      ),
     };
+    this.nightMaterials.push({ material: this.materials.lamp, max: 3 });
+    this.nightGlows.push({ material: this.materials.pool, max: 0.75 });
 
     // Ground under the whole map (dusty earth)
     const b = bundle.index.bounds;
@@ -253,6 +280,8 @@ export class CityWorld {
     const details = new MeshBuilder();
     const parks = new MeshBuilder();
     const water = new MeshBuilder();
+    const lamps = new MeshBuilder();
+    const pools = new MeshBuilder();
     const boxes: AABB[] = [];
 
     // ---- Roads (world-space UVs so overlapping joints never flicker) ----
@@ -271,6 +300,30 @@ export class CityWorld {
         ribbon(walks, ax, az, bx, bz, w + 5, 0.003); // sidewalks
         disc(walks, ax, az, w / 2 + 2.5, 0.003);
         const L = Math.hypot(bx - ax, bz - az);
+        // Street lamps every ~26 m, alternating sides, each with a warm pool on the road
+        if (L > 6) {
+          const ux = (bx - ax) / L;
+          const uz = (bz - az) / L;
+          const nx = -uz;
+          const nz = ux;
+          let side = rand() < 0.5 ? 1 : -1;
+          for (let s = 8 + rand() * 10; s < L - 4; s += 26) {
+            const px = ax + ux * s + nx * side * (w / 2 + 1.6);
+            const pz = az + uz * s + nz * side * (w / 2 + 1.6);
+            const hx = px - nx * side * 1.3;
+            const hz = pz - nz * side * 1.3;
+            details.box([0.18, 7.2, 0.18], [px, 3.6, pz], 0x55575a);
+            details.box(
+              [0.1, 0.1, 1.4],
+              [(px + hx) / 2, 7.15, (pz + hz) / 2],
+              0x55575a,
+              Math.atan2(nx, nz),
+            );
+            lamps.box([0.6, 0.16, 0.32], [hx, 7.05, hz], 0xffffff, Math.atan2(nx, nz));
+            glowDisc(pools, hx - nx * side * 1.2, hz - nz * side * 1.2, 8.5, y + 0.02);
+            side = -side;
+          }
+        }
         for (let s = 2; s + 3 < L; s += 9) {
           const t0 = s / L;
           const t1 = (s + 3) / L;
@@ -396,6 +449,14 @@ export class CityWorld {
     add(details, this.materials.detail, true);
     add(parks, this.materials.park);
     add(water, this.materials.water);
+    add(lamps, this.materials.lamp);
+    if (pools.count) {
+      const m = pools.build(this.materials.pool, { castShadow: false, receiveShadow: false });
+      if (m) {
+        m.renderOrder = 2;
+        group.add(m);
+      }
+    }
     return { key, group, boxes };
   }
 
@@ -437,6 +498,48 @@ function ribbon(
   const cross = (v[3]! - v[0]!) * (v[8]! - v[2]!) - (v[5]! - v[2]!) * (v[6]! - v[0]!);
   g.setIndex(cross < 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
   b.add(g);
+}
+
+/** Flat 16-gon with radial UVs (0.5, 0.5 = centre) for additive light pools. */
+function glowDisc(b: MeshBuilder, x: number, z: number, r: number, y: number) {
+  const n = 16;
+  const pos = [x, y, z];
+  const uv = [0.5, 0.5];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    pos.push(x + Math.cos(a) * r, y, z + Math.sin(a) * r);
+    uv.push(0.5 + Math.cos(a) * 0.5, 0.5 + Math.sin(a) * 0.5);
+  }
+  const idx: number[] = [];
+  for (let i = 0; i < n; i++) idx.push(0, 1 + ((i + 1) % n), 1 + i);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute(
+    'normal',
+    new THREE.Float32BufferAttribute(
+      new Array((n + 1) * 3).fill(0).map((_, i) => (i % 3 === 1 ? 1 : 0)),
+      3,
+    ),
+  );
+  g.setIndex(idx);
+  b.add(g);
+}
+
+/** Soft round light falloff for street-light pools. */
+function radialGlowTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 /** Octagon to round off road joints. */

@@ -19,6 +19,9 @@ export interface CameraFollow {
   fov: number;
   /** Heading to auto-align behind (vehicles), or null for free look. */
   autoAlignYaw: number | null;
+  /** Seconds without look input before auto-aligning (default 1.2) and how fast (default 2.5). */
+  alignDelay?: number;
+  alignRate?: number;
   lookInput: { x: number; y: number };
 }
 
@@ -68,11 +71,11 @@ export class CameraRig {
     this.idleLook = looking ? 0 : this.idleLook + dt;
 
     // Vehicles: swing back behind the heading after a moment without look input.
-    if (f.autoAlignYaw !== null && this.idleLook > 1.2) {
+    if (f.autoAlignYaw !== null && this.idleLook > (f.alignDelay ?? 1.2)) {
       const target = f.autoAlignYaw + Math.PI;
       let diff = target - this.yaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      this.yaw += diff * (1 - Math.exp(-2.5 * dt));
+      this.yaw += diff * (1 - Math.exp(-(f.alignRate ?? 2.5) * dt));
       this.pitch = damp(this.pitch, 0.22, 2, dt);
     }
 

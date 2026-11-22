@@ -16,7 +16,7 @@ export interface SavedSettings {
 const KEY = 'game.settings.v1';
 
 export const DEFAULT_SETTINGS: SavedSettings = {
-  prefs: { haptics: true, autoFire: true, batterySaver: false },
+  prefs: { haptics: true, autoFire: true, batterySaver: false, easyControls: true },
   weather: 'auto',
   voiceMode: 'auto',
   subtitleScale: 1,
@@ -34,6 +34,7 @@ export function loadSettings(): SavedSettings {
         haptics: bool(p.haptics, true),
         autoFire: bool(p.autoFire, true),
         batterySaver: bool(p.batterySaver, false),
+        easyControls: bool(p.easyControls, true),
       },
       weather: raw.weather === 'clear' || raw.weather === 'rain' ? raw.weather : 'auto',
       voiceMode: raw.voiceMode === 'device' || raw.voiceMode === 'off' ? raw.voiceMode : 'auto',

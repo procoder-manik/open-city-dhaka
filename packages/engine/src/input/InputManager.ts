@@ -14,6 +14,7 @@ const KEY_BINDINGS: Record<string, Action> = {
   KeyX: 'weapon',
   Tab: 'weapon',
   KeyG: 'throw',
+  KeyE: 'talk',
 };
 
 const MOVE_KEYS: Record<string, [number, number]> = {

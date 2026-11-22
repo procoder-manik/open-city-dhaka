@@ -7,6 +7,13 @@ export interface GamePrefs {
   autoFire: boolean;
   /** Cap at 30 FPS and lower resolution to save battery. */
   batterySaver: boolean;
+  /** Keyboard: A/D turn, W/S forward/back, camera follows behind (no mouse needed). */
+  easyControls: boolean;
 }
 
-export const DEFAULT_PREFS: GamePrefs = { haptics: true, autoFire: true, batterySaver: false };
+export const DEFAULT_PREFS: GamePrefs = {
+  haptics: true,
+  autoFire: true,
+  batterySaver: false,
+  easyControls: true,
+};
