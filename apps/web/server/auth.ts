@@ -1,3 +1,4 @@
+import { authUrl, trustedOrigins } from '@/lib/siteUrl';
 import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -63,7 +64,8 @@ export function getAuth(): Promise<Auth> {
     (db) =>
       betterAuth({
         secret: secret(),
-        baseURL: process.env.BETTER_AUTH_URL,
+        baseURL: authUrl(),
+        trustedOrigins: trustedOrigins(),
         database: drizzleAdapter(db, { provider: 'pg', schema }),
         emailAndPassword: {
           enabled: true,
