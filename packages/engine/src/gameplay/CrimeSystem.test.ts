@@ -21,22 +21,21 @@ describe('CrimeSystem', () => {
     expect(totalCrimes(s)).toBe(11);
   });
 
-  it('cools down one star after 90 s without crimes', () => {
+  it('cools down one star after 30 s without crimes', () => {
     const s = newCrimeState();
-    commitCrime(s, 'snatch');
-    commitCrime(s, 'snatch');
-    for (let t = 0; t < 91; t++) tickCrime(s, 1);
+    for (let k = 0; k < 4; k++) commitCrime(s, 'snatch'); // 4 × 0.5 = 2 stars
+    expect(stars(s)).toBe(2);
+    for (let t = 0; t < 31; t++) tickCrime(s, 1);
     expect(stars(s)).toBe(1);
   });
 
   it('bribe clears wanted only if you can pay', () => {
     const s = newCrimeState();
-    commitCrime(s, 'snatch');
-    commitCrime(s, 'snatch');
-    expect(bribeCost(s)).toBe(600);
+    for (let k = 0; k < 4; k++) commitCrime(s, 'snatch');
+    expect(bribeCost(s)).toBe(200);
     expect(payBribe(s, 100)).toBe(0);
     expect(stars(s)).toBe(2);
-    expect(payBribe(s, 1000)).toBe(600);
+    expect(payBribe(s, 1000)).toBe(200);
     expect(stars(s)).toBe(0);
   });
 

@@ -18,8 +18,10 @@ describe('vehicle condition', () => {
 
   it('ignores gentle bumps and caps damage at 100', () => {
     const c = newCondition();
-    expect(applyImpact(c, 'front', 1.5)).toBe(0);
-    for (let i = 0; i < 10; i++) applyImpact(c, 'front', 20);
+    expect(applyImpact(c, 'front', 5)).toBe(0); // bumps do nothing
+    applyImpact(c, 'front', 16); // a hard crash
+    expect(c.damage.front).toBeLessThanOrEqual(12);
+    for (let i = 0; i < 12; i++) applyImpact(c, 'front', 25);
     expect(c.damage.front).toBe(100);
     expect(totalDamage(c)).toBe(40);
   });
@@ -28,7 +30,9 @@ describe('vehicle condition', () => {
     const c = newCondition();
     expect(enginePower(c)).toBe(1);
     c.damage.front = 50;
-    expect(enginePower(c)).toBeCloseTo(0.7);
+    expect(enginePower(c)).toBe(1); // still full power when half damaged
+    c.damage.front = 80;
+    expect(enginePower(c)).toBeCloseTo(0.75);
     c.fuel = 0;
     expect(enginePower(c)).toBe(0);
   });

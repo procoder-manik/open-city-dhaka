@@ -54,7 +54,8 @@ describe('Combat', () => {
   it('scales police with stars and misses more at range', () => {
     expect(policeFor(0)).toEqual({ cops: 0, cars: 0 });
     expect(policeFor(1).cars).toBe(0);
-    expect(policeFor(5)).toEqual({ cops: 6, cars: 3 });
+    expect(policeFor(3)).toEqual({ cops: 3, cars: 0 }); // calm: no patrol cars below 4 stars
+    expect(policeFor(5)).toEqual({ cops: 5, cars: 2 });
     expect(copHitChance(5, false, 0)).toBeGreaterThan(copHitChance(25, false, 0));
     expect(copHitChance(10, true, 15)).toBeLessThan(copHitChance(10, false, 0));
   });

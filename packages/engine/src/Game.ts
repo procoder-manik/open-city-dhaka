@@ -63,6 +63,7 @@ export interface Game {
   debugFace(x: number, z: number): number;
   debugFuel(f: number): void;
   debugMoney(taka: number): void;
+  debugTraffic(): { x: number; z: number; yaw: number; flung: number } | null;
   debugBlackout(seconds?: number): void;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
@@ -304,6 +305,9 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     },
     debugBlackout(seconds?: number) {
       world.debugBlackout(seconds);
+    },
+    debugTraffic() {
+      return world.debugTraffic();
     },
     debugMoney(taka: number) {
       world.debugMoney(taka);

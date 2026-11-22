@@ -284,6 +284,8 @@ export class SliceScene {
   private rain: Rain;
   private wetness = 0;
   private ramCd = 0;
+  /** Seconds the player's car ignores impact damage (just rammed something). */
+  private impactGrace = 0;
   /** Seconds the hero keeps fists up after a punch. */
   private guardTimer = 0;
   private stationProps: StationProps;
@@ -886,6 +888,7 @@ export class SliceScene {
     v.prevVel.copy(vel);
     const mag = dv.length();
     if (mag < 2.5) return;
+    if (v === this.driving && this.impactGrace > 0) return; // our ram, not our crash
     const local = dv.clone().applyQuaternion(v.body.quat.clone().invert());
     const zone = impactZone(local.x, local.z);
     const added = applyImpact(v.cond, zone, mag, v.def.kind === 'car' ? 1.2 : 0.9);
@@ -1047,7 +1050,7 @@ export class SliceScene {
         this.hudDirty = true;
       }
       // Carjack: a stopped/slow traffic vehicle within reach (no parked one closer)
-      const cj = !best && this.traffic ? this.traffic.carjackTarget(p.x, p.z, 4.2) : null;
+      const cj = !best && this.traffic ? this.traffic.carjackTarget(p.x, p.z, 5) : null;
       const usable = cj && this.spareFor(cj) ? cj : null;
       if (usable !== this.carjackCar) {
         this.carjackCar = usable;
@@ -1113,6 +1116,7 @@ export class SliceScene {
     }
     this.updateBlackout(dt);
     this.ramMissionCar(dt);
+    this.ramTraffic(dt);
     this.guardTimer = Math.max(0, this.guardTimer - dt);
     this.hero.guard = !this.driving && this.arsenal.weapon === 'fist' && this.guardTimer > 0;
     this.updateStations(dt);
@@ -1148,6 +1152,35 @@ export class SliceScene {
         text: fillHero('হলুদ গাড়ি দাউ দাউ করে জ্বলছে! পেছনে নাকি {hero}', this.identity),
       };
     } else this.particles.emit('smoke', at, undefined, 2);
+  }
+
+  /** Ramming ordinary traffic at speed sends it flying; the player's car shrugs it off. */
+  private ramTraffic(dt: number) {
+    this.impactGrace = Math.max(0, this.impactGrace - dt);
+    const v = this.driving;
+    if (!v || !this.traffic) return;
+    const p = v.body.renderPos;
+    const vel = v.body.vel;
+    const speed = Math.hypot(vel.x, vel.z);
+    if (speed < 6) return;
+    const reach = v.def.chassisHalfExtents[2] + 3.2;
+    for (const c of this.traffic.cars) {
+      if (!c.active || c.flung || c.mission) continue;
+      const dx = c.pos.x - p.x;
+      const dz = c.pos.z - p.z;
+      const d = Math.hypot(dx, dz);
+      if (d > reach || d < 0.01) continue;
+      const closing =
+        (vel.x * dx + vel.z * dz) / d -
+        c.speed * ((Math.sin(c.yaw) * dx + Math.cos(c.yaw) * dz) / d);
+      if (closing < 6) continue;
+      this.traffic.fling(c, vel.x, vel.z);
+      this.impactGrace = 0.6;
+      this.audio?.crash(Math.min(1, closing / 15));
+      this.rig.addShake(0.35);
+      this.particles.emit('debris', c.pos.clone().setY(0.8), undefined, 10);
+      this.crimeEvent('crash');
+    }
   }
 
   /** Ramming the mission target with the player's vehicle. */
@@ -1260,6 +1293,26 @@ export class SliceScene {
       if (!this.overlay)
         this.dialogue.say('hero', v.cond.fuel <= 0 ? 'outOfFuel' : 'lowFuel', this.hero);
     }
+  }
+
+  /** Testing/debug: nearest moving traffic car (car/CNG kinds) and how many are flying. */
+  debugTraffic(): { x: number; z: number; yaw: number; flung: number } | null {
+    if (!this.traffic) return null;
+    const p = this.focusPos;
+    let best: TrafficCar | null = null;
+    let bd = Infinity;
+    for (const c of this.traffic.cars) {
+      if (!c.active || c.flung || c.mission || (c.kind !== 'car' && c.kind !== 'cng')) continue;
+      const d = Math.hypot(c.pos.x - p.x, c.pos.z - p.z);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    const flung = this.traffic.cars.filter((c) => c.active && c.flung).length;
+    return best
+      ? { x: best.pos.x, z: best.pos.z, yaw: best.yaw, flung }
+      : { x: p.x, z: p.z, yaw: 0, flung };
   }
 
   /** Testing/debug: set the player's cash. */
@@ -1699,15 +1752,30 @@ export class SliceScene {
   private punch() {
     if (this.fireCd > 0) return;
     this.fireCd = WEAPONS.fist.cooldown;
+    const me = this.player.renderPos;
+    // Auto-aim: turn to the nearest person within arm's reach (touch players can't
+    // line up a punch precisely)
+    let nearest: THREE.Vector3 | null = null;
+    let nd = 2.6;
+    for (const t of this.targets()) {
+      const d = Math.hypot(t.pos.x - me.x, t.pos.z - me.z);
+      if (d < nd) {
+        nd = d;
+        nearest = t.pos;
+      }
+    }
+    if (nearest) {
+      this.facing = Math.atan2(nearest.x - me.x, nearest.z - me.z);
+      this.hero.root.rotation.y = this.facing;
+    }
     this.hero.punch();
     this.guardTimer = 4;
     const fwd = new THREE.Vector3(Math.sin(this.facing), 0, Math.cos(this.facing));
-    const me = this.player.renderPos;
     let hit = false;
     for (const t of this.targets()) {
       const to = t.pos.clone().sub(me).setY(0);
       const d = to.length();
-      if (d > WEAPONS.fist.range || (d > 0.3 && to.normalize().dot(fwd) < 0.5)) continue;
+      if (d > 2.0 || (d > 0.3 && to.normalize().dot(fwd) < 0.5)) continue;
       hit = true;
       this.hitTarget(t, WEAPONS.fist.damage, this.facing, 'punch');
       break;
@@ -2104,7 +2172,8 @@ export class SliceScene {
     for (const c of this.police.cars)
       if (c.active) dCar = Math.min(dCar, Math.hypot(c.pos.x - focus.x, c.pos.z - focus.z));
     const s = stars(this.crime);
-    this.audio?.setSiren(this.overlay || s === 0 ? 0 : Math.max(s >= 2 ? 0.2 : 0, 1 - dCar / 140));
+    // Siren only from real patrol cars nearby (3+ stars), never a constant drone
+    this.audio?.setSiren(this.overlay || s < 3 ? 0 : Math.max(0, 1 - dCar / 140));
     if (Math.abs(this.police.arrest - this.hud.arrest) > 0.05) this.hudDirty = true;
   }
 

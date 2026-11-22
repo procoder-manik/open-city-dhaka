@@ -408,7 +408,7 @@ export class PoliceSystem {
         if (dist > 60) this.despawnCop(c);
       } else {
         // Shoot from range at 2+ stars, otherwise run in to arrest
-        const shooter = ctx.stars >= 2 && dist < 22 && dist > 3;
+        const shooter = ctx.stars >= 3 && dist < 22 && dist > 3;
         c.state = shooter ? 'shoot' : 'chase';
         // Stuck behind a building for a while → give up; a fresh cop spawns elsewhere
         if (!shooter && dist > 8) {

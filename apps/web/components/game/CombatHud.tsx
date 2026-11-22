@@ -106,6 +106,20 @@ export function CombatHud({ game, touch }: { game: Game; touch: boolean }) {
               💣
             </button>
           )}
+          <button
+            type="button"
+            className={styles.smallBtn}
+            aria-label="অস্ত্র বদলাও"
+            data-testid="touch-weapon"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              press('weapon', true);
+            }}
+            onPointerUp={() => press('weapon', false)}
+            onPointerCancel={() => press('weapon', false)}
+          >
+            🔄
+          </button>
         </div>
       )}
     </>

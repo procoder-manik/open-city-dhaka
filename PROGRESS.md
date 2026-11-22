@@ -261,3 +261,9 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 | 2026-11-20 | Claude (Opus 5.5) | Brand presets: switch name by changing `"active"` (mvp / gtb "Gaye Tel Beshi" / mwm) | Waiting for repo URL + DB choice |
 | 2026-11-20 | Claude (Opus 5.5) | Set working title MVP: Mostofa Vs Pulish via brand.config.json; rewrote story/missions for crime-career | Waiting for repo URL + DB choice before Phase 0 |
 | 2026-11-20 | Claude (Opus 5.5) | Wrote all planning docs (01–08), mobile/all-device spec, feature checklist, extend guide, handoff system; git init + first commit | Waiting for owner's name/repo/DB answers before Phase 0 |
+
+## 2026-11-22 — fix batch (police, cars, punch, touch)
+- Done: easier police (heat cools in 30 s, bribe 100/star, sirens and shooting only at 3+ stars), much tougher cars (8 crashes, 0 damage), carjack any moving car (5 m), punch auto-aim, phone joystick works as throttle in vehicles, touch weapon-switch button.
+- Checked: braking/reverse OK, 2 snatches → 2 stars → 0 after 40 s.
+- Open: ramming flings traffic only sometimes (1 of 4 head-on tries) and our car still takes some front damage (`SliceScene.ramTraffic`/`detectImpact`, grace 0.6 s). Fix next.
+- Then: shop robbery/extortion, more guns + grenades, zoom-aim, back-to-back missions, woman model + voices, car designs, bigger city, more traffic.

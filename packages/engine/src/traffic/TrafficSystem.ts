@@ -82,6 +82,8 @@ export interface TrafficCar {
   /** The mission's target vehicle (never despawned, bright yellow, can be wrecked). */
   mission: boolean;
   hp: number;
+  /** Rammed: flying / tumbling wreck (visual only, collider parked). */
+  flung: { vx: number; vy: number; vz: number; spin: number; roll: number; t: number } | null;
 }
 
 export interface TrafficObstacle {
@@ -106,6 +108,7 @@ export class TrafficSystem {
   private q = new THREE.Quaternion();
   private s = new THREE.Vector3(1, 1, 1);
   private up = new THREE.Vector3(0, 1, 0);
+  private euler = new THREE.Euler();
   /** Called when a traffic vehicle honks: (car, distance to focus). */
   onHonk: ((car: TrafficCar) => void) | null = null;
 
@@ -154,6 +157,7 @@ export class TrafficSystem {
         honkCooldown: 0,
         mission: false,
         hp: 100,
+        flung: null,
       });
     }
     this.perKind = perKind;
@@ -174,9 +178,9 @@ export class TrafficSystem {
   kinematic(): KinematicInput[] {
     return this.cars.map((c) => ({
       bodyId: c.bodyId,
-      x: c.pos.x,
-      y: c.active ? c.pos.y + 0.75 : PARK_Y,
-      z: c.active ? c.pos.z : c.slot * 12,
+      x: c.active && !c.flung ? c.pos.x : c.slot * 12,
+      y: c.active && !c.flung ? c.pos.y + 0.75 : PARK_Y,
+      z: c.active && !c.flung ? c.pos.z : c.slot * 12,
       yaw: c.yaw,
     }));
   }
@@ -308,9 +312,25 @@ export class TrafficSystem {
     this.missionState = null;
   }
 
+  /** Rammed hard: the car flies off tumbling (its collider is parked straight away). */
+  fling(c: TrafficCar, vx: number, vz: number, rand = Math.random) {
+    if (!c.active || c.flung || c.mission) return;
+    const sp = Math.hypot(vx, vz);
+    c.flung = {
+      vx: vx * 0.9,
+      vy: 3.5 + Math.min(7, sp * 0.35),
+      vz: vz * 0.9,
+      spin: (rand() - 0.5) * 6,
+      roll: 0,
+      t: 0,
+    };
+    c.speed = 0;
+  }
+
   /** Remove a car from the road (carjacked). */
   despawn(c: TrafficCar) {
     c.active = false;
+    c.flung = null;
     c.edge = null;
     c.pos.set(c.slot * 12, PARK_Y, 0);
   }
@@ -320,7 +340,7 @@ export class TrafficSystem {
     let best: TrafficCar | null = null;
     let bestD = range;
     for (const c of this.cars) {
-      if (!c.active || c.mission || !TRAFFIC_KINDS[c.kind].def || c.speed > 4) continue;
+      if (!c.active || c.mission || c.flung || !TRAFFIC_KINDS[c.kind].def) continue;
       const d = Math.hypot(c.pos.x - x, c.pos.z - z);
       if (d < bestD) {
         bestD = d;
@@ -354,6 +374,29 @@ export class TrafficSystem {
     }
 
     for (const c of this.cars) {
+      if (c.active && c.flung) {
+        // Tumbling wreck: ballistic flight, bounce, then cleared away
+        const f = c.flung;
+        f.t += dt;
+        c.pos.x += f.vx * dt;
+        c.pos.z += f.vz * dt;
+        c.pos.y += f.vy * dt;
+        f.vy -= 9.8 * dt;
+        c.yaw += f.spin * dt;
+        f.roll += f.spin * 0.8 * dt;
+        if (c.pos.y < 0) {
+          c.pos.y = 0;
+          f.vy = Math.abs(f.vy) * 0.3;
+          f.vx *= 0.6;
+          f.vz *= 0.6;
+          f.spin *= 0.6;
+        }
+        if (f.t > 5) {
+          c.flung = null;
+          this.despawn(c);
+        }
+        continue;
+      }
       if (!c.active || !c.edge) continue;
       const spec = TRAFFIC_KINDS[c.kind];
       c.honkCooldown = Math.max(0, c.honkCooldown - dt);
@@ -427,7 +470,9 @@ export class TrafficSystem {
       const i = counts.get(c.kind) ?? 0;
       if (i >= this.perKind) continue;
       counts.set(c.kind, i + 1);
-      this.q.setFromAxisAngle(this.up, c.yaw);
+      if (c.flung)
+        this.q.setFromEuler(this.euler.set(c.flung.roll * 0.6, c.yaw, c.flung.roll, 'YXZ'));
+      else this.q.setFromAxisAngle(this.up, c.yaw);
       this.m.compose(c.pos, this.q, this.s);
       mesh.setMatrixAt(i, this.m);
       mesh.setColorAt(i, c.color);

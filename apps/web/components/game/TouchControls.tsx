@@ -78,8 +78,9 @@ export function TouchControls({ input, mode, interactLabel }: Props) {
     const nx = dx / JOYSTICK_RADIUS;
     const ny = -dy / JOYSTICK_RADIUS;
     if (modeRef.current === 'vehicle') {
-      // Driving: stick steers only; gas/brake are pedal buttons on the right.
-      input.setTouchMove(nx, 0);
+      // Driving: stick steers; pushing it up/down is gas / brake-then-reverse too
+      // (the ▲/▼ pedals still work). Small dead zone so steering doesn't brake.
+      input.setTouchMove(nx, Math.abs(ny) > 0.35 ? ny : 0);
     } else {
       input.setTouchMove(nx, ny);
       input.setTouchButton('sprint', Math.hypot(nx, ny) >= AUTO_SPRINT);

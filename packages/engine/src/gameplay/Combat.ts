@@ -95,5 +95,6 @@ export function copHitChance(distance: number, inVehicle: boolean, playerSpeed: 
 /** Desired police presence for a wanted level: foot cops and patrol cars. */
 export function policeFor(stars: number): { cops: number; cars: number } {
   if (stars <= 0) return { cops: 0, cars: 0 };
-  return { cops: Math.min(6, stars + 1), cars: Math.max(0, Math.min(3, stars - 2)) };
+  // Calm by default: 1 cop per star, patrol cars only from 4 stars
+  return { cops: Math.min(5, stars), cars: Math.max(0, Math.min(2, stars - 3)) };
 }

@@ -21,7 +21,8 @@ export function totalDamage(c: VehicleCondition): number {
 export function enginePower(c: VehicleCondition): number {
   if (c.fuel <= 0) return 0;
   if (totalDamage(c) >= 100 || c.damage.front >= 100) return 0;
-  return 1 - (c.damage.front / 100) * 0.6;
+  // Power only drops once the engine is badly hurt
+  return 1 - Math.max(0, (c.damage.front - 60) / 40) * 0.5;
 }
 
 /**
@@ -41,9 +42,11 @@ export function applyImpact(
   dv: number,
   toughness = 1,
 ): number {
-  const threshold = 2.5;
+  // Tough cars (owner feedback): bumps do nothing; a hard crash costs ~5–12 %, so it
+  // takes 10+ big hits to wreck one.
+  const threshold = 6;
   if (dv <= threshold) return 0;
-  const add = Math.min(60, ((dv - threshold) * 7) / toughness);
+  const add = Math.min(12, ((dv - threshold) * 1.6) / toughness);
   c.damage[zone] = Math.min(100, c.damage[zone] + add);
   return add;
 }

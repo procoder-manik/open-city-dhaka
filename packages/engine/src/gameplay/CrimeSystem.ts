@@ -25,22 +25,24 @@ export const CRIME_KINDS: CrimeKind[] = [
 ];
 
 const STAR_WEIGHT: Record<CrimeKind, number> = {
-  snatch: 1,
-  grab: 0.5,
-  threaten: 0.3,
-  vehicleTheft: 0.5,
-  crash: 0.2,
-  carjack: 0.9,
-  hitPedestrian: 0.7,
-  assault: 0.6,
-  shooting: 1.2,
-  copAssault: 1.6,
+  // Owner feedback: police too annoying — everyday crime stays at 1 star, only real
+  // violence (guns, fighting cops) escalates.
+  snatch: 0.5,
+  grab: 0.25,
+  threaten: 0.15,
+  vehicleTheft: 0.25,
+  crash: 0.05,
+  carjack: 0.4,
+  hitPedestrian: 0.3,
+  assault: 0.3,
+  shooting: 0.6,
+  copAssault: 1,
 };
 
 /** Seconds without new crimes before one star cools off. */
-const COOL_DOWN = 90;
+const COOL_DOWN = 30;
 export const MAX_STARS = 5;
-export const BRIBE_PER_STAR = 300;
+export const BRIBE_PER_STAR = 100;
 export const GOOD_POINTS_PER_CRIME = 3;
 
 export interface CrimeState {
