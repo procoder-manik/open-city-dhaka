@@ -36,6 +36,18 @@ export default function CreditsPage() {
         (CC0)। গাড়ির ইঞ্জিন, হর্ন, সাইরেন, গুলি ও বিস্ফোরণের শব্দ গেমের ভেতরেই কোড দিয়ে তৈরি। কণ্ঠ: আগে
         থেকে তৈরি AI ভয়েস (থাকলে) অথবা তোমার ডিভাইসের টেক্সট-টু-স্পিচ।
       </p>
+      <h2>3D মডেল</h2>
+      <p>
+        মানুষের বাস্তবধর্মী 3D মডেল:{' '}
+        <a
+          href="https://grab3d.com/models/characters/man-base-character/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Grab3D — Man Base Mesh
+        </a>{' '}
+        (CC0)। গেমে কাপড়ের রং, চামড়ার রং ও অ্যানিমেশন বদলানো হয়েছে।
+      </p>
       <h2>ওপেন সোর্স</h2>
       <ul>
         {OPEN_SOURCE.map(([name, lic, url]) => (
@@ -49,8 +61,8 @@ export default function CreditsPage() {
       </ul>
       <h2>বানানো</h2>
       <p>
-        চরিত্র, গাড়ি ও শহরের সব মডেল কোড দিয়ে বানানো (প্রসিডিউরাল)। ডিজাইন ও কোডিংয়ে AI সহায়তা
-        (Claude, Anthropic) নেওয়া হয়েছে।
+        গাড়ি, শহর ও বাকি চরিত্রগুলো কোড দিয়ে বানানো (প্রসিডিউরাল)। ডিজাইন ও কোডিংয়ে AI সহায়তা (Claude,
+        Anthropic) নেওয়া হয়েছে।
       </p>
     </LegalPage>
   );

@@ -3,6 +3,7 @@ import { cdl, float, pass, vec3, vec4 } from 'three/tsl';
 import { vignette } from 'three/addons/tsl/display/CRT.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { qualityPresets } from '@game/content';
+import { preloadCharacterModel } from './actors/GltfBody';
 import type { GamePrefs } from './state/prefs';
 import type { WeatherMode } from './world/Weather';
 import type { HeroIdentity, QualityTier } from '@game/shared';
@@ -31,6 +32,8 @@ export interface GameOptions {
   createPhysicsWorker?: () => Worker;
   /** Base URL of the streamed city map (null = only the hand-built block). */
   mapBase?: string | null;
+  /** Realistic character model URL (glTF); null = procedural bodies only. */
+  characterModel?: string | null;
   /** Hero title + name (signed-in players can customise; guests get the default). */
   hero?: HeroIdentity;
   /** CSS font-family of the loaded Bangla web font (for signboards). */
@@ -152,6 +155,14 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   });
 
   // Real Mohammadpur map (OpenStreetMap). Falls back to the hand-built block if it can't load.
+  // Realistic character body (glTF, CC0). Falls back to the procedural body if it can't load.
+  const characterLoad =
+    opts.characterModel === null
+      ? Promise.resolve(null)
+      : Promise.race([
+          preloadCharacterModel(opts.characterModel ?? '/assets/characters/man.glb'),
+          new Promise<null>((res) => setTimeout(() => res(null), 12000)),
+        ]);
   let city: CityBundle | null = null;
   const mapBase = opts.mapBase === undefined ? '/assets/map/mohammadpur' : opts.mapBase;
   if (mapBase) {
@@ -165,6 +176,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     }
   }
 
+  await characterLoad;
   const world = new SliceScene(preset, (hud) => store.setState(hud), audio, voice, city);
   if (opts.hero) world.setIdentity(opts.hero);
   const physics = new PhysicsClient();

@@ -1,3 +1,4 @@
+import { GltfBody, characterModelReady, type BodyTint } from './GltfBody';
 import * as THREE from 'three/webgpu';
 
 export type Emotion = 'neutral' | 'happy' | 'angry' | 'scared' | 'smug' | 'surprised';
@@ -22,6 +23,8 @@ export interface HumanoidLook {
   height?: number;
   /** 0 = normal walk, 1 = full swagger. */
   swagger?: number;
+  /** false = always the code-built body (default: realistic model when the outfit fits). */
+  realistic?: boolean;
 }
 
 /** Hero: smart young Dhaka mastan. */
@@ -838,6 +841,59 @@ export class Humanoid {
     }
 
     this.bake();
+    this.tryRealisticBody(look);
+  }
+
+  /** Realistic glTF body for outfits it can show (T-shirt/shirt + jeans/trousers, short hair). */
+  private realBody: GltfBody | null = null;
+  private tryRealisticBody(look: HumanoidLook) {
+    const fits =
+      look.realistic !== false &&
+      (look.top.kind === 'shirtOpen' || look.top.kind === 'shirt' || look.top.kind === 'tshirt') &&
+      (look.bottom.kind === 'jeans' || look.bottom.kind === 'trousers') &&
+      look.hairStyle !== 'long';
+    if (!fits || !characterModelReady()) return;
+    try {
+      const div = (c: THREE.Color, r: number, g: number, b: number, max: number) =>
+        c.setRGB(Math.min(max, c.r / r), Math.min(max, c.g / g), Math.min(max, c.b / b));
+      const tint: BodyTint = {
+        skin: div(new THREE.Color(look.skin), 0.86, 0.64, 0.54, 1.2),
+        shirt: new THREE.Color(look.top.color),
+        pants: new THREE.Color(look.bottom.color),
+        shoes: new THREE.Color(look.shoes.color),
+      };
+      this.realBody = new GltfBody(
+        this.root,
+        {
+          hips: this.hips,
+          spine: this.spine,
+          chest: this.chest,
+          head: this.head,
+          thighL: this.thigh[0],
+          shinL: this.shin[0],
+          footL: this.foot[0],
+          thighR: this.thigh[1],
+          shinR: this.shin[1],
+          footR: this.foot[1],
+          armL: this.upperArm[0],
+          foreL: this.foreArm[0],
+          armR: this.upperArm[1],
+          foreR: this.foreArm[1],
+        },
+        HIP_HEIGHT,
+        tint,
+      );
+      // The code-built mesh is no longer drawn (its bones keep driving the pose)
+      for (const m of this.meshes) {
+        m.parent?.remove(m);
+        m.geometry.dispose();
+      }
+      this.meshes.length = 0;
+      this.meshes.push(this.realBody.mesh);
+    } catch (err) {
+      console.warn('[character] realistic body failed, using procedural:', err);
+      this.realBody = null;
+    }
   }
 
   /**
@@ -1132,6 +1188,7 @@ export class Humanoid {
       -spineLean * 0.5 + (this.talkTimer > 0 ? Math.sin(this.time * 7) * 0.05 : 0);
     this.head.rotation.y = -this.chest.rotation.y * 0.6;
     this.combatPose(dt);
+    this.realBody?.sync(this.root, this.hips);
   }
 
   /** Turn head towards a world point (NPCs looking at the player). */
@@ -1139,6 +1196,7 @@ export class Humanoid {
     const local = this.root.worldToLocal(world.clone());
     const yaw = clamp(Math.atan2(local.x, local.z), -1.1, 1.1);
     this.head.rotation.y = lerp(this.head.rotation.y, yaw, weight);
+    this.realBody?.sync(this.root, this.hips);
   }
 
   setVisible(v: boolean) {
@@ -1282,5 +1340,6 @@ export class Humanoid {
     }
     for (const m of this.materials) m.dispose();
     for (const t of this.textures) t.dispose();
+    this.realBody?.dispose();
   }
 }
