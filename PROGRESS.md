@@ -12,11 +12,11 @@
 |---|---|
 | Last updated | 2026-11-21 |
 | Updated by | Claude (Opus 5.5) |
-| Current phase | **Acts 1–3 playable (15 missions, all play-tested): P0–P6 done, P7 ~90 %, P8 launch prep done → owner deploys (docs/12-DEPLOY.md)** |
+| Current phase | **LIVE: https://open-city-dhaka-swg5.vercel.app (Vercel + Neon Singapore). Acts 1–3 (15 missions), P0–P6 done, P7 ~90 %, P8 ~85 %** |
 | Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~90 % (rain + wet grip, load-shedding, HUD editor, haptics, auto-fire, battery saver, saved settings, culling done; real-phone perf test, radio, in-game phone, outfits left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
 | Game name | Working title **GTM: Great Thief Mostofa** ("Bangladesh's Most Wanted"), set in `brand.config.json`, changeable anytime (`docs/09-BRANDING.md`) |
 | GitHub repo | https://github.com/procoder-manik/open-city-dhaka (branch `main`) |
-| Database | **PostgreSQL (Neon) + Drizzle** via `DATABASE_URL`; embedded PGlite in `.data/` when unset (dev) |
+| Database | **PostgreSQL 18 on Neon** (ap-southeast-1, pooled) via `DATABASE_URL` — live since 2026-11-22; embedded PGlite in `.data/` when unset (dev). Check: `pnpm db:check`, live: `pnpm --filter @game/web db:roundtrip <url>` |
 | Build status | `pnpm typecheck`, `lint`, `test` (70 unit), `build`, `e2e` (19 Playwright, desktop + phone) all pass locally (2026-11-21). CI run on GitHub not yet checked |
 
 ## How to run
@@ -134,9 +134,10 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 - [x] **Act 3 — ওসির ডাবল গেম** (`gameplay/act3.ts`, 5 missions): mission **target vehicle** (bright yellow, `TrafficSystem.spawnMission/damageMission`, follows the road graph, never despawns, flees when hit) + step kinds **`tail`** (stay `near`–`far` m for N s; too close 3 s = spotted, > 140 m = lost) and **`destroy`** (bullets 20, ram = closing speed × 7, grenade blast); `MissionSystem.startExtras` → `spawnTarget` event; mission start radius 3.5 m. All 15 missions play-tested (`e2e/act2-play.mjs`, `e2e/act3-play.mjs`)
 - [x] **Petrol pumps + garages**: `packages/content/src/stations.json` (4 pumps, 2 garages, fictional names, placed beside real main roads clear of building footprints) validated by `StationSchema`; `gameplay/Stations.ts` (pure, tested): stop on a forecourt → tank fills, paid per litre (car ৳450 / CNG ৳260 / bike ৳180 a tank; stops when broke); stop in a garage 2.5 s → repair (৳8 per damage %) + respray ৳500 that wipes the wanted level unless a cop is within 20 m; one service per visit. `world/StationProps.ts`: canopy/dispensers or open shed + lit Bangla signboards, fixed physics boxes + camera colliders. HUD status pill, ⛽/🔧 on minimap + full map, low/empty-fuel lines, pump attendant + mechanic speakers
 - [x] **Police fixes found while testing**: patrol cars that circle without getting closer no longer block foot cops forever (foot cops spawn after 8 s); when the player is off every road the car pulls over after 10 s without progress; foot cops stuck behind a building for 8 s despawn so fresh ones come from elsewhere
+- [x] **Launched (2026-11-22)**: Neon (Singapore) connected + verified; Vercel project (root `apps/web`, functions `sin1`). Fixed on the way: pnpm 12 CI install (`allowBuilds: esbuild: false` in `pnpm-workspace.yaml`) and INVALID_ORIGIN on sign-up (auth now trusts the deployment's Vercel URLs and ignores a localhost `BETTER_AUTH_URL` on Vercel — `lib/siteUrl.ts`). Live round-trip (sign-up → hero → save → leaderboard → password → delete) passes; game boots live in ~6 s with no errors
 
 ## ▶ NEXT STEP
-**Owner (to go live):** follow `docs/12-DEPLOY.md` — create a free Neon database and a Vercel project (root `apps/web`), set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`; optional Google OAuth. Fill `site.config.json` (donate, Google Form, socials, siteUrl). Then test on a real phone.
+**Owner:** on Vercel set `BETTER_AUTH_URL` and `NEXT_PUBLIC_SITE_URL` to `https://open-city-dhaka-swg5.vercel.app` (they still say localhost; the code copes, but keep them right — and update both if you add a custom domain). Fill `site.config.json` (donate, Google Form, socials). Play on a real phone and send feedback. Optional: Google login keys.
 
 **Next coding steps (recommended order):**
 1. Real-phone performance pass (actors are now culled off-screen; facing a crowd mobile headless ≈ 216 calls — if phones struggle, lower pools on Mobile or drop rain/shadows)
@@ -237,6 +238,7 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## Session log (newest first)
 | Date | Who | What was done | Where it stopped |
 |---|---|---|---|
+| 2026-11-22 | Claude (Opus 5.5) | Launch: Neon connected + verified, Vercel deploy fixed (pnpm 12 build scripts, auth origin), live site checked (pages, game boot, account round-trip) | Live; next: owner phone test, Act 4 |
 | 2026-11-22 | Claude (Opus 5.5) | Petrol pumps + garages (refuel per litre, repair, respray clears wanted), station props/signs/minimap; police routing fixes (stalled patrol cars, stuck cops); all 15 missions + station/polish checks re-run green; 70 unit + 19 e2e | Next: Act 4 / new area, real-phone test |
 | 2026-11-22 | Claude (Opus 5.5) | Phase 7 polish part 3 (wet grip, spray, load-shedding, haptics, auto-fire, battery saver, saved settings) + Act 3 (target vehicles, tail/destroy steps, 5 missions); everything play-tested in the real game; 66 unit + 19 e2e | Next: refuelling + Act 4 / real-phone test |
 | 2026-11-21 | Claude (Opus 5.5) | Self play-test of all Act 2 missions (act2-play.mjs, all pass) + 3 real bugs fixed (parked car rammed by traffic, off-road mission targets, mirrored signs); fresh-clone setup verified end to end | Owner: run locally / deploy; then Act 3 |
