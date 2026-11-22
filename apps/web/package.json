@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "e2e": "playwright test",
-    "db:check": "node scripts/db-check.mjs"
+    "db:check": "node scripts/db-check.mjs",
+    "db:roundtrip": "node scripts/db-roundtrip.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.17",

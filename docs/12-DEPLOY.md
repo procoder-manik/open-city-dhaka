@@ -38,6 +38,10 @@ Never commit `.env.local` (it is git-ignored).
 3. Add the env vars above → Deploy.
 4. Domain: Project → Domains → add yours (free `*.vercel.app` works too).
 
+Server functions run in Singapore (`apps/web/vercel.json` → `sin1`), next to a Neon database in
+`ap-southeast-1`. After deploying, check the live site with
+`pnpm --filter @game/web db:roundtrip https://<your-site>` (creates and deletes a test account).
+
 Headers (COOP/COEP credentialless, CSP, HSTS) are set in `apps/web/next.config.ts` — no
 extra config needed.
 
