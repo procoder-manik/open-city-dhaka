@@ -13,6 +13,8 @@ export class AudioEngine {
   private voice: GainNode;
   private ambience: GainNode;
   private noiseBuffer: AudioBuffer;
+  /** Street reverb (shots and blasts echo between the buildings). */
+  private reverbSend: GainNode;
   private engine: EngineVoice | null = null;
   private skid: { src: AudioBufferSourceNode; gain: GainNode; filter: BiquadFilterNode } | null =
     null;
@@ -36,6 +38,11 @@ export class AudioEngine {
     this.voice = this.bus(1);
     this.ambience = this.bus(0.35);
     this.noiseBuffer = this.makeNoise();
+    const verb = this.ctx.createConvolver();
+    verb.buffer = this.makeImpulse(1.8);
+    this.reverbSend = this.ctx.createGain();
+    this.reverbSend.gain.value = 0.5;
+    this.reverbSend.connect(verb).connect(this.master);
     this.startAmbience();
   }
 
@@ -55,6 +62,33 @@ export class AudioEngine {
       const white = Math.random() * 2 - 1;
       last = (last + 0.02 * white) / 1.02; // brownish
       d[i] = white * 0.6 + last * 3;
+    }
+    return buf;
+  }
+
+  /**
+   * Impulse response for a narrow Dhaka street: a couple of early slap-back echoes off the
+   * facing buildings, then a decaying stereo tail.
+   */
+  private makeImpulse(seconds: number): AudioBuffer {
+    const rate = this.ctx.sampleRate;
+    const len = Math.floor(rate * seconds);
+    const buf = this.ctx.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const t = i / len;
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2) * 0.5;
+      }
+      for (const [at, g] of [
+        [0.045 + ch * 0.012, 0.55],
+        [0.11 + ch * 0.02, 0.35],
+        [0.19 - ch * 0.015, 0.2],
+      ] as const) {
+        const i0 = Math.floor(at * rate);
+        for (let k = 0; k < 220 && i0 + k < len; k++)
+          d[i0 + k]! += (Math.random() * 2 - 1) * g * (1 - k / 220);
+      }
     }
     return buf;
   }
@@ -166,8 +200,12 @@ export class AudioEngine {
     thump?: number;
     thumpFreq?: number;
     pan?: number;
+    /** Reverb send 0..1. */
+    send?: number;
+    /** Start this many seconds from now. */
+    at?: number;
   }) {
-    const t = this.ctx.currentTime;
+    const t = this.ctx.currentTime + (opts.at ?? 0);
     const src = this.ctx.createBufferSource();
     src.buffer = this.noiseBuffer;
     src.playbackRate.value = 0.8 + Math.random() * 0.4;
@@ -181,6 +219,11 @@ export class AudioEngine {
     const pan = this.ctx.createStereoPanner();
     pan.pan.value = opts.pan ?? 0;
     src.connect(f).connect(g).connect(pan).connect(this.sfx);
+    if (opts.send) {
+      const sg = this.ctx.createGain();
+      sg.gain.value = opts.send;
+      pan.connect(sg).connect(this.reverbSend);
+    }
     src.start(t, Math.random() * 1.5);
     src.stop(t + opts.decay + 0.05);
     if (opts.thump) {
@@ -197,43 +240,85 @@ export class AudioEngine {
     }
   }
 
-  /** Pistol shot; `distance` in metres attenuates and dulls it. */
+  /** Pistol shot: sharp crack + chesty body + low thump, echoing down the street. */
   gunshot(distance = 0, pan = 0) {
     const d = Math.max(1, distance);
     const v = Math.min(1, 12 / (d + 8));
+    const far = Math.min(1, d / 60);
+    // Crack (the supersonic snap) fades first with distance
     this.burst({
-      gain: 0.9 * v,
-      decay: 0.18 + d * 0.004,
-      freq: Math.max(700, 4200 - d * 40),
-      type: 'lowpass',
-      thump: 0.6 * v,
-      thumpFreq: 140,
+      gain: 0.9 * v * (1 - far * 0.8),
+      decay: 0.045,
+      freq: 2600,
+      type: 'highpass',
       pan,
+      send: 0.3,
+    });
+    this.burst({
+      gain: 0.85 * v,
+      decay: 0.2 + d * 0.004,
+      freq: Math.max(600, 2400 - d * 30),
+      type: 'lowpass',
+      thump: 0.75 * v,
+      thumpFreq: 160,
+      pan,
+      send: 0.55 + far * 0.4,
     });
   }
 
+  /** Blast: deep boom, roaring body, then crackling debris and a long street echo. */
   explosion(distance = 0, pan = 0) {
     const v = Math.min(1, 30 / (Math.max(1, distance) + 15));
+    this.burst({ gain: 0.9 * v, decay: 0.08, freq: 1800, type: 'highpass', pan, send: 0.4 });
     this.burst({
-      gain: 1.4 * v,
-      decay: 1.6,
-      freq: 900,
+      gain: 1.5 * v,
+      decay: 1.9,
+      freq: 700,
       type: 'lowpass',
-      thump: 1.2 * v,
-      thumpFreq: 70,
+      thump: 1.4 * v,
+      thumpFreq: 62,
       pan,
+      send: 0.7,
     });
-    this.burst({ gain: 0.5 * v, decay: 0.9, freq: 2500, type: 'bandpass', q: 0.4, pan });
+    this.burst({
+      gain: 0.45 * v,
+      decay: 1.1,
+      freq: 2200,
+      type: 'bandpass',
+      q: 0.4,
+      pan,
+      send: 0.5,
+    });
+    // Debris pattering down
+    for (let i = 0; i < 9; i++) {
+      this.burst({
+        gain: (0.12 + Math.random() * 0.15) * v,
+        decay: 0.05 + Math.random() * 0.06,
+        freq: 1500 + Math.random() * 3000,
+        type: 'bandpass',
+        q: 1.5,
+        pan: Math.max(-1, Math.min(1, pan + (Math.random() - 0.5) * 0.6)),
+        at: 0.25 + Math.random() * 1.3,
+        send: 0.3,
+      });
+    }
   }
 
+  /** Fist: slap transient + body thud (a whoosh when it misses). */
   punch(hit = true) {
+    if (!hit) {
+      this.burst({ gain: 0.22, decay: 0.14, freq: 1400, type: 'bandpass', q: 0.6 });
+      return;
+    }
+    this.burst({ gain: 0.55, decay: 0.03, freq: 2200, type: 'highpass', send: 0.15 });
     this.burst({
-      gain: hit ? 0.7 : 0.2,
-      decay: hit ? 0.12 : 0.08,
-      freq: hit ? 500 : 2000,
-      type: hit ? 'lowpass' : 'highpass',
-      thump: hit ? 0.5 : 0,
-      thumpFreq: 120,
+      gain: 0.75,
+      decay: 0.13,
+      freq: 420,
+      type: 'lowpass',
+      thump: 0.6,
+      thumpFreq: 110,
+      send: 0.15,
     });
   }
 
@@ -324,6 +409,7 @@ export class AudioEngine {
     g.gain.setValueAtTime(0.9 * s, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.35 + s * 0.4);
     src.connect(f).connect(g).connect(this.sfx);
+    g.connect(this.reverbSend);
     src.start(t, Math.random());
     src.stop(t + 1);
     const o = this.ctx.createOscillator();

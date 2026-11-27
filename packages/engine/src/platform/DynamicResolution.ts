@@ -9,7 +9,7 @@ export class DynamicResolution {
 
   constructor(
     private targetFps: number,
-    private readonly min: number,
+    private min: number,
     private readonly max: number,
     private readonly stepSize = 0.05,
     /** Frames to wait between adjustments so changes don't oscillate. */
@@ -17,6 +17,16 @@ export class DynamicResolution {
   ) {
     this.scale = max;
     this.avgMs = 1000 / targetFps;
+  }
+
+  get minScale(): number {
+    return this.min;
+  }
+
+  /** Allow a lower floor (weak-GPU fallback). */
+  setMin(min: number) {
+    this.min = Math.min(this.min, min);
+    this.cooldown = 0;
   }
 
   get averageFrameMs(): number {

@@ -213,13 +213,14 @@ export function PlayClient() {
       />
 
       {phase === 'start' && (
-        <div className={styles.overlay}>
+        <div className={`${styles.overlay} ${styles.titleScreen}`}>
+          <TitleBackdrop />
           <div className={`panel ${styles.startCard}`}>
             <p className={styles.edition}>{brand.editionName}</p>
             <h1 className={styles.title}>{brand.displayName}</h1>
             <p className={styles.muted}>{brand.taglineBn}</p>
             <button
-              className="btn"
+              className={`btn ${styles.playBtn}`}
               type="button"
               onClick={start}
               disabled={!engineReady}
@@ -260,9 +261,27 @@ export function PlayClient() {
               </p>
             )}
             {!isTouch && engineReady && (
-              <p className={styles.tip}>
-                WASD হাঁটা · মাউস দেখা · Shift দৌড় · Space লাফ · F গাড়িতে ওঠা · Esc পজ
-              </p>
+              <ul className={styles.keys} aria-label="কন্ট্রোল">
+                {(
+                  [
+                    ['W', 'সামনে'],
+                    ['A D', 'ঘোরা'],
+                    ['S', 'ব্রেক / পেছনে'],
+                    ['Shift', 'দৌড়'],
+                    ['Space', 'লাফ / হ্যান্ডব্রেক'],
+                    ['F', 'গাড়িতে ওঠা'],
+                    ['E', 'কথা'],
+                    ['Esc', 'পজ'],
+                  ] as const
+                ).map(([k, label]) => (
+                  <li key={k}>
+                    {k.split(' ').map((c) => (
+                      <kbd key={c}>{c}</kbd>
+                    ))}
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>
@@ -273,7 +292,7 @@ export function PlayClient() {
           <div className={styles.loader} aria-live="polite">
             <div className={styles.spinner} />
             <p>মোহাম্মদপুর লোড হচ্ছে…</p>
-            <p className={styles.muted}>টিপস: জ্যামে আটকালে হর্ন দিয়ে লাভ নাই 😄</p>
+            <LoadingTip />
           </div>
         </div>
       )}
@@ -892,5 +911,79 @@ function StatsOverlay({ game, onClick }: { game: Game; onClick: () => void }) {
         physics: {s.physicsMode} · input: {s.lastInput}
       </span>
     </button>
+  );
+}
+
+const TIPS = [
+  'টিপস: জ্যামে আটকালে হর্ন দিয়ে লাভ নাই 😄',
+  'টিপস: পুলিশ পিছু নিলে ঘুষ দাও — ঝামেলা শেষ।',
+  'টিপস: চলন্ত গাড়ির পাশে গিয়ে F চাপো — গাড়ি তোমার।',
+  'টিপস: জোরে ধাক্কা দিলে সামনের গাড়ি উড়ে যায়, তোমার গাড়ি ঠিক থাকে।',
+  'টিপস: চায়ের দোকানে E চেপে কথা বলো — কাজ পাবে।',
+  'টিপস: গ্রাফিক্স ধীর লাগলে গেম নিজেই ইফেক্ট কমিয়ে স্মুথ রাখে।',
+];
+
+function LoadingTip() {
+  const [i, setI] = useState(() => Math.floor(Math.random() * TIPS.length));
+  useEffect(() => {
+    const id = setInterval(() => setI((n) => (n + 1) % TIPS.length), 3500);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <p className={styles.muted} key={i}>
+      {TIPS[i]}
+    </p>
+  );
+}
+
+/** Dusk Dhaka skyline behind the title card (pure SVG/CSS, no image download). */
+function TitleBackdrop() {
+  const near = [
+    [0, 62, 40],
+    [38, 48, 34],
+    [70, 70, 28],
+    [96, 40, 46],
+    [140, 58, 30],
+    [168, 76, 38],
+    [204, 50, 26],
+    [228, 66, 44],
+    [270, 44, 32],
+    [300, 72, 40],
+    [338, 54, 30],
+    [366, 80, 34],
+  ];
+  return (
+    <div className={styles.titleBg} aria-hidden>
+      <div className={styles.sun} />
+      <svg className={styles.skyline} viewBox="0 0 400 120" preserveAspectRatio="none">
+        <path
+          className={styles.farCity}
+          d="M0 120V70h14v-8h10v14h12V58h8v-6h6v16h14V64h18v10h10V50h12v20h16V60h10v18h14V54h20v16h10V62h16v12h14V48h10v22h18V66h12v10h16V56h14v18h12V62h10v58z"
+        />
+        {near.map(([x, h, w]) => (
+          <g key={x}>
+            <rect className={styles.nearCity} x={x} y={120 - h!} width={w} height={h} />
+            {Array.from({ length: Math.floor(h! / 12) }, (_, r) =>
+              Array.from({ length: Math.floor(w! / 9) }, (_, c) =>
+                (x! * 7 + r * 13 + c * 5) % 3 === 0 ? (
+                  <rect
+                    key={`${r}-${c}`}
+                    className={styles.window}
+                    x={x! + 3 + c * 9}
+                    y={120 - h! + 5 + r * 12}
+                    width={4}
+                    height={5}
+                  />
+                ) : null,
+              ),
+            )}
+          </g>
+        ))}
+        <path
+          className={styles.wires}
+          d="M0 66 Q100 82 200 70 T400 74 M0 74 Q120 90 230 78 T400 84"
+        />
+      </svg>
+    </div>
   );
 }

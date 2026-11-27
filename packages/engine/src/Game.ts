@@ -64,6 +64,13 @@ export interface Game {
   debugFuel(f: number): void;
   debugMoney(taka: number): void;
   debugTraffic(): { x: number; z: number; yaw: number; flung: number } | null;
+  debugProfile(): {
+    frames: number;
+    frameMs: number;
+    updateMs: number;
+    renderMs: number;
+    sections: Record<string, number>;
+  };
   debugBlackout(seconds?: number): void;
   debugKnockPedestrian(): boolean;
   debugSetWanted(n: number): void;
@@ -190,12 +197,14 @@ export async function createGame(opts: GameOptions): Promise<Game> {
 
   // Post-processing: bloom on Medium+ (signboards and lights glow at dusk).
   let pipeline: THREE.RenderPipeline | null = null;
-  if (preset.postFx.bloom) {
+  const buildPipeline = (withBloom: boolean) => {
+    pipeline?.dispose();
+    pipeline = null;
     try {
       pipeline = new THREE.RenderPipeline(renderer);
       const scenePass = pass(world.scene, world.camera);
       const color = scenePass.getTextureNode('output');
-      const lit = color.add(bloom(color, 0.35, 0.35, 0.8));
+      const lit = withBloom ? color.add(bloom(color, 0.35, 0.35, 0.8)) : color;
       // "Natural Dhaka" grade: warm highlights, slightly cool shadows, gentle
       // contrast + saturation, soft vignette — the cinematic open-world look.
       const graded = cdl(
@@ -210,7 +219,8 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       console.warn('[render] bloom unavailable:', err);
       pipeline = null;
     }
-  }
+  };
+  if (preset.postFx.bloom) buildPipeline(true);
 
   const loop = new FixedStepLoop(1 / 60);
   const dynRes = new DynamicResolution(
@@ -241,6 +251,47 @@ export async function createGame(opts: GameOptions): Promise<Game> {
   let frameMsSum = 0;
   let minFrameMs = preset.fpsCap > 0 ? 1000 / preset.fpsCap - 1 : 0;
 
+  const prof = { update: 0, render: 0, frame: 0, n: 0 };
+  /**
+   * Weak GPU guard: when even the lowest dynamic resolution can't hold the target frame
+   * rate for a few seconds, switch off the costliest effects one by one (bloom, then sun
+   * shadows, then allow a lower resolution). Keeps the game playable instead of a slideshow.
+   */
+  let degradeLevel = 0;
+  let slowSince = 0;
+  let lastDegrade = 0;
+  let slowAvg = 0;
+  const autoDegrade = (time: number, frameMs: number) => {
+    if (paused || degradeLevel >= 3) return;
+    // Frames over 200 ms are the browser throttling a hidden/background window (or a
+    // one-off hitch), not a weak GPU: never lower quality because of them.
+    if (frameMs > 200 || document.visibilityState !== 'visible') {
+      slowSince = 0;
+      return;
+    }
+    slowAvg = slowAvg ? slowAvg * 0.95 + frameMs * 0.05 : frameMs;
+    const budget = 1000 / preset.targetFps;
+    const atFloor = dynRes.scale <= dynRes.minScale + 0.001;
+    if (!atFloor || slowAvg < budget * 1.25 || time - lastDegrade < 4000) {
+      slowSince = 0;
+      return;
+    }
+    if (!slowSince) slowSince = time;
+    if (time - slowSince < 3000) return;
+    slowSince = 0;
+    lastDegrade = time;
+    degradeLevel++;
+    if (degradeLevel === 1 && pipeline && preset.postFx.bloom) buildPipeline(false);
+    else if (degradeLevel <= 2 && preset.shadows) {
+      degradeLevel = 2;
+      world.setShadows(false);
+    } else {
+      degradeLevel = 3;
+      dynRes.setMin(0.5);
+    }
+    console.info('[render] weak GPU: lowered effects, level', degradeLevel);
+    store.setState({ perfLevel: degradeLevel });
+  };
   const frame = (time: number) => {
     if (minFrameMs && time - lastRender < minFrameMs) return;
     const frameMs = time - lastTime;
@@ -251,6 +302,7 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     input.update(dt);
     if (input.pressed('pause')) requestPause();
 
+    const tA = performance.now();
     if (!paused) {
       const { steps } = loop.advance(dt);
       const cmds = world.preStep(dt, input);
@@ -261,10 +313,17 @@ export async function createGame(opts: GameOptions): Promise<Game> {
       renderer.toneMappingExposure = world.exposure;
     }
 
+    const tB = performance.now();
     if (pipeline) pipeline.render();
     else renderer.render(world.scene, world.camera);
+    const tC = performance.now();
+    prof.update += tB - tA;
+    prof.render += tC - tB;
+    prof.frame += frameMs;
+    prof.n++;
 
     if (dynRes.sample(frameMs)) applySize();
+    autoDegrade(time, frameMs);
 
     frames++;
     frameMsSum += frameMs;
@@ -293,6 +352,19 @@ export async function createGame(opts: GameOptions): Promise<Game> {
     canvas,
     debugInfo() {
       return { ...world.debugInfo(), physicsMode, paused };
+    },
+    /** Average CPU ms per frame since the last call: update (game logic), render (submit), scene sections. */
+    debugProfile() {
+      const n = Math.max(1, prof.n);
+      const r = {
+        frames: prof.n,
+        frameMs: +(prof.frame / n).toFixed(2),
+        updateMs: +(prof.update / n).toFixed(2),
+        renderMs: +(prof.render / n).toFixed(2),
+        sections: world.takeProfile(n),
+      };
+      prof.update = prof.render = prof.frame = prof.n = 0;
+      return r;
     },
     setHour(hour: number) {
       world.setHour(hour);

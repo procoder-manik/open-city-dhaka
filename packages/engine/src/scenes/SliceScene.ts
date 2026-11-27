@@ -97,7 +97,9 @@ const TRAFFIC_ID_BASE = 400;
 const POLICE_ID_BASE = 450;
 const STASH_ID = 990;
 /** Easy keyboard controls: turn speed (rad/s) for A/D. */
-const EASY_TURN = 2.8;
+/** Easy controls: top turn speed (rad/s) and how fast turning eases in/out. */
+const EASY_TURN = 3.6;
+const EASY_TURN_EASE = 14;
 const STATION_ID_BASE = 900;
 const RESPRAY_COLORS = [0x1d5c96, 0x8a1d1d, 0x2f6b3a, 0x202020, 0xd9d2c0, 0x6b2f80];
 const STATIC_ID_BASE = 1000;
@@ -312,6 +314,7 @@ export class SliceScene {
   private talkToggles = 0;
   /** This frame the hero is steered tank-style (easy keyboard controls). */
   private easyMove = false;
+  private turnVel = 0;
   private crashBarkCooldown = 0;
   private hornOn = false;
   private hud: HudState = {
@@ -560,6 +563,11 @@ export class SliceScene {
     return this.env.exposure;
   }
 
+  /** Turn sun shadows off/on (weak-GPU fallback). */
+  setShadows(on: boolean) {
+    this.env.sun.castShadow = on;
+  }
+
   setAspect(aspect: number) {
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
@@ -576,6 +584,8 @@ export class SliceScene {
     impulses?: ImpulseInput[];
   } {
     const frozen = !!this.overlay;
+    // Before physics, so a rammed car is already flying when the bodies would touch
+    this.ramTraffic(dt);
     if (!frozen && input.pressed('interact')) this.toggleVehicle();
     if (!frozen && input.pressed('talk')) this.openTalk();
     if (!frozen && !this.driving) this.combatInput(input);
@@ -639,7 +649,10 @@ export class SliceScene {
         this.prefs.easyControls && input.lastDevice === 'keyboard' && !this.aiming && !frozen;
       if (this.easyMove) {
         // Easy: A/D turn on the spot, W forward, S backward (slower). Camera follows.
-        this.facing -= input.move.x * EASY_TURN * dt;
+        // Turning eases in and out: a tap nudges, holding swings round quickly
+        const turnTarget = -input.move.x * EASY_TURN * (input.move.y < -0.1 ? 0.7 : 1);
+        this.turnVel += (turnTarget - this.turnVel) * (1 - Math.exp(-EASY_TURN_EASE * dt));
+        this.facing += this.turnVel * dt;
         const fwd = input.move.y;
         const spd =
           fwd >= 0 ? (sprint && fwd > 0.1 ? SPRINT_SPEED : JOG_SPEED * fwd) : WALK_SPEED * fwd;
@@ -916,7 +929,23 @@ export class SliceScene {
 
   // ---------------- Per-frame ----------------
 
+  private profAcc: Record<string, number> = {};
+  private profT = 0;
+  /** Adds the time since the previous mark to section `name` (debug profiling, ~free). */
+  private mark(name: string) {
+    const t = performance.now();
+    if (name !== '') this.profAcc[name] = (this.profAcc[name] ?? 0) + (t - this.profT);
+    this.profT = t;
+  }
+  takeProfile(frames: number) {
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(this.profAcc)) out[k] = +(v / frames).toFixed(2);
+    this.profAcc = {};
+    return out;
+  }
+
   update(dt: number, input: InputManager) {
+    this.mark('');
     this.crashBarkCooldown = Math.max(0, this.crashBarkCooldown - dt);
     for (const v of this.vehicles) {
       v.body.update(dt);
@@ -925,6 +954,7 @@ export class SliceScene {
       v.visual.update(dt, v.speed, v.wheels);
       this.vehicleEffects(v, dt);
     }
+    this.mark('vehicles');
     this.ball.update(dt);
     this.ballMesh.position.copy(this.ball.renderPos);
     this.ballMesh.quaternion.copy(this.ball.renderQuat);
@@ -1010,8 +1040,8 @@ export class SliceScene {
         fov: this.aiming ? 48 : sprinting ? 68 : 60,
         // Easy controls: the camera swings behind the hero by itself
         autoAlignYaw: this.easyMove ? this.facing : null,
-        alignDelay: 0.6,
-        alignRate: 3.5,
+        alignDelay: 0.2,
+        alignRate: 5,
         lookInput: input.look,
       });
 
@@ -1058,9 +1088,13 @@ export class SliceScene {
       }
     }
     if (this.driving) this.carjackCar = null;
+    this.mark('hero+camera');
     this.updateStreetLife(dt);
+    this.mark('streetLife');
     this.updateCombat(dt);
+    this.mark('combat');
     this.updateMissions(dt);
+    this.mark('missions');
 
     // NPC life: face the player, idle calls when the player is around
     const playerPos = this.driving ? this.driving.body.renderPos : this.player.renderPos;
@@ -1100,6 +1134,7 @@ export class SliceScene {
       headline: this.hud.headline?.text ?? null,
     });
     this.dialogue.update(dt);
+    this.mark('npcs+boards');
 
     const focus = this.driving ? this.driving.body.renderPos : this.player.renderPos;
     if (this.city) {
@@ -1114,9 +1149,9 @@ export class SliceScene {
         this.rig.setColliders(this.cityBoxes);
       }
     }
+    this.mark('city');
     this.updateBlackout(dt);
     this.ramMissionCar(dt);
-    this.ramTraffic(dt);
     this.guardTimer = Math.max(0, this.guardTimer - dt);
     this.hero.guard = !this.driving && this.arsenal.weapon === 'fist' && this.guardTimer > 0;
     this.updateStations(dt);
@@ -1125,6 +1160,7 @@ export class SliceScene {
       for (const nm of this.city.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
       for (const gl of this.city.nightGlows) gl.material.opacity = gl.max * lit;
     }
+    this.mark('misc');
     this.updateWeather(dt);
     this.env.update(dt, focus, this.camera);
     for (const nm of this.street.nightMaterials) nm.material.emissiveIntensity = nm.max * lit;
@@ -1133,10 +1169,13 @@ export class SliceScene {
     for (const g of this.street.nightGlows) g.material.opacity = g.max * lit;
     this.particles.setFogColor((this.scene.fog as THREE.Fog).color);
     this.particles.update(dt, this.camera);
+    this.mark('env+particles');
     this.audio?.update(dt, this.env.night);
     this.cullActors();
+    this.mark('audio+cull');
 
     this.publishHud(dt);
+    this.mark('hud');
   }
 
   /** Damage the mission target; wrecks it with a blast when it runs out of health. */
@@ -1162,23 +1201,36 @@ export class SliceScene {
     const p = v.body.renderPos;
     const vel = v.body.vel;
     const speed = Math.hypot(vel.x, vel.z);
-    if (speed < 6) return;
-    const reach = v.def.chassisHalfExtents[2] + 3.2;
+    if (speed < 5) return;
+    // Look ahead a little (covers slow frames): will we reach the car within ~0.2 s?
+    const look = Math.min(0.25, Math.max(0.12, dt * 2));
+    const own = v.def.chassisHalfExtents[2];
     for (const c of this.traffic.cars) {
       if (!c.active || c.flung || c.mission) continue;
-      const dx = c.pos.x - p.x;
-      const dz = c.pos.z - p.z;
-      const d = Math.hypot(dx, dz);
-      if (d > reach || d < 0.01) continue;
-      const closing =
-        (vel.x * dx + vel.z * dz) / d -
-        c.speed * ((Math.sin(c.yaw) * dx + Math.cos(c.yaw) * dz) / d);
-      if (closing < 6) continue;
-      this.traffic.fling(c, vel.x, vel.z);
-      this.impactGrace = 0.6;
+      const radius = own + TRAFFIC_KINDS[c.kind].half[2] + 0.5;
+      const rx = c.pos.x - p.x;
+      const rz = c.pos.z - p.z;
+      const d = Math.hypot(rx, rz);
+      if (d > radius + speed * look + 2 || d < 0.01) continue;
+      const cvx = Math.sin(c.yaw) * c.speed;
+      const cvz = Math.cos(c.yaw) * c.speed;
+      const ux = vel.x - cvx;
+      const uz = vel.z - cvz;
+      const closing = (rx * ux + rz * uz) / d;
+      if (closing < 4.5) continue;
+      // Closest approach within the look-ahead window
+      const u2 = ux * ux + uz * uz;
+      const t = Math.min(look, Math.max(0, (rx * ux + rz * uz) / u2));
+      const mx = rx - ux * t;
+      const mz = rz - uz * t;
+      if (Math.hypot(mx, mz) > radius) continue;
+      this.traffic.fling(c, vel.x * 0.9 + ux * 0.3, vel.z * 0.9 + uz * 0.3);
+      this.impactGrace = 0.7;
       this.audio?.crash(Math.min(1, closing / 15));
+      this.haptic(70);
       this.rig.addShake(0.35);
-      this.particles.emit('debris', c.pos.clone().setY(0.8), undefined, 10);
+      this.particles.emit('debris', c.pos.clone().setY(0.8), undefined, 12);
+      this.particles.emit('dust', c.pos.clone().setY(0.3), undefined, 6);
       this.crimeEvent('crash');
     }
   }

@@ -10,6 +10,148 @@
   overflow-y: auto;
 }
 
+.titleScreen {
+  background: linear-gradient(180deg, #1a1030 0%, #5a2a3a 38%, #c8643a 68%, #f2a24a 100%);
+  overflow: hidden;
+}
+
+.titleBg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sun {
+  position: absolute;
+  left: 50%;
+  bottom: 26%;
+  width: min(46vw, 340px);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd27a 0%, #ff9a4a 45%, rgba(255, 120, 60, 0) 70%);
+  filter: blur(2px);
+  opacity: 0.85;
+}
+
+.skyline {
+  position: absolute;
+  left: -5%;
+  bottom: 0;
+  width: 110%;
+  height: 46%;
+  animation: drift 40s ease-in-out infinite alternate;
+}
+
+.farCity {
+  fill: #3a1f2e;
+  opacity: 0.85;
+}
+
+.nearCity {
+  fill: #160c14;
+}
+
+.window {
+  fill: #ffcf6a;
+  opacity: 0.75;
+  animation: flicker 6s steps(2) infinite;
+}
+
+.wires {
+  fill: none;
+  stroke: #0b0609;
+  stroke-width: 0.6;
+}
+
+@keyframes drift {
+  to {
+    translate: -4% 0;
+  }
+}
+
+@keyframes flicker {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.titleScreen .startCard {
+  position: relative;
+  background: rgba(12, 8, 14, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 190, 110, 0.28);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.titleScreen .title {
+  font-size: clamp(2rem, 7vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  background: linear-gradient(180deg, #fff6d8 0%, #ffb347 60%, #e0692a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6));
+}
+
+.playBtn {
+  font-size: 1.25rem;
+  padding: 16px 20px;
+  animation: pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 170, 60, 0.18);
+  }
+}
+
+.keys {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  text-align: left;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.keys li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.keys span {
+  margin-left: 4px;
+}
+
+.keys kbd {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom-width: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font:
+    700 0.75rem/1.4 ui-monospace,
+    monospace;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skyline,
+  .window,
+  .playBtn {
+    animation: none;
+  }
+}
+
 .startCard {
   width: min(440px, 100%);
   padding: 28px 24px;

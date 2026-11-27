@@ -19,6 +19,8 @@ export interface GameState extends HudState {
   physicsMode: 'worker' | 'inline' | 'none';
   fps: number;
   frameMs: number;
+  /** Weak-GPU fallback level: 0 full effects, 1 no bloom, 2 no shadows, 3 lower resolution. */
+  perfLevel: number;
   drawCalls: number;
   triangles: number;
   resolutionScale: number;
@@ -41,6 +43,7 @@ export const createGameStore = (tier: QualityTier) =>
     physicsMode: 'none',
     fps: 0,
     frameMs: 0,
+    perfLevel: 0,
     drawCalls: 0,
     triangles: 0,
     resolutionScale: 1,

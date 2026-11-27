@@ -10,7 +10,7 @@
 ## Status snapshot
 | Field | Value |
 |---|---|
-| Last updated | 2026-11-21 |
+| Last updated | 2026-11-27 |
 | Updated by | Claude (Opus 5.5) |
 | Current phase | **LIVE: https://open-city-dhaka-swg5.vercel.app (Vercel + Neon Singapore). Acts 1–3 (15 missions), P0–P6 done, P7 ~90 %, P8 ~85 %** |
 | Overall progress | P0–P6 100 % · P1.5-B ~35 % (realistic models need owner downloads) · P7 ~90 % (rain + wet grip, load-shedding, HUD editor, haptics, auto-fire, battery saver, saved settings, culling done; real-phone perf test, radio, in-game phone, outfits left) · P8 ~70 % (ready to deploy; needs owner's Neon + Vercel) |
@@ -265,5 +265,17 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · ⏸ blocked
 ## 2026-11-22 — fix batch (police, cars, punch, touch)
 - Done: easier police (heat cools in 30 s, bribe 100/star, sirens and shooting only at 3+ stars), much tougher cars (8 crashes, 0 damage), carjack any moving car (5 m), punch auto-aim, phone joystick works as throttle in vehicles, touch weapon-switch button.
 - Checked: braking/reverse OK, 2 snatches → 2 stars → 0 after 40 s.
-- Open: ramming flings traffic only sometimes (1 of 4 head-on tries) and our car still takes some front damage (`SliceScene.ramTraffic`/`detectImpact`, grace 0.6 s). Fix next.
+- (fixed 2026-11-27) ramming: see below.
 - Then: shop robbery/extortion, more guns + grenades, zoom-aim, back-to-back missions, woman model + voices, car designs, bigger city, more traffic.
+
+## 2026-11-27 — smoothness, controls, ramming, sound, title screen
+- **Lag cause found:** on the owner's AMD integrated GPU (Vega/GCN-5) Auto picked Medium → ~17 fps, GPU-bound (CPU: game logic ~1.8 ms + render submit ~7 ms; frame ~59 ms). New **weak-GPU fallback** in `Game.ts` (`autoDegrade`): when even the lowest dynamic resolution misses the target for 3 s it drops bloom, then sun shadows, then allows 50 % resolution (`store.perfLevel` 0–3). Frames >200 ms (hidden/background window) are ignored so it never misfires.
+- **Profiler:** `__game.debugProfile()` (debug) → avg frame / update / render ms + per-section ms of `SliceScene.update`.
+- **Controls:** easy-mode A/D turning eases in/out and is faster (3.6 rad/s), camera swings behind sooner (0.2 s, rate 5); car steering snappier (3.4 rad/s) and keeps more lock at speed.
+- **Ramming:** check runs in `preStep` *before* physics with a short look-ahead and per-vehicle length (buses), so the rammed car is already flying and ours takes no damage. Check: flung cars, our damage unchanged on the ramming try.
+- **Sound:** street reverb (slap-back echoes + tail); gunshot = crack + body + thump; explosion = boom + roar + debris patter; punch slap + thud; crashes echo.
+- **UI:** title screen redesigned (dusk Dhaka skyline backdrop, gradient title, pulsing play button, keycap controls); rotating loading tips.
+- Tests: 59 engine unit pass; Playwright 18 pass, 2 skipped; the E-talk test is flaky only under load (~1 fps headless) and passes alone.
+- Not verified: real frame rate after the fallback (couldn't watch the window). Owner: play on the laptop and check the FPS overlay (`/play?debug=1`).
+- "Baper Rasta": no public repo found; its sounds/art can't be copied anyway (copyright). Inspired-by only.
+- Next: shop robbery/extortion, more guns + zoom-aim, back-to-back missions, woman model + voices, car designs, bigger city, more traffic.

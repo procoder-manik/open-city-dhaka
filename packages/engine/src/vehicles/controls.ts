@@ -16,8 +16,8 @@ export interface VehicleControls {
   handbrake: boolean;
 }
 
-const STEER_SPEED = 2.6; // rad/s towards target
-const STEER_RETURN = 4.5; // rad/s back to centre
+const STEER_SPEED = 3.4; // rad/s towards target (snappy, still smooth on a keyboard)
+const STEER_RETURN = 5.5; // rad/s back to centre
 
 /**
  * Arcade-realistic driving: throttle accelerates until top speed, pulling back brakes
@@ -57,7 +57,7 @@ export function computeVehicleControls(
   }
 
   // Lighter steering at speed for stability.
-  const speedFactor = 1 / (1 + Math.abs(speed) / 14);
+  const speedFactor = 1 / (1 + Math.abs(speed) / 20);
   const target = -Math.max(-1, Math.min(1, input.steer)) * def.maxSteer * speedFactor;
   const rate =
     Math.abs(target) < Math.abs(prevSteer) || Math.sign(target) !== Math.sign(prevSteer)
